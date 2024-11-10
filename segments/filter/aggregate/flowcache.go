@@ -265,10 +265,10 @@ func (f *FlowExporter) Insert(pkt gopacket.Packet) {
 	f.mutex.Lock()
 	if record, exists = f.cache[key]; !exists {
 		f.cache[key] = new(FlowRecord)
-		f.cache[key].TimeReceived = time.Now()
+		f.cache[key].TimeReceived = pkt.Metadata().Timestamp
 		record = f.cache[key]
 	}
-	record.LastUpdated = time.Now()
+	record.LastUpdated = pkt.Metadata().Timestamp
 	record.SamplerAddress = f.samplerAddress
 	record.Packets = append(record.Packets, pkt)
 
@@ -291,10 +291,10 @@ func (f *FlowExporter) InsertFlow(flow *pb.EnrichedFlow) {
 	f.mutex.Lock()
 	if record, exists = f.cache[key]; !exists {
 		f.cache[key] = new(FlowRecord)
-		f.cache[key].TimeReceived = time.Now()
+		f.cache[key].TimeReceived = time.Unix(int64(flow.TimeFlowStart), 0)
 		record = f.cache[key]
 	}
-	record.LastUpdated = time.Now()
+	record.LastUpdated = time.Unix(int64(flow.TimeFlowEnd), 0)
 	record.SamplerAddress = f.samplerAddress
 	record.Flows = append(record.Flows, flow)
 }
