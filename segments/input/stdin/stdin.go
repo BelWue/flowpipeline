@@ -92,13 +92,15 @@ func (segment *StdIn) Run(wg *sync.WaitGroup) {
 			}
 			segment.Out <- msg
 		case line := <-fromStdin:
-			msg := &pb.EnrichedFlow{}
-			err := protojson.Unmarshal(line, msg)
-			if err != nil {
-				log.Printf("[warning] StdIn: Skipping a flow, failed to recode input to protobuf: %v", err)
-				continue
-			}
-			segment.Out <- msg
+			go func(){
+				msg := &pb.EnrichedFlow{}
+				err := protojson.Unmarshal(line, msg)
+				if err != nil {
+					log.Printf("[warning] StdIn: Skipping a flow, failed to recode input to protobuf: %v", err)
+					return
+				}
+				segment.Out <- msg
+			}()
 		}
 	}
 }
