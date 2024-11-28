@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/signal"
 	"plugin"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -88,8 +89,9 @@ func (i *flagArray) Set(value string) error {
 
 func main() {
 	var pluginPaths flagArray
-	flag.Var(&pluginPaths, "p", "path to load segment plugins from, can be specified multiple times")
-	logLevel := flag.String("l", "info", "loglevel: one of 'trace', 'debug', 'info', 'warning', 'error', 'fatal', or 'panic'")
+	flag.Var(&pluginPaths, "p", "Path to load segment plugins from, can be specified multiple times")
+	logLevel := flag.String("l", "warning", "Loglevel: one of 'debug', 'info', 'warning' or 'error'")
+	concurrency := flag.Uint("n", 1, "Number of concurrent pipelines to spawn. Set to 0 to enable automatic setting according to GOMAXPROCS. Only the default value 1 guarantees a stable order of the flows in and out of flowpipeline.")
 	version := flag.Bool("v", false, "print version")
 	prettyLogging := flag.Bool("j", false, "Json log")
 	configFile := flag.String("c", "config.yml", "location of the config file in yml format")
@@ -125,9 +127,22 @@ func main() {
 		log.Error().Err(err).Msg(" reading config file: ")
 		return
 	}
-	pipe := pipeline.NewFromConfig(config)
-	pipe.Start()
-	pipe.AutoDrain()
+
+	pipelineCount := 1
+	if *concurrency == 0 {
+		pipelineCount = runtime.GOMAXPROCS(0)
+	} else {
+		pipelineCount = int(*concurrency)
+	}
+
+	segmentReprs := pipeline.SegmentReprsFromConfig(config)
+	for i := 0; i < pipelineCount; i++ {
+		segments := pipeline.SegmentsFromRepr(segmentReprs)
+		pipe := pipeline.New(segments...)
+		pipe.Start()
+		pipe.AutoDrain()
+		defer pipe.Close()
+	}
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGINT)
@@ -139,7 +154,6 @@ func main() {
 		log.Fatal().Msg("Failed to shut down gracefully - force quitting")
 		os.Exit(5)
 	}()
-	pipe.Close()
 }
 
 func zerologLogLevel(logLevel *string) zerolog.Level {

@@ -13,13 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// A config representation of a segment. It is intended to look like this:
-//   - segment: pass
-//     config:
-//     key: value
-//     foo: bar
-//
-// This struct has the appropriate yaml tags inline.
+// A config representation of a segment.
 type SegmentRepr struct {
 	Name   string        `yaml:"segment"`             // to be looked up with a registry
 	Config Config        `yaml:"config"`              // to be expanded by our instance
@@ -65,33 +59,42 @@ func (s *SegmentRepr) ExpandedConfig() map[string]string {
 // initializes a Pipeline with them.
 func NewFromConfig(config []byte) *Pipeline {
 	// parse a list of SegmentReprs from yaml
-	segmentReprs := new([]SegmentRepr)
+	segmentReprs := SegmentReprsFromConfig(config)
+
+	// build segments from it
+	segments := SegmentsFromRepr(segmentReprs)
+
+	// we have Segments parsed and ready, instantiate them as actual pipeline
+	return New(segments...)
+}
+
+// SegmentReprsFromConfig returns a list of segment representation objects from a config.
+func SegmentReprsFromConfig(config []byte) []SegmentRepr {
+	// parse a list of SegmentReprs from yaml
+	segmentReprs := []SegmentRepr{}
 
 	err := yaml.Unmarshal(config, &segmentReprs)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error parsing configuration YAML: ")
 	}
 
-	segments := SegmentsFromRepr(segmentReprs)
-
-	// we have SegmentReprs parsed, instanciate them as actual Segments
-	return New(segments...)
+	return segmentReprs
 }
 
 // Creates a list of Segments from their config representations. Handles
 // recursive definitions found in Segments.
-func SegmentsFromRepr(segmentReprs *[]SegmentRepr) []segments.Segment {
-	segmentList := make([]segments.Segment, len(*segmentReprs))
-	for i, segmentrepr := range *segmentReprs {
+func SegmentsFromRepr(segmentReprs []SegmentRepr) []segments.Segment {
+	segmentList := make([]segments.Segment, len(segmentReprs))
+	for i, segmentrepr := range segmentReprs {
 		segmentTemplate := segments.LookupSegment(segmentrepr.Name) // a typed nil instance
 		// the Segment's New method knows how to handle our config
 		segment := segmentTemplate.New(segmentrepr.ExpandedConfig())
 		switch segment := segment.(type) { // handle special segments
 		case *branch.Branch:
 			segment.ImportBranches(
-				New(SegmentsFromRepr(&segmentrepr.If)...),
-				New(SegmentsFromRepr(&segmentrepr.Then)...),
-				New(SegmentsFromRepr(&segmentrepr.Else)...),
+				New(SegmentsFromRepr(segmentrepr.If)...),
+				New(SegmentsFromRepr(segmentrepr.Then)...),
+				New(SegmentsFromRepr(segmentrepr.Else)...),
 			)
 		// Insert custom config parameters into segments
 		case *traffic_specific_toptalkers.TrafficSpecificToptalkers:
