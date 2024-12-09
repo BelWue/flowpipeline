@@ -12,30 +12,26 @@ import (
 	"os"
 	"os/signal"
 	"plugin"
+	"runtime"
 	"strings"
 
-	"github.com/bwNetFlow/flowpipeline/pipeline"
 	"github.com/hashicorp/logutils"
 
+	"github.com/bwNetFlow/flowpipeline/pipeline"
 	_ "github.com/bwNetFlow/flowpipeline/segments/alert/http"
-
+	_ "github.com/bwNetFlow/flowpipeline/segments/analysis/toptalkers_metrics"
 	_ "github.com/bwNetFlow/flowpipeline/segments/controlflow/branch"
-
 	_ "github.com/bwNetFlow/flowpipeline/segments/export/clickhouse"
 	_ "github.com/bwNetFlow/flowpipeline/segments/export/influx"
 	_ "github.com/bwNetFlow/flowpipeline/segments/export/prometheus"
-
 	_ "github.com/bwNetFlow/flowpipeline/segments/filter/drop"
 	_ "github.com/bwNetFlow/flowpipeline/segments/filter/elephant"
-
 	_ "github.com/bwNetFlow/flowpipeline/segments/filter/flowfilter"
-
 	_ "github.com/bwNetFlow/flowpipeline/segments/input/bpf"
 	_ "github.com/bwNetFlow/flowpipeline/segments/input/goflow"
 	_ "github.com/bwNetFlow/flowpipeline/segments/input/kafkaconsumer"
 	_ "github.com/bwNetFlow/flowpipeline/segments/input/packet"
 	_ "github.com/bwNetFlow/flowpipeline/segments/input/stdin"
-
 	_ "github.com/bwNetFlow/flowpipeline/segments/modify/addcid"
 	_ "github.com/bwNetFlow/flowpipeline/segments/modify/addrstrings"
 	_ "github.com/bwNetFlow/flowpipeline/segments/modify/anonymize"
@@ -48,21 +44,16 @@ import (
 	_ "github.com/bwNetFlow/flowpipeline/segments/modify/remoteaddress"
 	_ "github.com/bwNetFlow/flowpipeline/segments/modify/reversedns"
 	_ "github.com/bwNetFlow/flowpipeline/segments/modify/snmp"
-
-	_ "github.com/bwNetFlow/flowpipeline/segments/pass"
-
 	_ "github.com/bwNetFlow/flowpipeline/segments/output/csv"
 	_ "github.com/bwNetFlow/flowpipeline/segments/output/json"
 	_ "github.com/bwNetFlow/flowpipeline/segments/output/kafkaproducer"
 	_ "github.com/bwNetFlow/flowpipeline/segments/output/lumberjack"
 	_ "github.com/bwNetFlow/flowpipeline/segments/output/sqlite"
-
+	_ "github.com/bwNetFlow/flowpipeline/segments/pass"
 	_ "github.com/bwNetFlow/flowpipeline/segments/print/count"
 	_ "github.com/bwNetFlow/flowpipeline/segments/print/printdots"
 	_ "github.com/bwNetFlow/flowpipeline/segments/print/printflowdump"
 	_ "github.com/bwNetFlow/flowpipeline/segments/print/toptalkers"
-
-	_ "github.com/bwNetFlow/flowpipeline/segments/analysis/toptalkers_metrics"
 )
 
 var Version string
@@ -80,10 +71,11 @@ func (i *flagArray) Set(value string) error {
 
 func main() {
 	var pluginPaths flagArray
-	flag.Var(&pluginPaths, "p", "path to load segment plugins from, can be specified multiple times")
-	loglevel := flag.String("l", "warning", "loglevel: one of 'debug', 'info', 'warning' or 'error'")
+	flag.Var(&pluginPaths, "p", "Path to load segment plugins from, can be specified multiple times.")
+	loglevel := flag.String("l", "warning", "Loglevel: one of 'debug', 'info', 'warning' or 'error'.")
 	version := flag.Bool("v", false, "print version")
-	configfile := flag.String("c", "config.yml", "location of the config file in yml format")
+	concurrency := flag.Uint("j", 1, "How many concurrent pipelines to spawn. Set to 0 to enable automatic setting according to GOMAXPROCS. Only the default value 1 guarantees a stable order of the flows in and out of flowpipeline.")
+	configfile := flag.String("c", "config.yml", "Location of the config file in yml format.")
 	flag.Parse()
 
 	if *version {
@@ -116,13 +108,24 @@ func main() {
 		log.Printf("[error] reading config file: %s", err)
 		return
 	}
-	pipe := pipeline.NewFromConfig(config)
-	pipe.Start()
-	pipe.AutoDrain()
+
+	pipelineCount := 1
+	if *concurrency == 0 {
+		pipelineCount = runtime.GOMAXPROCS(0)
+	} else {
+		pipelineCount = int(*concurrency)
+	}
+
+	segmentReprs := pipeline.SegmentReprsFromConfig(config)
+	for i := 0; i < pipelineCount; i++ {
+		segments := pipeline.SegmentsFromRepr(segmentReprs)
+		pipe := pipeline.New(segments...)
+		pipe.Start()
+		pipe.AutoDrain()
+		defer pipe.Close()
+	}
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt)
 	<-sigs
-
-	pipe.Close()
 }
