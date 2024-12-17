@@ -30,6 +30,19 @@ require (
 )
 
 require (
+	github.com/jonboulle/clockwork v0.4.0 // indirect
+	github.com/montanaflynn/stats v0.7.1 // indirect
+	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
+	github.com/robfig/cron/v3 v3.0.1 // indirect
+	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
+	github.com/xdg-go/scram v1.1.2 // indirect
+	github.com/xdg-go/stringprep v1.0.4 // indirect
+	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
+	go.uber.org/atomic v1.10.0 // indirect
+	golang.org/x/exp v0.0.0-20240613232115-7f521ea00fb8 // indirect
+)
+
+require (
 	github.com/ClickHouse/ch-go v0.53.0 // indirect
 	github.com/alecthomas/participle/v2 v2.0.0-beta.1 // indirect
 	github.com/alouca/gologger v0.0.0-20120904114645-7d4b7291de9c // indirect
@@ -46,11 +59,13 @@ require (
 	github.com/eapache/go-xerial-snappy v0.0.0-20230111030713-bf00bc1b83b6 // indirect
 	github.com/eapache/queue v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
+	github.com/go-co-op/gocron v1.37.0
+	github.com/go-co-op/gocron/v2 v2.12.3
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.6.1 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
@@ -64,7 +79,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/k-sone/critbitgo v1.4.0 // indirect
 	github.com/kaorimatz/go-mrt v0.0.0-20210326003454-aa11f3646f93 // indirect
-	github.com/klauspost/compress v1.15.15 // indirect
+	github.com/klauspost/compress v1.15.15
 	github.com/libp2p/go-reuseport v0.2.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
@@ -94,11 +109,11 @@ require (
 	github.com/vishvananda/netns v0.0.4 // indirect
 	go.opentelemetry.io/otel v1.13.0 // indirect
 	go.opentelemetry.io/otel/trace v1.13.0 // indirect
-	golang.org/x/crypto v0.6.0 // indirect
-	golang.org/x/net v0.7.0 // indirect
-	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
+	golang.org/x/crypto v0.22.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sys v0.19.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto v0.0.0-20230222225845-10f96fb3dbec // indirect
 	google.golang.org/grpc v1.53.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

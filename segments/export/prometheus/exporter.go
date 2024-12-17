@@ -51,6 +51,20 @@ func (e *Exporter) Initialize(labels []string) {
 
 }
 
+func (e *Exporter) ResetCounter() {
+	log.Printf("[INFO] prometheus export: resetting counter")
+	e.kafkaOffsets.Reset()
+	e.flowBits.Reset()
+
+	e.MetaReg.Unregister(e.kafkaMessageCount)
+	e.kafkaMessageCount = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "kafka_messages_total",
+			Help: "Number of Kafka messages",
+		})
+	e.MetaReg.MustRegister(e.kafkaMessageCount)
+}
+
 // listen on given endpoint addr with Handler for metricPath and flowdataPath
 func (e *Exporter) ServeEndpoints(segment *Prometheus) {
 	mux := http.NewServeMux()

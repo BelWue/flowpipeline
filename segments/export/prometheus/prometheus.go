@@ -23,17 +23,20 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bwNetFlow/flowpipeline/pb"
 	"github.com/bwNetFlow/flowpipeline/segments"
+	"github.com/go-co-op/gocron/v2"
 )
 
 type Prometheus struct {
 	segments.BaseSegment
-	Endpoint     string   // optional, default value is ":8080"
-	MetricsPath  string   // optional, default is "/metrics"
-	FlowdataPath string   // optional, default is "/flowdata"
-	Labels       []string // optional, list of labels to be exported
+	Endpoint       string         // optional, default value is ":8080"
+	MetricsPath    string         // optional, default is "/metrics"
+	FlowdataPath   string         // optional, default is "/flowdata"
+	Labels         []string       // optional, list of labels to be exported
+	VacuumInterval *time.Duration // optional, intervall in which counters should be reset
 }
 
 func (segment Prometheus) New(config map[string]string) segments.Segment {
@@ -55,11 +58,21 @@ func (segment Prometheus) New(config map[string]string) segments.Segment {
 	} else {
 		flowdataPath = config["flowdatapath"]
 	}
+	var vacuumInterval *time.Duration
+	if config["vacuum_interval"] != "" {
+		vacuumIntervalDuration, err := time.ParseDuration(config["vacuum_interval"])
+		if err != nil {
+			log.Println("[info] prometheus: Missing configuration parameter 'flowdatapath'. Using default path \"/flowdata\"")
+		} else {
+			vacuumInterval = &vacuumIntervalDuration
+		}
+	}
 
 	newsegment := &Prometheus{
-		Endpoint:     endpoint,
-		MetricsPath:  metricsPath,
-		FlowdataPath: flowdataPath,
+		Endpoint:       endpoint,
+		MetricsPath:    metricsPath,
+		FlowdataPath:   flowdataPath,
+		VacuumInterval: vacuumInterval,
 	}
 
 	// set default labels if not configured
@@ -90,8 +103,10 @@ func (segment *Prometheus) Run(wg *sync.WaitGroup) {
 	}()
 
 	var promExporter = Exporter{}
-	promExporter.Initialize(segment.Labels)
-	promExporter.ServeEndpoints(segment)
+	segment.initializeExporter(&promExporter)
+	if segment.VacuumInterval != nil {
+		segment.AddVacuumCronJob(&promExporter)
+	}
 
 	for msg := range segment.In {
 		labelset := make(map[string]string)
@@ -118,6 +133,27 @@ func (segment *Prometheus) Run(wg *sync.WaitGroup) {
 		promExporter.Increment(msg.Bytes, msg.Packets, labelset)
 		segment.Out <- msg
 	}
+}
+
+func (segment *Prometheus) initializeExporter(exporter *Exporter) {
+	exporter.Initialize(segment.Labels)
+	exporter.ServeEndpoints(segment)
+}
+
+func (segment *Prometheus) AddVacuumCronJob(promExporter *Exporter) {
+	scheduler, err := gocron.NewScheduler()
+	if err != nil {
+		log.Printf("[Error] Failed inizialiozing prometheus exporter vacuum job: " + err.Error())
+	}
+	_, err = scheduler.NewJob(
+		gocron.DurationJob(*segment.VacuumInterval),
+		gocron.NewTask(promExporter.ResetCounter),
+	)
+	if err != nil {
+		log.Printf("[Error] Failed inizialiozing prometheus exporter vacuum job: " + err.Error())
+	}
+	// start the scheduler
+	scheduler.Start()
 }
 
 func init() {
