@@ -1,0 +1,225 @@
+syntax = "proto3";
+package flowpb;
+option go_package = "github.com/bwNetFlow/flowpipeline/pb;";
+
+message LegacyEnrichedFlow {
+
+  enum FlowType {
+    FLOWUNKNOWN = 0;
+    SFLOW_5 = 1;
+    NETFLOW_V5 = 2;
+    NETFLOW_V9 = 3;
+    IPFIX = 4;
+    EBPF = 5;
+  }
+  FlowType Type = 1;
+
+  uint64 TimeReceived = 2;
+  uint32 SequenceNum = 4;
+  uint64 SamplingRate = 3;
+
+  uint32 FlowDirection = 42;
+
+  // Sampler information
+  bytes SamplerAddress = 11;
+
+  // Found inside packet
+  uint64 TimeFlowStart = 38;
+  uint64 TimeFlowEnd = 5;
+
+  // Size of the sampled packet
+  uint64 Bytes = 9;
+  uint64 Packets = 10;
+
+  // Source/destination addresses
+  bytes SrcAddr = 6;
+  bytes DstAddr = 7;
+
+  // Layer 3 protocol (IPv4/IPv6/ARP/MPLS...)
+  uint32 Etype = 30;
+
+  // Layer 4 protocol
+  uint32 Proto = 20;
+
+  // Ports for UDP and TCP
+  uint32 SrcPort = 21;
+  uint32 DstPort = 22;
+
+  // Interfaces
+  uint32 InIf = 18;
+  uint32 OutIf = 19;
+
+  // Ethernet information
+  uint64 SrcMac = 27;
+  uint64 DstMac = 28;
+
+  // Vlan
+  uint32 SrcVlan = 33;
+  uint32 DstVlan = 34;
+  // 802.1q VLAN in sampled packet
+  uint32 VlanId = 29;
+
+  // VRF
+  uint32 IngressVrfID = 39;
+  uint32 EgressVrfID = 40;
+
+  // IP and TCP special flags
+  uint32 IPTos = 23;
+  uint32 ForwardingStatus = 24;
+  uint32 IPTTL = 25;
+  uint32 TCPFlags = 26;
+  uint32 IcmpType = 31;
+  uint32 IcmpCode = 32;
+  uint32 IPv6FlowLabel = 37;
+  // Fragments (IPv4/IPv6)
+  uint32 FragmentId = 35;
+  uint32 FragmentOffset = 36;
+  uint32 BiFlowDirection = 41;
+
+  // Autonomous system information
+  uint32 SrcAS = 14;
+  uint32 DstAS = 15;
+
+  bytes NextHop = 12;
+  uint32 NextHopAS = 13;
+
+  // Prefix size
+  uint32 SrcNet = 16;
+  uint32 DstNet = 17;
+
+  // MPLS information
+  bool HasMPLS = 53;
+  uint32 MPLSCount = 54;
+  uint32 MPLS1TTL = 55; // First TTL
+  uint32 MPLS1Label = 56; // First Label
+  uint32 MPLS2TTL = 57; // Second TTL
+  uint32 MPLS2Label = 58; // Second Label
+  uint32 MPLS3TTL = 59; // Third TTL
+  uint32 MPLS3Label = 60; // Third Label
+  uint32 MPLSLastTTL = 61; // Last TTL
+  uint32 MPLSLastLabel = 62; // Last Label
+
+  // bwNET custom fields:
+
+  // input/bpf:
+  // Many of the above fields can not be filled when creating flows from eBPF.
+  // However, there are some additional packet level metrics available,
+  // inspired by this list:
+  // https://github.com/ahlashkari/CICFlowMeter/blob/master/ReadMe.txt
+
+  uint32 PacketBytesMin = 1100;    // new, single packet means uint32 < MTU
+  uint32 PacketBytesMax = 1101;    // new
+  uint32 PacketBytesMean = 1102;   // new
+  uint32 PacketBytesStdDev = 1103; // new
+
+  uint64 PacketIATMin = 1110;    // new
+  uint64 PacketIATMax = 1111;    // new
+  uint64 PacketIATMean = 1112;   // new
+  uint64 PacketIATStdDev = 1113; // new
+
+  uint32 HeaderBytes = 1120; // new
+
+  uint64 FINFlagCount = 1130; // new
+  uint64 SYNFlagCount = 1131; // new
+  uint64 RSTFlagCount = 1132; // new
+  uint64 PSHFlagCount = 1133; // new
+  uint64 ACKFlagCount = 1134; // new
+  uint64 URGFlagCount = 1135; // new
+  uint64 CWRFlagCount = 1136; // new
+  uint64 ECEFlagCount = 1137; // new
+
+  uint64 PayloadPackets = 1140; // new
+
+  uint64 TimeActiveMin = 1150;    // new
+  uint64 TimeActiveMax = 1151;    // new
+  uint64 TimeActiveMean = 1152;   // new
+  uint64 TimeActiveStdDev = 1153; // new
+  uint64 TimeIdleMin = 1154;      // new
+  uint64 TimeIdleMax = 1155;      // new
+  uint64 TimeIdleMean = 1156;     // new
+  uint64 TimeIdleStdDev = 1157;   // new
+
+  // modify/addcid
+  uint32 Cid = 1000; // TODO: deprecate and provide as helper?
+  string CidString = 1001; // deprecated, delete for v1.0.0
+  uint32 SrcCid = 1012;
+  uint32 DstCid = 1013;
+
+  // modify/anonymize
+  enum AnonymizedType {
+    NotAnonymized = 0;
+    CryptoPAN = 1;
+  }
+  AnonymizedType SrcAddrAnon = 1160;
+  AnonymizedType DstAddrAnon = 1161;
+  uint32 SrcAddrPreservedLen = 1162;
+  uint32 DstAddrPreservedLen = 1163;
+
+  AnonymizedType SamplerAddrAnon = 1164;
+  uint32 SamplerAddrAnonPreservedPrefixLen = 1165;
+
+  // modify/bgp
+  // as done by a number of Netflow implementations, these refer to the destination
+  repeated uint32 ASPath = 1171;
+  uint32 Med = 1172;
+  uint32 LocalPref = 1173;
+  enum ValidationStatusType {
+    Unknown = 0;
+    Valid = 1;
+    NotFound = 2;
+    Invalid = 3;
+  }
+  ValidationStatusType ValidationStatus = 1174;
+
+  // modify/geolocation
+  string RemoteCountry = 1010; // TODO: deprecate and provide as helper
+  string SrcCountry = 1014;
+  string DstCountry = 1015;
+
+  // modify/normalize
+  enum NormalizedType {
+    No = 0;
+    Yes = 1;
+  }
+  NormalizedType Normalized = 1002; // TODO: deprecate and replace with helper?
+  // TODO: if not, replace with OriginalSamplingRate instead and set SamplingRate to 1?
+
+  // modify/protomap
+  string ProtoName = 1009; // TODO: deprecate and replace with helper, why lug a string along...
+
+  // modify/remoteaddress
+  enum RemoteAddrType {
+    Neither = 0;
+    Src = 1;
+    Dst = 2;
+  }
+  RemoteAddrType RemoteAddr = 1011; // TODO: figure out a better system? applicable only to service providers right now...
+
+  // modify/reversedns
+  string SrcHostName = 1180;
+  string DstHostName = 1181;
+  string NextHopHostName = 1182;
+  string SrcASName = 1183;
+  string DstASName = 1184;
+  string NextHopASName = 1185;
+  string SamplerHostName = 1186;
+
+  // modify/snmp
+  string SrcIfName = 1003;  // TODO: rename to match InIf and OutIf
+  string SrcIfDesc = 1004;  // TODO: rename to match InIf and OutIf
+  uint32 SrcIfSpeed = 1005; // TODO: rename to match InIf and OutIf
+  string DstIfName = 1006;  // TODO: rename to match InIf and OutIf
+  string DstIfDesc = 1007;  // TODO: rename to match InIf and OutIf
+  uint32 DstIfSpeed = 1008; // TODO: rename to match InIf and OutIf
+
+  // general
+  string Note = 1016; // free-form field to implement anything
+
+  // modify/addrstrings
+  string SourceIP = 1290;
+  string DestinationIP = 1291;
+  string NextHopIP = 1292;
+  string SamplerIP = 1293;
+  string SourceMAC = 1294;
+  string DestinationMAC = 1295;
+}

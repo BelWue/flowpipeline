@@ -92,7 +92,7 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 			if !path.Best {
 				continue
 			}
-			msg.ASPath = path.AsPath
+			msg.AsPath = path.AsPath
 			msg.Med = path.Med
 			msg.LocalPref = path.LocalPref
 			switch path.Validation {
@@ -106,8 +106,8 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 				msg.ValidationStatus = pb.EnrichedFlow_Unknown
 			}
 			// for router exported netflow, the following are likely overwriting their own annotations
-			msg.DstAS = path.AsPath[len(path.AsPath)-1]
-			msg.NextHopAS = path.AsPath[0]
+			msg.DstAs = path.AsPath[len(path.AsPath)-1]
+			msg.NextHopAs = path.AsPath[0]
 			if nh := net.ParseIP(path.NextHop); nh != nil {
 				msg.NextHop = nh
 			}

@@ -53,7 +53,7 @@ func (segment Csv) New(config map[string]string) segments.Segment {
 			field = strings.TrimSpace(field)
 			_, found := protofields.FieldByName(field)
 			if !found {
-				log.Printf("[error] Csv: Field specified in 'fields' does not exist.")
+				log.Printf("[error] Csv: Field '%s' specified in 'fields' does not exist.", field)
 				return nil
 			}
 			heading = append(heading, field)

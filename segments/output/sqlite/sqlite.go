@@ -72,7 +72,7 @@ func (segment Sqlite) New(config map[string]string) segments.Segment {
 		for _, field := range conffields {
 			protofield, found := protofields.FieldByName(field)
 			if !found {
-				log.Printf("[error] Csv: Field specified in 'fields' does not exist.")
+				log.Printf("[error] sqlite: Field '%s' specified in 'fields' does not exist.", field)
 				return nil
 			}
 			newsegment.fieldNames = append(newsegment.fieldNames, field)

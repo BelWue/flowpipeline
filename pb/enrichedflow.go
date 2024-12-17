@@ -3,140 +3,7 @@ package pb
 import (
 	"fmt"
 	"net"
-
-	oldpb "github.com/bwNetFlow/protobuf/go"
-	goflowpb "github.com/netsampler/goflow2/pb"
 )
-
-func NewFromOld(msg *oldpb.FlowMessage) *EnrichedFlow {
-	return &EnrichedFlow{
-		Type:             EnrichedFlow_FlowType(msg.Type),
-		TimeReceived:     msg.TimeReceived,
-		SequenceNum:      msg.SequenceNum,
-		SamplingRate:     msg.SamplingRate,
-		FlowDirection:    msg.FlowDirection,
-		SamplerAddress:   msg.SamplerAddress,
-		TimeFlowStart:    msg.TimeFlowStart,
-		TimeFlowEnd:      msg.TimeFlowEnd,
-		Bytes:            msg.Bytes,
-		Packets:          msg.Packets,
-		SrcAddr:          msg.SrcAddr,
-		DstAddr:          msg.DstAddr,
-		Etype:            msg.Etype,
-		Proto:            msg.Proto,
-		SrcPort:          msg.SrcPort,
-		DstPort:          msg.DstPort,
-		InIf:             msg.InIf,
-		OutIf:            msg.OutIf,
-		SrcMac:           msg.SrcMac,
-		DstMac:           msg.DstMac,
-		SrcVlan:          msg.SrcVlan,
-		DstVlan:          msg.DstVlan,
-		VlanId:           msg.VlanId,
-		IngressVrfID:     msg.IngressVrfID,
-		EgressVrfID:      msg.EgressVrfID,
-		IPTos:            msg.IPTos,
-		ForwardingStatus: msg.ForwardingStatus,
-		IPTTL:            msg.IPTTL,
-		TCPFlags:         msg.TCPFlags,
-		IcmpType:         msg.IcmpType,
-		IcmpCode:         msg.IcmpCode,
-		IPv6FlowLabel:    msg.IPv6FlowLabel,
-		FragmentId:       msg.FragmentId,
-		FragmentOffset:   msg.FragmentOffset,
-		BiFlowDirection:  msg.BiFlowDirection,
-		SrcAS:            msg.SrcAS,
-		DstAS:            msg.DstAS,
-		NextHop:          msg.NextHop,
-		NextHopAS:        msg.NextHopAS,
-		SrcNet:           msg.SrcNet,
-		DstNet:           msg.DstNet,
-		HasMPLS:          msg.HasMPLS,
-		MPLSCount:        msg.MPLSCount,
-		MPLS1TTL:         msg.MPLS1TTL,
-		MPLS1Label:       msg.MPLS1Label,
-		MPLS2TTL:         msg.MPLS2TTL,
-		MPLS2Label:       msg.MPLS2Label,
-		MPLS3TTL:         msg.MPLS3TTL,
-		MPLS3Label:       msg.MPLS3Label,
-		MPLSLastTTL:      msg.MPLSLastTTL,
-		MPLSLastLabel:    msg.MPLSLastLabel,
-		Cid:              msg.Cid,
-		CidString:        msg.CidString,
-		SrcCid:           msg.SrcCid,
-		DstCid:           msg.DstCid,
-		Normalized:       EnrichedFlow_NormalizedType(msg.Normalized),
-		SrcIfName:        msg.SrcIfName,
-		SrcIfDesc:        msg.SrcIfDesc,
-		SrcIfSpeed:       msg.SrcIfSpeed,
-		DstIfName:        msg.DstIfName,
-		DstIfDesc:        msg.DstIfDesc,
-		DstIfSpeed:       msg.DstIfSpeed,
-		ProtoName:        msg.ProtoName,
-		RemoteCountry:    msg.RemoteCountry,
-		SrcCountry:       msg.SrcCountry,
-		DstCountry:       msg.DstCountry,
-		RemoteAddr:       EnrichedFlow_RemoteAddrType(msg.RemoteAddr),
-		Note:             msg.Note,
-	}
-}
-
-func NewFromGoflow(msg *goflowpb.FlowMessage) *EnrichedFlow {
-	return &EnrichedFlow{
-		Type:             EnrichedFlow_FlowType(msg.Type),
-		TimeReceived:     msg.TimeReceived,
-		SequenceNum:      msg.SequenceNum,
-		SamplingRate:     msg.SamplingRate,
-		FlowDirection:    msg.FlowDirection,
-		SamplerAddress:   msg.SamplerAddress,
-		TimeFlowStart:    msg.TimeFlowStart,
-		TimeFlowEnd:      msg.TimeFlowEnd,
-		Bytes:            msg.Bytes,
-		Packets:          msg.Packets,
-		SrcAddr:          msg.SrcAddr,
-		DstAddr:          msg.DstAddr,
-		Etype:            msg.Etype,
-		Proto:            msg.Proto,
-		SrcPort:          msg.SrcPort,
-		DstPort:          msg.DstPort,
-		InIf:             msg.InIf,
-		OutIf:            msg.OutIf,
-		SrcMac:           msg.SrcMac,
-		DstMac:           msg.DstMac,
-		SrcVlan:          msg.SrcVlan,
-		DstVlan:          msg.DstVlan,
-		VlanId:           msg.VlanId,
-		IngressVrfID:     msg.IngressVrfID,
-		EgressVrfID:      msg.EgressVrfID,
-		IPTos:            msg.IPTos,
-		ForwardingStatus: msg.ForwardingStatus,
-		IPTTL:            msg.IPTTL,
-		TCPFlags:         msg.TCPFlags,
-		IcmpType:         msg.IcmpType,
-		IcmpCode:         msg.IcmpCode,
-		IPv6FlowLabel:    msg.IPv6FlowLabel,
-		FragmentId:       msg.FragmentId,
-		FragmentOffset:   msg.FragmentOffset,
-		BiFlowDirection:  msg.BiFlowDirection,
-		SrcAS:            msg.SrcAS,
-		DstAS:            msg.DstAS,
-		NextHop:          msg.NextHop,
-		NextHopAS:        msg.NextHopAS,
-		SrcNet:           msg.SrcNet,
-		DstNet:           msg.DstNet,
-		HasMPLS:          msg.HasMPLS,
-		MPLSCount:        msg.MPLSCount,
-		MPLS1TTL:         msg.MPLS1TTL,
-		MPLS1Label:       msg.MPLS1Label,
-		MPLS2TTL:         msg.MPLS2TTL,
-		MPLS2Label:       msg.MPLS2Label,
-		MPLS3TTL:         msg.MPLS3TTL,
-		MPLS3Label:       msg.MPLS3Label,
-		MPLSLastTTL:      msg.MPLSLastTTL,
-		MPLSLastLabel:    msg.MPLSLastLabel,
-		// leave the 'Custom*' fields out of this conversion
-	}
-}
 
 var (
 	FlowDirectionMap = map[uint32]string{
@@ -301,7 +168,8 @@ func (flow *EnrichedFlow) GetBps() uint64 {
 	if duration == 0 {
 		duration = 1
 	}
-	return flow.Bytes / duration
+	bpns := flow.Bytes / duration
+	return bpns
 }
 
 func (flow *EnrichedFlow) GetPps() uint64 {
@@ -309,5 +177,6 @@ func (flow *EnrichedFlow) GetPps() uint64 {
 	if duration == 0 {
 		duration = 1
 	}
-	return flow.Packets / duration
+	ppns := flow.Packets / duration
+	return ppns
 }

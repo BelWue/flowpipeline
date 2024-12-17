@@ -7,7 +7,6 @@ import (
 	"sync"
 
 	"github.com/bwNetFlow/flowfilter/parser"
-	"github.com/bwNetFlow/flowfilter/visitors"
 	"github.com/bwNetFlow/flowpipeline/pb"
 	"github.com/bwNetFlow/flowpipeline/segments"
 )
@@ -32,7 +31,7 @@ func (segment FlowFilter) New(config map[string]string) segments.Segment {
 		log.Printf("[error] FlowFilter: Syntax error in filter expression: %v", err)
 		return nil
 	}
-	filter := &visitors.Filter{}
+	filter := &Filter{}
 	if _, err := filter.CheckFlow(newSegment.expression, &pb.EnrichedFlow{}); err != nil {
 		log.Printf("[error] FlowFilter: Semantic error in filter expression: %v", err)
 		return nil
@@ -48,7 +47,7 @@ func (segment *FlowFilter) Run(wg *sync.WaitGroup) {
 
 	log.Printf("[info] FlowFilter: Using filter expression: %s", segment.Filter)
 
-	filter := &visitors.Filter{}
+	filter := &Filter{}
 	for msg := range segment.In {
 		if match, _ := filter.CheckFlow(segment.expression, msg); match {
 			segment.Out <- msg

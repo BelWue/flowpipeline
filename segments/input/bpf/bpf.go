@@ -9,17 +9,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bwNetFlow/bpf_flowexport/flowexport"
-	"github.com/bwNetFlow/bpf_flowexport/packetdump"
 	"github.com/bwNetFlow/flowpipeline/segments"
 )
 
-// FIXME: the bpf_flowexport projects needs to adopt the new flowmsg too
 type Bpf struct {
 	segments.BaseSegment
 
-	dumper   *packetdump.PacketDumper
-	exporter *flowexport.FlowExporter
+	dumper   PacketDumper
+	exporter *FlowExporter
 
 	Device          string // required, the name of the device to capture, e.g. "eth0"
 	ActiveTimeout   string // optional, default is 30m
@@ -53,7 +50,7 @@ func (segment Bpf) New(config map[string]string) segments.Segment {
 	}
 
 	// setup bpf dumping
-	newsegment.dumper = &packetdump.PacketDumper{BufSize: newsegment.BufferSize}
+	newsegment.dumper = PacketDumper{BufSize: newsegment.BufferSize}
 
 	err := newsegment.dumper.Setup(newsegment.Device)
 	if err != nil {
@@ -88,7 +85,7 @@ func (segment Bpf) New(config map[string]string) segments.Segment {
 		log.Printf("[info] Bpf: 'inactivetimeout' set to '%s'.", config["inactivetimeout"])
 	}
 
-	newsegment.exporter, err = flowexport.NewFlowExporter(newsegment.ActiveTimeout, newsegment.InactiveTimeout)
+	newsegment.exporter, err = NewFlowExporter(newsegment.ActiveTimeout, newsegment.InactiveTimeout)
 	if err != nil {
 		log.Printf("[error] Bpf: error setting up exporter: %s", err)
 		return nil

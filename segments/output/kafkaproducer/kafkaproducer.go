@@ -40,6 +40,7 @@ type KafkaProducer struct {
 	Pass        string // required if auth is true
 	Tls         bool   // optional, default is true
 	Auth        bool   // optional, default is true
+	Legacy      bool   // optional, default is false
 
 	saramaConfig *sarama.Config
 }
@@ -56,6 +57,18 @@ func (segment KafkaProducer) New(config map[string]string) segments.Segment {
 		newsegment.Server = config["server"]
 		newsegment.Topic = config["topic"]
 	}
+
+	var legacy bool = false
+	if config["legacy"] != "" {
+		if parsedTls, err := strconv.ParseBool(config["legacy"]); err == nil {
+			legacy = parsedTls
+		} else {
+			log.Println("[Error] KafkaProducer: Could not parse 'legacy' parameter, using default false.")
+		}
+	} else {
+		log.Println("[Debug] KafkaProducer: 'legacy' set to default false.")
+	}
+	newsegment.Legacy = legacy
 
 	// set some unconfigurable defaults
 	newsegment.saramaConfig.Producer.RequiredAcks = sarama.WaitForLocal       // Only wait for the leader to ack
@@ -163,9 +176,25 @@ func (segment *KafkaProducer) Run(wg *sync.WaitGroup) {
 	for msg := range segment.In {
 		segment.Out <- msg
 		var binary []byte
-		if binary, err = proto.Marshal(msg); err != nil {
-			log.Printf("[error] KafkaProducer: Error encoding protobuf. %s", err)
-			continue
+		if segment.Legacy {
+			legacyFlow := msg.ConvertToLegacyEnrichedFlow()
+			if binary, err = proto.Marshal(legacyFlow); err != nil {
+				log.Printf("[error] KafkaProducer: Error encoding protobuf. %s", err)
+				continue
+			}
+		} else {
+			if msg != nil {
+				protoProducerMessage := pb.ProtoProducerMessage{}
+				msg.SyncMissingTimeStamps()
+				protoProducerMessage.EnrichedFlow = *msg
+				if binary, err = protoProducerMessage.MarshalBinary(); err != nil {
+					log.Printf("[error] KafkaProducer: Error encoding protobuf. %s", err)
+					continue
+				}
+			} else {
+				log.Printf("[error] KafkaProducer: Empty message")
+				continue
+			}
 		}
 
 		if segment.TopicSuffix == "" {

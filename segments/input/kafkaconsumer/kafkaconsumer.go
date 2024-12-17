@@ -30,6 +30,7 @@ type KafkaConsumer struct {
 	Auth    bool          // optional, default is true
 	StartAt string        // optional, one of "oldest" or "newest", default is "newest"
 	Timeout time.Duration // optional, default is 15s, any parsable duration
+	Legacy  bool          //optional, default is false
 
 	startingOffset int64
 	saramaConfig   *sarama.Config
@@ -48,6 +49,18 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 		newsegment.Topic = config["topic"]
 		newsegment.Group = config["group"]
 	}
+
+	var legacy bool = false
+	if config["legacy"] != "" {
+		if parsedTls, err := strconv.ParseBool(config["legacy"]); err == nil {
+			legacy = parsedTls
+		} else {
+			log.Println("[Error] KafkaConsumer: Could not parse 'legacy' parameter, using default false.")
+		}
+	} else {
+		log.Println("[Debug] KafkaConsumer: 'legacy' set to default false.")
+	}
+	newsegment.Legacy = legacy
 
 	// set some unconfigurable defaults
 	// newsegment.saramaConfig.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
@@ -170,8 +183,9 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 
 	handlerCtx, handlerCancel := context.WithCancel(context.Background())
 	var handler = &Handler{
-		ready: make(chan bool),
-		flows: make(chan *pb.EnrichedFlow),
+		ready:  make(chan bool),
+		flows:  make(chan *pb.EnrichedFlow),
+		legacy: segment.Legacy,
 	}
 	handlerWg := sync.WaitGroup{}
 	handlerWg.Add(1)

@@ -8,7 +8,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,16 +19,26 @@ import (
 	"github.com/bwNetFlow/flowpipeline/segments"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/netsampler/goflow2/transport"
-	"github.com/netsampler/goflow2/utils"
+	_ "github.com/netsampler/goflow2/v2/format/binary"
+	"github.com/netsampler/goflow2/v2/utils/debug"
+
+	"github.com/netsampler/goflow2/v2/transport"
+	_ "github.com/netsampler/goflow2/v2/transport/file"
+	_ "github.com/netsampler/goflow2/v2/transport/kafka"
+
+	"github.com/netsampler/goflow2/v2/metrics"
+	rawproducer "github.com/netsampler/goflow2/v2/producer/raw"
+	"github.com/netsampler/goflow2/v2/utils"
 )
 
 type Goflow struct {
 	segments.BaseSegment
-	Listen  []url.URL // optional, default config value for this slice is "sflow://:6343,netflow://:2055"
-	Workers uint64    // optional, amunt of workers to spawn for each endpoint, default is 1
-
-	goflow_in chan *pb.EnrichedFlow
+	Listen     []url.URL // optional, default config value for this slice is "sflow://:6343,netflow://:2055"
+	Workers    uint64    // optional, amunt of workers to spawn for each endpoint, default is 1
+	Blocking   bool      //optional, default is false
+	QueueSize  int       //default is 1000000
+	NumSockets int       //default is 1
+	goflow_in  chan *pb.EnrichedFlow
 }
 
 func (segment Goflow) New(config map[string]string) segments.Segment {
@@ -148,46 +160,76 @@ func (d *myProtobufDriver) Init(context.Context) error { return nil }
 
 func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 	formatter := &myProtobufDriver{}
+	var pipes []utils.FlowPipe
 
 	for _, listenAddrUrl := range segment.Listen {
 		go func(listenAddrUrl url.URL) {
+			var err error
 
 			hostname := listenAddrUrl.Hostname()
 			port, _ := strconv.ParseUint(listenAddrUrl.Port(), 10, 64)
 
-			var err error
+			if segment.NumSockets == 0 {
+				segment.NumSockets = 1
+			}
+
+			if segment.QueueSize == 0 {
+				segment.QueueSize = 1000000
+			}
+
+			cfg := &utils.UDPReceiverConfig{
+				Sockets:          segment.NumSockets,
+				Workers:          int(segment.Workers),
+				QueueSize:        segment.QueueSize,
+				Blocking:         segment.Blocking,
+				ReceiverCallback: metrics.NewReceiverMetric(),
+			}
+			recv, err := utils.NewUDPReceiver(cfg)
+			if err != nil {
+				log.Println("error creating UDP receiver", slog.String("error", err.Error()))
+				os.Exit(1)
+			}
+
+			if err != nil {
+				slog.Error("error transporter", slog.String("error", err.Error()))
+				os.Exit(1)
+			}
+
+			cfgPipe := &utils.PipeConfig{
+				Format:           formatter,
+				Transport:        transport,
+				Producer:         &rawproducer.RawProducer{},
+				NetFlowTemplater: metrics.NewDefaultPromTemplateSystem, // wrap template system to get Prometheus info
+			}
+
+			var pipeline utils.FlowPipe
 			switch scheme := listenAddrUrl.Scheme; scheme {
 			case "netflow":
-				sNF := &utils.StateNetFlow{
-					Format:    formatter,
-					Transport: transport,
-				}
+				pipeline = utils.NewNetFlowPipe(cfgPipe)
 				log.Printf("[info] Goflow: Listening for Netflow v9 on port %d...", port)
-				err = sNF.FlowRoutine(int(segment.Workers), hostname, int(port), false)
 			case "sflow":
-				sSFlow := &utils.StateSFlow{
-					Format:    formatter,
-					Transport: transport,
-				}
+				pipeline = utils.NewSFlowPipe(cfgPipe)
 				log.Printf("[info] Goflow: Listening for sflow on port %d...", port)
-				err = sSFlow.FlowRoutine(int(segment.Workers), hostname, int(port), false)
-			case "nfl":
-				sNFL := &utils.StateNFLegacy{
-					Format:    formatter,
-					Transport: transport,
-				}
+			case "flow":
+				pipeline = utils.NewFlowPipe(cfgPipe)
 				log.Printf("[info] Goflow: Listening for netflow legacy on port %d...", port)
-				err = sNFL.FlowRoutine(int(segment.Workers), hostname, int(port), false)
+			default:
+				log.Fatal("scheme does not exist", slog.String("error", listenAddrUrl.Scheme))
 			}
+
+			decodeFunc := pipeline.DecodeFlow
+			// intercept panic and generate error
+			decodeFunc = debug.PanicDecoderWrapper(decodeFunc)
+			// wrap decoder with Prometheus metrics
+			decodeFunc = metrics.PromDecoderWrapper(decodeFunc, listenAddrUrl.Scheme)
+			pipes = append(pipes, pipeline)
+
+			err = recv.Start(hostname, int(port), decodeFunc)
+
 			if err != nil {
 				log.Fatalf("[error] Goflow: %s", err.Error())
 			}
 
 		}(listenAddrUrl)
 	}
-}
-
-func init() {
-	segment := &Goflow{}
-	segments.RegisterSegment("goflow", segment)
 }

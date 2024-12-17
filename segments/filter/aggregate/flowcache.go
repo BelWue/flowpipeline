@@ -31,7 +31,7 @@ func NewFlowKeyFromFlow(flow *pb.EnrichedFlow) FlowKey {
 		SrcPort: uint16(flow.SrcPort),
 		DstPort: uint16(flow.DstPort),
 		Proto:   flow.Proto,
-		IPTos:   uint8(flow.IPTos),
+		IPTos:   uint8(flow.IpTos),
 		InIface: flow.InIf,
 	}
 }
@@ -79,9 +79,9 @@ func BuildFlow(f *FlowRecord) *pb.EnrichedFlow {
 	msg := &pb.EnrichedFlow{}
 	msg.Type = pb.EnrichedFlow_EBPF
 	msg.SamplerAddress = f.SamplerAddress
-	msg.TimeReceived = uint64(f.TimeReceived.Unix())
-	msg.TimeFlowStart = uint64(f.TimeReceived.Unix())
-	msg.TimeFlowEnd = uint64(f.LastUpdated.Unix())
+	msg.TimeReceived = uint64(f.TimeReceived.UnixNano())
+	msg.TimeFlowStart = uint64(f.TimeReceived.UnixNano())
+	msg.TimeFlowEnd = uint64(f.LastUpdated.UnixNano())
 	for i, pkt := range f.Packets {
 		if i == 0 {
 			msg.InIf = uint32(pkt.Metadata().InterfaceIndex)
@@ -103,37 +103,37 @@ func BuildFlow(f *FlowRecord) *pb.EnrichedFlow {
 					msg.SrcAddr = ip.SrcIP
 					msg.DstAddr = ip.DstIP
 					msg.Proto = uint32(ip.Protocol)
-					msg.IPTos = uint32(ip.TOS)
-					msg.IPTTL = uint32(ip.TTL)
+					msg.IpTos = uint32(ip.TOS)
+					msg.IpTtl = uint32(ip.TTL)
 				case layers.LayerTypeIPv6:
 					ip, _ := layer.(*layers.IPv6)
 					msg.SrcAddr = ip.SrcIP
 					msg.DstAddr = ip.DstIP
 					msg.Proto = uint32(ip.NextHeader)
-					msg.IPTos = uint32(ip.TrafficClass)
-					msg.IPTTL = uint32(ip.HopLimit)
-					msg.IPv6FlowLabel = ip.FlowLabel
+					msg.IpTos = uint32(ip.TrafficClass)
+					msg.IpTtl = uint32(ip.HopLimit)
+					msg.Ipv6FlowLabel = ip.FlowLabel
 				case layers.LayerTypeTCP:
 					tcp, _ := layer.(*layers.TCP)
 					msg.SrcPort = uint32(tcp.SrcPort)
 					msg.DstPort = uint32(tcp.DstPort)
 					if tcp.URG {
-						msg.TCPFlags = msg.TCPFlags | 0b100000
+						msg.TcpFlags = msg.TcpFlags | 0b100000
 					}
 					if tcp.ACK {
-						msg.TCPFlags = msg.TCPFlags | 0b010000
+						msg.TcpFlags = msg.TcpFlags | 0b010000
 					}
 					if tcp.PSH {
-						msg.TCPFlags = msg.TCPFlags | 0b001000
+						msg.TcpFlags = msg.TcpFlags | 0b001000
 					}
 					if tcp.RST {
-						msg.TCPFlags = msg.TCPFlags | 0b000100
+						msg.TcpFlags = msg.TcpFlags | 0b000100
 					}
 					if tcp.SYN {
-						msg.TCPFlags = msg.TCPFlags | 0b000010
+						msg.TcpFlags = msg.TcpFlags | 0b000010
 					}
 					if tcp.FIN {
-						msg.TCPFlags = msg.TCPFlags | 0b000001
+						msg.TcpFlags = msg.TcpFlags | 0b000001
 					}
 				case layers.LayerTypeUDP:
 					udp, _ := layer.(*layers.UDP)
@@ -272,7 +272,7 @@ func (f *FlowExporter) Insert(pkt gopacket.Packet) {
 	record.SamplerAddress = f.samplerAddress
 	record.Packets = append(record.Packets, pkt)
 
-	// shortcut flow export if we see TCP FIN
+	// shortcut flow export if we see Tcp FIN
 	if tcpLayer := pkt.Layer(layers.LayerTypeTCP); tcpLayer != nil {
 		tcp, _ := tcpLayer.(*layers.TCP)
 		if tcp.FIN {

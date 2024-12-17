@@ -91,11 +91,11 @@ func (segment PrintFlowdump) format_flow(flowmsg *pb.EnrichedFlow) string {
 
 	var srcas, dstas string
 	if segment.Verbose {
-		if flowmsg.SrcAS != 0 {
-			srcas = fmt.Sprintf("AS%d/", flowmsg.SrcAS)
+		if flowmsg.SrcAs != 0 {
+			srcas = fmt.Sprintf("AS%d/", flowmsg.SrcAs)
 		}
-		if flowmsg.DstAS != 0 {
-			dstas = fmt.Sprintf("AS%d/", flowmsg.DstAS)
+		if flowmsg.DstAs != 0 {
+			dstas = fmt.Sprintf("AS%d/", flowmsg.DstAs)
 		}
 	}
 	var proto string
