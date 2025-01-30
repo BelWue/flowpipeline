@@ -905,6 +905,34 @@ throughput when setting this parameter.
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/sqlite)
 [examples using this segment](https://github.com/search?q=%22segment%3A+sqlite%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
+#### mongodb
+**This segment is unavailable in the static binary release due to its CGO dependency.**
+
+The `mongodb` segment provides a Mongodb output option. 
+The connection parameter of the mongodb must be configured in the parameter `mongodb_uri`.
+MongoDb is intended to be used as a ringbuffer like storage using capped collections.
+The maximumg (unecrypted) disk usage can be set using `max_disk_usage`.
+The fields parameter optionally takes a
+string of comma-separated fieldnames, e.g. `SrcAddr,Bytes,Packets`.
+
+The batchsize parameter determines the number of flows stored in memory before
+writing them to the database in a transaction made up from as many insert
+statements. For the default value of 1000 in-memory flows, benchmarks show that
+this should be an okay value for processing at least 1000 flows per second on
+most szenarios, i.e. flushing to disk once per second. Mind the expected flow
+throughput when setting this parameter.
+
+```yaml
+- segment: mongodb
+  config:
+    mongodb_uri: "mongodb://localhost:27017/"
+    max_disk_usage: "20 GB"
+    fields: "SrcAddr,DstAddr,SrcPort,DstPort"
+
+```
+
+[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/sqlite)
+
 #### json
 The `json` segment provides a JSON output option.
 It uses stdout by default, but can be instructed to write to file using the filename parameter.
