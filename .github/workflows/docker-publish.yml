@@ -29,13 +29,6 @@ jobs:
       packages: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: setup go
-        uses: actions/setup-go@v5.3.0
-        with:
-          go-version: '1.23.2'
-
       # Login against a Docker registry except on PR
       # https://github.com/docker/login-action
       - name: Log into registry ${{ env.REGISTRY }}
@@ -46,6 +39,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        
+      - name: setup go
+        uses: actions/setup-go@v5.3.0
+        with:
+          go-version: '1.23.2'
+          
       # Extract metadata (tags, labels) for Docker
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
