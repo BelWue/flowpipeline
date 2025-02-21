@@ -5,8 +5,8 @@
 package goflow
 
 import (
+	"bytes"
 	"context"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/url"
@@ -17,9 +17,8 @@ import (
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/encoding/protodelim"
 
-	_ "github.com/netsampler/goflow2/v2/format/binary"
 	"github.com/netsampler/goflow2/v2/utils/debug"
 
 	"github.com/netsampler/goflow2/v2/transport"
@@ -27,8 +26,13 @@ import (
 	_ "github.com/netsampler/goflow2/v2/transport/kafka"
 
 	"github.com/netsampler/goflow2/v2/metrics"
-	rawproducer "github.com/netsampler/goflow2/v2/producer/raw"
 	"github.com/netsampler/goflow2/v2/utils"
+
+	// various formatters
+	"github.com/netsampler/goflow2/v2/format"
+	_ "github.com/netsampler/goflow2/v2/format/binary"
+
+	protoproducer "github.com/netsampler/goflow2/v2/producer/proto"
 )
 
 type Goflow struct {
@@ -127,13 +131,13 @@ type channelDriver struct {
 }
 
 func (d *channelDriver) Send(key, data []byte) error {
-	msg := &pb.EnrichedFlow{}
-	// TODO: can we shave of this Unmarshal here and the Marshal in line 138
-	if err := proto.Unmarshal(data, msg); err != nil {
+	msg := new(pb.ProtoProducerMessage)
+	// TODO: can we shave of this Unmarshal here by writing a custom formatter
+	if err := protodelim.UnmarshalFrom(bytes.NewReader(data), msg); err != nil {
 		log.Println("[error] Goflow: Conversion error for received flow.")
 		return nil
 	}
-	d.out <- msg
+	d.out <- &msg.EnrichedFlow
 	return nil
 }
 
@@ -142,21 +146,12 @@ func (d *channelDriver) Close(context.Context) error {
 	return nil
 }
 
-type myProtobufDriver struct {
-}
-
-func (d *myProtobufDriver) Format(data interface{}) ([]byte, []byte, error) {
-	msg, ok := data.(proto.Message)
-	if !ok {
-		return nil, nil, fmt.Errorf("message is not protobuf")
-	}
-	// TODO: can we shave of this Marshal here and the Unmarshal in line 116
-	b, err := proto.Marshal(msg)
-	return nil, b, err
-}
-
 func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
-	formatter := &myProtobufDriver{}
+	formatter, err := format.FindFormat("bin")
+	if err != nil {
+		slog.Error("error formatter", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
 	var pipes []utils.FlowPipe
 
 	for _, listenAddrUrl := range segment.Listen {
@@ -192,10 +187,21 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 				os.Exit(1)
 			}
 
+			var cfgProducer = &protoproducer.ProducerConfig{}
+			cfgm, err := cfgProducer.Compile()
+			if err != nil {
+				log.Fatal(err)
+			}
+			flowProducer, err := protoproducer.CreateProtoProducer(cfgm, protoproducer.CreateSamplingSystem)
+			if err != nil {
+				slog.Error("error producer", slog.String("error", err.Error()))
+				os.Exit(1)
+			}
+
 			cfgPipe := &utils.PipeConfig{
 				Format:           formatter,
 				Transport:        transport,
-				Producer:         &rawproducer.RawProducer{},
+				Producer:         flowProducer,
 				NetFlowTemplater: metrics.NewDefaultPromTemplateSystem, // wrap template system to get Prometheus info
 			}
 
