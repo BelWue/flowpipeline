@@ -155,7 +155,7 @@ func fillSegmentWithConfig(newsegment *Mongodb, config map[string]string) (*Mong
 		conffields := strings.Split(config["fields"], ",")
 		for _, field := range conffields {
 			protofield, found := protofields.FieldByName(field)
-			if !found {
+			if !found || !protofield.IsExported() {
 				return newsegment, errors.New("csv: Field specified in 'fields' does not exist")
 			}
 			newsegment.fieldNames = append(newsegment.fieldNames, field)
@@ -163,13 +163,12 @@ func fillSegmentWithConfig(newsegment *Mongodb, config map[string]string) (*Mong
 		}
 	} else {
 		protofields := reflect.TypeOf(pb.EnrichedFlow{})
-		// +-3 skips over protobuf state, sizeCache and unknownFields
-		newsegment.fieldNames = make([]string, protofields.NumField()-3)
-		newsegment.fieldTypes = make([]string, protofields.NumField()-3)
-		for i := 3; i < protofields.NumField(); i++ {
+		for i := 0; i < protofields.NumField(); i++ {
 			field := protofields.Field(i)
-			newsegment.fieldNames[i-3] = field.Name
-			newsegment.fieldTypes[i-3] = field.Type.String()
+			if field.IsExported() {
+				newsegment.fieldNames = append(newsegment.fieldNames, field.Name)
+				newsegment.fieldTypes = append(newsegment.fieldTypes, field.Type.String())
+			}
 		}
 		newsegment.Fields = config["fields"]
 	}

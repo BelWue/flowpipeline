@@ -51,8 +51,8 @@ func (segment Csv) New(config map[string]string) segments.Segment {
 		conffields := strings.Split(config["fields"], ",")
 		for _, field := range conffields {
 			field = strings.TrimSpace(field)
-			_, found := protofields.FieldByName(field)
-			if !found {
+			protoField, found := protofields.FieldByName(field)
+			if !found || !protoField.IsExported() {
 				log.Printf("[error] Csv: Field '%s' specified in 'fields' does not exist.", field)
 				return nil
 			}
@@ -61,12 +61,12 @@ func (segment Csv) New(config map[string]string) segments.Segment {
 		}
 	} else {
 		protofields := reflect.TypeOf(pb.EnrichedFlow{})
-		// +-3 skips over protobuf state, sizeCache and unknownFields
-		newsegment.fieldNames = make([]string, protofields.NumField()-3)
-		for i := 3; i < protofields.NumField(); i++ {
+		for i := 0; i < protofields.NumField(); i++ {
 			field := protofields.Field(i)
-			newsegment.fieldNames[i-3] = field.Name
-			heading = append(heading, field.Name)
+			if field.IsExported() {
+				newsegment.fieldNames = append(newsegment.fieldNames, field.Name)
+				heading = append(heading, field.Name)
+			}
 		}
 		newsegment.Fields = config["fields"]
 	}
@@ -92,19 +92,19 @@ func (segment *Csv) Run(wg *sync.WaitGroup) {
 		values := reflect.ValueOf(msg).Elem()
 		for _, fieldname := range segment.fieldNames {
 			value := values.FieldByName(fieldname).Interface()
-			switch value.(type) {
+			switch value := value.(type) {
 			case []uint8: // this is necessary for proper formatting
-				ipstring := net.IP(value.([]uint8)).String()
+				ipstring := net.IP(value).String()
 				if ipstring == "<nil>" {
 					ipstring = ""
 				}
 				record = append(record, ipstring)
 			case uint32: // this is because FormatUint is much faster than Sprint
-				record = append(record, strconv.FormatUint(uint64(value.(uint32)), 10))
+				record = append(record, strconv.FormatUint(uint64(value), 10))
 			case uint64: // this is because FormatUint is much faster than Sprint
-				record = append(record, strconv.FormatUint(uint64(value.(uint64)), 10))
+				record = append(record, strconv.FormatUint(uint64(value), 10))
 			case string: // this is because doing nothing is also much faster than Sprint
-				record = append(record, value.(string))
+				record = append(record, value)
 			default:
 				record = append(record, fmt.Sprint(value))
 			}
