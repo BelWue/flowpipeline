@@ -1,6 +1,6 @@
 syntax = "proto3";
 package flowpb;
-option go_package = "github.com/BelWue/flowpipeline/pb;flowpb";
+option go_package = "github.com/BelWue/flowpipeline/pb;";
 
 message EnrichedFlow {
 

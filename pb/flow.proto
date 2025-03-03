@@ -1,6 +1,6 @@
 syntax = "proto3";
 package flowpb;
-option go_package = "github.com/netsampler/goflow2/pb;flowpb";
+option go_package = "github.com/netsampler/goflow2/pb;";
 
 message FlowMessage {
 
