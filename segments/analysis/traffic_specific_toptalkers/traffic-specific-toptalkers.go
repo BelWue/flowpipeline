@@ -12,8 +12,6 @@ import (
 	"github.com/BelWue/flowpipeline/segments/filter/flowfilter"
 )
 
-const cleanupWindowSizes = 5
-
 type TrafficSpecificToptalkers struct {
 	segments.BaseFilterSegment
 	toptalkers_metrics.PrometheusParams
@@ -92,7 +90,7 @@ func (segment *TrafficSpecificToptalkers) Run(wg *sync.WaitGroup) {
 	var promExporter = toptalkers_metrics.PrometheusExporter{}
 	promExporter.Initialize()
 
-	allDatabases = initDatabasesAndCollectors(promExporter, segment)
+	allDatabases = initDatabasesAndCollector(promExporter, segment)
 
 	//start timers
 	promExporter.ServeEndpoints(&segment.PrometheusParams)
@@ -112,29 +110,28 @@ func (segment *TrafficSpecificToptalkers) Run(wg *sync.WaitGroup) {
 	log.Printf("[info] Threshold Metric Report runing on " + segment.Endpoint)
 }
 
-func initDatabasesAndCollectors(promExporter toptalkers_metrics.PrometheusExporter, segment *TrafficSpecificToptalkers) *[]*toptalkers_metrics.Database {
+func initDatabasesAndCollector(promExporter toptalkers_metrics.PrometheusExporter, segment *TrafficSpecificToptalkers) *[]*toptalkers_metrics.Database {
 	allDatabases := []*toptalkers_metrics.Database{}
 	for _, filterDef := range segment.ThresholdMetricDefinition {
-		databases := initCollectors(filterDef, &promExporter)
+		databases := initDatabasesForFilter(filterDef, &promExporter)
 		allDatabases = append(allDatabases, databases...)
 	}
+
+	collector := toptalkers_metrics.NewPrometheusCollector(allDatabases)
+	promExporter.FlowReg.MustRegister(collector)
 	return &allDatabases
 }
 
-func initCollectors(filterDef *ThresholdMetricDefinition, promExporter *toptalkers_metrics.PrometheusExporter) []*toptalkers_metrics.Database {
+func initDatabasesForFilter(filterDef *ThresholdMetricDefinition, promExporter *toptalkers_metrics.PrometheusExporter) []*toptalkers_metrics.Database {
 	databases := []*toptalkers_metrics.Database{}
 	if filterDef.TrafficType != "" { //defined a metric that should be in prometheus
-		database := toptalkers_metrics.NewDatabase(
-			filterDef.ThresholdBps, filterDef.ThresholdPps, filterDef.Buckets, filterDef.BucketDuration,
-			filterDef.ThresholdBuckets, cleanupWindowSizes, promExporter,
-		)
-		collector := toptalkers_metrics.NewPrometheusCollector(&database, filterDef.TrafficType, filterDef.ReportBuckets)
-		promExporter.FlowReg.MustRegister(collector)
+		database := toptalkers_metrics.NewDatabase(filterDef.PrometheusMetricsParams, promExporter)
+
 		filterDef.Database = &database
 		databases = append(databases, &database)
 	}
 	for _, subDef := range filterDef.SubDefinitions {
-		databases = append(databases, initCollectors(subDef, promExporter)...)
+		databases = append(databases, initDatabasesForFilter(subDef, promExporter)...)
 	}
 	return databases
 }

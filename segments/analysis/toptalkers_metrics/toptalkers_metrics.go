@@ -7,8 +7,6 @@ import (
 	"github.com/BelWue/flowpipeline/segments"
 )
 
-const cleanupWindowSizes = 5
-
 type ToptalkersMetrics struct {
 	segments.BaseFilterSegment
 	PrometheusMetricsParams
@@ -52,8 +50,8 @@ func (segment *ToptalkersMetrics) Run(wg *sync.WaitGroup) {
 
 	var promExporter = PrometheusExporter{}
 
-	database := NewDatabase(segment.ThresholdBps, segment.ThresholdPps, segment.Buckets, segment.BucketDuration, segment.ThresholdBuckets, cleanupWindowSizes, &promExporter)
-	collector := NewPrometheusCollector(&database, segment.TrafficType, segment.ReportBuckets)
+	database := NewDatabase(segment.PrometheusMetricsParams, &promExporter)
+	collector := NewPrometheusCollector([]*Database{&database})
 	promExporter.Initialize()
 	promExporter.FlowReg.MustRegister(collector)
 	promExporter.ServeEndpoints(&segment.PrometheusParams)

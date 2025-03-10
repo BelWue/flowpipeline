@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/BelWue/flowpipeline/segments/analysis/traffic_specific_toptalkers"
 	"github.com/BelWue/flowpipeline/segments/controlflow/branch"
 	"gopkg.in/yaml.v2"
 )
@@ -19,11 +20,12 @@ import (
 //
 // This struct has the appropriate yaml tags inline.
 type SegmentRepr struct {
-	Name   string            `yaml:"segment"`             // to be looked up with a registry
-	Config map[string]string `yaml:"config"`              // to be expanded by our instance
-	If     []SegmentRepr     `yaml:"if,omitempty,flow"`   // only used by group segment
-	Then   []SegmentRepr     `yaml:"then,omitempty,flow"` // only used by group segment
-	Else   []SegmentRepr     `yaml:"else,omitempty,flow"` // only used by group segment
+	Name       string                                                   `yaml:"segment"`               // to be looked up with a registry
+	Config     map[string]string                                        `yaml:"config"`                // to be expanded by our instance
+	If         []SegmentRepr                                            `yaml:"if,omitempty,flow"`     // only used by group segment
+	Then       []SegmentRepr                                            `yaml:"then,omitempty,flow"`   // only used by group segment
+	Else       []SegmentRepr                                            `yaml:"else,omitempty,flow"`   // only used by group segment
+	Definition []*traffic_specific_toptalkers.ThresholdMetricDefinition `yaml:"definitions,omitempty"` // used to add addition data that is parsed by the segment - e.g. for configs that use complex data
 }
 
 // Returns the SegmentRepr's Config with all its variables expanded. It tries
@@ -80,6 +82,8 @@ func SegmentsFromRepr(segmentReprs *[]SegmentRepr) []segments.Segment {
 				New(SegmentsFromRepr(&segmentrepr.Then)...),
 				New(SegmentsFromRepr(&segmentrepr.Else)...),
 			)
+		case *traffic_specific_toptalkers.TrafficSpecificToptalkers:
+			segment.SetThresholdMetricDefinition(segmentrepr.Definition)
 		}
 		if segment != nil {
 			segmentList[i] = segment

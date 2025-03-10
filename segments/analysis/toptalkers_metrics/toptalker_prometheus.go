@@ -11,23 +11,21 @@ import (
 )
 
 type PrometheusCollector struct {
-	database       *Database
-	ReportBuckets  int
-	BucketDuration int
-	TrafficType    string
+	Databases      []*Database
 	trafficBpsDesc *prometheus.Desc
 	trafficPpsDesc *prometheus.Desc
 }
 
 type PrometheusMetricsParams struct {
-	TrafficType      string `yaml:"traffictype,omitempty"`      // optional, default is "", name for the traffic type (included as label)
-	Buckets          int    `yaml:"buckets,omitempty"`          // optional, default is 60, sets the number of seconds used as a sliding window size
-	ThresholdBuckets int    `yaml:"thresholdbuckets,omitempty"` // optional, use the last N buckets for calculation of averages, default: $Buckets
-	ReportBuckets    int    `yaml:"reportbuckets,omitempty"`    // optional, use the last N buckets to calculate averages that are reported as result, default: $Buckets
-	BucketDuration   int    `yaml:"bucketduration,omitempty"`   // optional, duration of a bucket, default is 1 second
-	ThresholdBps     uint64 `yaml:"thresholdbps,omitempty"`     // optional, default is 0, only log talkers with an average bits per second rate higher than this value
-	ThresholdPps     uint64 `yaml:"thresholdpps,omitempty"`     // optional, default is 0, only log talkers with an average packets per second rate higher than this value
-	RelevantAddress  string `yaml:"relevantaddress,omitempty"`  // optional, default is "destination", options are "destination", "source", "both"
+	TrafficType        string `yaml:"traffictype,omitempty"`      // optional, default is "", name for the traffic type (included as label)
+	Buckets            int    `yaml:"buckets,omitempty"`          // optional, default is 60, sets the number of seconds used as a sliding window size
+	ThresholdBuckets   int    `yaml:"thresholdbuckets,omitempty"` // optional, use the last N buckets for calculation of averages, default: $Buckets
+	ReportBuckets      int    `yaml:"reportbuckets,omitempty"`    // optional, use the last N buckets to calculate averages that are reported as result, default: $Buckets
+	BucketDuration     int    `yaml:"bucketduration,omitempty"`   // optional, duration of a bucket, default is 1 second
+	ThresholdBps       uint64 `yaml:"thresholdbps,omitempty"`     // optional, default is 0, only log talkers with an average bits per second rate higher than this value
+	ThresholdPps       uint64 `yaml:"thresholdpps,omitempty"`     // optional, default is 0, only log talkers with an average packets per second rate higher than this value
+	RelevantAddress    string `yaml:"relevantaddress,omitempty"`  // optional, default is "destination", options are "destination", "source", "both"
+	CleanupWindowSizes int
 }
 
 type PrometheusParams struct {
@@ -36,14 +34,20 @@ type PrometheusParams struct {
 	FlowdataPath string // optional, default is "/flowdata"
 }
 
-func NewPrometheusCollector(database *Database, trafficType string, reportBuckets int) *PrometheusCollector {
+func NewPrometheusCollector(databases []*Database) *PrometheusCollector {
 	coll := PrometheusCollector{
-		database:       database,
-		ReportBuckets:  reportBuckets,
-		BucketDuration: database.bucketDuration,
-		TrafficType:    trafficType,
+		Databases: databases,
 	}
-	coll.InitDescriptors()
+	coll.trafficBpsDesc = prometheus.NewDesc(
+		"traffic_bps",
+		"Traffic volume in bits per second, for a given address",
+		[]string{"traffic_type", "address", "forwarding_status"}, nil,
+	)
+	coll.trafficPpsDesc = prometheus.NewDesc(
+		"traffic_pps",
+		"Traffic in packets per second, for a given address.",
+		[]string{"traffic_type", "address", "forwarding_status"}, nil,
+	)
 	return &coll
 }
 
@@ -68,6 +72,9 @@ func (params *PrometheusMetricsParams) InitDefaultPrometheusMetricParams() {
 	}
 	if params.RelevantAddress == "" {
 		params.RelevantAddress = "destination"
+	}
+	if params.CleanupWindowSizes == 0 {
+		params.CleanupWindowSizes = 5
 	}
 }
 
@@ -151,75 +158,45 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 	return nil
 }
 
-func (c *PrometheusCollector) InitDescriptors() {
-	var (
-		bps_fqName string
-		pps_fqName string
-		bps_help   string
-		pps_help   string
-	)
-
-	if c.TrafficType != "" {
-		bps_fqName = c.TrafficType + "_traffic_bps"
-		pps_fqName = c.TrafficType + "_traffic_pps"
-		bps_help = "Traffic volume in bits per second of traffic type " + c.TrafficType + ", for a given address"
-		pps_help = "Traffic in packets per second of traffic type " + c.TrafficType + ", for a given address."
-	} else {
-		bps_fqName = "traffic_bps"
-		pps_fqName = "traffic_pps"
-		bps_help = "Traffic volume in bits per second, for a given address"
-		pps_help = "Traffic in packets per second, for a given address."
-	}
-
-	c.trafficBpsDesc = prometheus.NewDesc(
-		bps_fqName,
-		bps_help,
-		[]string{"traffic_type", "address", "forwarding_status"}, nil,
-	)
-	c.trafficPpsDesc = prometheus.NewDesc(
-		pps_fqName,
-		pps_help,
-		[]string{"traffic_type", "address", "forwarding_status"}, nil,
-	)
-}
-
 func (c *PrometheusCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.trafficBpsDesc
 	ch <- c.trafficPpsDesc
 }
 func (collector *PrometheusCollector) Collect(ch chan<- prometheus.Metric) {
-	for entry := range collector.database.GetAllRecords() {
-		key := entry.key
-		record := entry.record
-		// check if thresholds are exceeded
-		buckets := collector.ReportBuckets
-		bucketDuration := collector.BucketDuration
-		if record.aboveThreshold.Load() {
-			sumFwdBps, sumFwdPps, sumDropBps, sumDropPps := record.GetMetrics(buckets, bucketDuration)
-			ch <- prometheus.MustNewConstMetric(
-				collector.trafficBpsDesc,
-				prometheus.GaugeValue,
-				sumFwdBps,
-				collector.TrafficType, key, "forwarded",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				collector.trafficBpsDesc,
-				prometheus.GaugeValue,
-				sumDropBps,
-				collector.TrafficType, key, "dropped",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				collector.trafficPpsDesc,
-				prometheus.GaugeValue,
-				sumFwdPps,
-				collector.TrafficType, key, "forwarded",
-			)
-			ch <- prometheus.MustNewConstMetric(
-				collector.trafficPpsDesc,
-				prometheus.GaugeValue,
-				sumDropPps,
-				collector.TrafficType, key, "dropped",
-			)
+	for _, db := range collector.Databases {
+		for entry := range db.GetAllRecords() {
+			key := entry.key
+			record := entry.record
+			// check if thresholds are exceeded
+			buckets := db.ReportBuckets
+			bucketDuration := db.BucketDuration
+			if record.aboveThreshold.Load() {
+				sumFwdBps, sumFwdPps, sumDropBps, sumDropPps := record.GetMetrics(buckets, bucketDuration)
+				ch <- prometheus.MustNewConstMetric(
+					collector.trafficBpsDesc,
+					prometheus.GaugeValue,
+					sumFwdBps,
+					db.TrafficType, key, "forwarded",
+				)
+				ch <- prometheus.MustNewConstMetric(
+					collector.trafficBpsDesc,
+					prometheus.GaugeValue,
+					sumDropBps,
+					db.TrafficType, key, "dropped",
+				)
+				ch <- prometheus.MustNewConstMetric(
+					collector.trafficPpsDesc,
+					prometheus.GaugeValue,
+					sumFwdPps,
+					db.TrafficType, key, "forwarded",
+				)
+				ch <- prometheus.MustNewConstMetric(
+					collector.trafficPpsDesc,
+					prometheus.GaugeValue,
+					sumDropPps,
+					db.TrafficType, key, "dropped",
+				)
+			}
 		}
 	}
 }

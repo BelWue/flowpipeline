@@ -18,31 +18,37 @@ type Record struct {
 }
 
 type Database struct {
-	database         *map[string]*Record
-	thresholdBps     uint64
-	thresholdPps     uint64
-	buckets          int // seconds
-	bucketDuration   int // seconds
-	thresholdBuckets int
-	cleanupCounter   int
-	promExporter     *PrometheusExporter
-	stopCleanupC     chan struct{}
-	stopClockC       chan struct{}
+	database           *map[string]*Record
+	TrafficType        string
+	thresholdBps       uint64
+	thresholdPps       uint64
+	buckets            int
+	BucketDuration     int // seconds
+	ReportBuckets      int
+	thresholdBuckets   int
+	cleanupCounter     int
+	cleanupWindowSizes int
+	promExporter       *PrometheusExporter
+	stopCleanupC       chan struct{}
+	stopClockC         chan struct{}
 	sync.RWMutex
 }
 
-func NewDatabase(thresholdBps uint64, thresholdPps uint64, buckets int, bucketDuration int, thresholdBuckets int, cleanupWindowSizes int, promExporter *PrometheusExporter) Database {
+func NewDatabase(params PrometheusMetricsParams, promExporter *PrometheusExporter) Database {
 	return Database{
-		database:         &map[string]*Record{},
-		thresholdBps:     thresholdBps,
-		thresholdPps:     thresholdPps,
-		thresholdBuckets: thresholdBuckets,
-		cleanupCounter:   buckets * cleanupWindowSizes, // cleanup every N windows
-		promExporter:     promExporter,
-		buckets:          buckets,
-		bucketDuration:   bucketDuration,
-		stopCleanupC:     make(chan struct{}),
-		stopClockC:       make(chan struct{}),
+		database:           &map[string]*Record{},
+		thresholdBps:       params.ThresholdBps,
+		thresholdPps:       params.ThresholdPps,
+		thresholdBuckets:   params.ThresholdBuckets,
+		cleanupWindowSizes: params.CleanupWindowSizes,
+		cleanupCounter:     params.Buckets * params.CleanupWindowSizes, // cleanup every N windows
+		promExporter:       promExporter,
+		buckets:            params.Buckets,
+		ReportBuckets:      params.ReportBuckets,
+		TrafficType:        params.TrafficType,
+		BucketDuration:     params.BucketDuration,
+		stopCleanupC:       make(chan struct{}),
+		stopClockC:         make(chan struct{}),
 	}
 }
 
@@ -51,7 +57,7 @@ func (db *Database) GetRecord(key string) *Record {
 	defer db.Unlock()
 	record, found := (*db.database)[key]
 	if !found || record == nil {
-		record = NewRecord(db.buckets)
+		record = NewRecord(db.ReportBuckets)
 		(*db.database)[key] = record
 	}
 	return record
@@ -162,14 +168,14 @@ func (record *Record) tick(thresholdBuckets int, bucketDuration int, thresholdBp
 }
 
 func (db *Database) Clock() {
-	ticker := time.NewTicker(time.Duration(db.bucketDuration) * time.Second)
+	ticker := time.NewTicker(time.Duration(db.BucketDuration) * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			db.Lock()
 			for _, record := range *db.database {
-				record.tick(db.thresholdBuckets, db.bucketDuration, db.thresholdBps, db.thresholdPps)
+				record.tick(db.thresholdBuckets, db.BucketDuration, db.thresholdBps, db.thresholdPps)
 			}
 			db.Unlock()
 		case <-db.stopClockC:
@@ -179,7 +185,7 @@ func (db *Database) Clock() {
 }
 
 func (db *Database) Cleanup() {
-	ticker := time.NewTicker(time.Duration(db.bucketDuration*db.buckets) * time.Second)
+	ticker := time.NewTicker(time.Duration(db.BucketDuration*db.buckets) * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
@@ -187,7 +193,7 @@ func (db *Database) Cleanup() {
 			db.Lock()
 			db.cleanupCounter--
 			if db.cleanupCounter <= 0 {
-				db.cleanupCounter = db.buckets * cleanupWindowSizes
+				db.cleanupCounter = db.buckets * db.cleanupWindowSizes
 				for key, record := range *db.database {
 					if record.isEmpty() {
 						delete(*db.database, key)
