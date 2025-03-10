@@ -74,7 +74,7 @@ conditional, limiting payload data, and multiple receivers.
 Segments in this group do higher level analysis on flow data. They usually
 export or print results in some way, but might also filter given flows.
 
-#### toptalkers-metrics
+#### toptalkers_metrics
 The `toptalkers-metrics` segment calculates statistics about traffic levels
 per IP address and exports them in OpenMetrics format via HTTP.
 
@@ -100,7 +100,7 @@ The parameter "traffictype" is passed as OpenMetrics label, so this segment
 can be used multiple times in one pipeline without metrics getting mixed up.
 
 ```yaml
-- segment: toptalkers-metrics
+- segment: toptalkers_metrics
   config:
     # the lines below are optional and set to default
     traffictype: ""
@@ -118,6 +118,38 @@ can be used multiple times in one pipeline without metrics getting mixed up.
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/analysis/toptalkers-metrics)
 [examples using this segment](https://github.com/search?q=%22segment%3A+toptalkers-metrics%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
+
+#### traffic_specific_toptalkers
+The traffic specific toptalker metrics segement is simmilar to the `toptalker-metrics` segment, 
+but allows filtering for specific protocols. The use of nested filters is supported to
+allow for a more efficient filtering.
+
+Filters with a specified `traffictyp` will be exported if they reach the configured thresholds.
+
+```
+- segment: traffic_specific_toptalkers
+  config:
+    endpoint: ":8085"
+  definitions:
+  - filter: "proto udp"
+    metricdefinitions:
+    - filter: "port 0"
+      traffictype: "UDP Fragmented"
+      thresholdbps: 100
+    - filter: "port 53"
+      traffictype: "DNS"
+      filter: "port 53"
+      thresholdbps: 100
+    - filter: "port 123"
+      traffictype: "NTP"
+      thresholdbps: 100
+    - filter: "port 389"
+      traffictype: "CLDAP"
+      thresholdbps: 100
+  - filter: "proto icmp or proto icmpv6"
+    traffictype: "ICMP"
+    thresholdpps: 100
+```
 
 ### Controlflow Group
 Segments in this group have the ability to change the sequence of segments any
