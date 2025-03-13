@@ -2,6 +2,7 @@ package branch
 
 import (
 	"log"
+	"strconv"
 	"sync"
 
 	"github.com/BelWue/flowpipeline/pb"
@@ -20,13 +21,22 @@ type Pipeline interface {
 
 type Branch struct {
 	segments.BaseSegment
-	condition   Pipeline
-	then_branch Pipeline
-	else_branch Pipeline
+	condition      Pipeline
+	then_branch    Pipeline
+	else_branch    Pipeline
+	bypassMessages bool //optional, default is false, forward all ingoing messages to the next segment (ignoring filtering of the branch segments)
 }
 
 func (segment Branch) New(config map[string]string) segments.Segment {
-	return &Branch{}
+	bypassMessages := false
+	if config["bypass-messages"] != "" {
+		b, err := strconv.ParseBool(config["bypass-messages"])
+		if err != nil {
+			log.Fatalf("[error] Branch: Failed to parse bypass-messages config option: %s", err)
+		}
+		bypassMessages = b
+	}
+	return &Branch{bypassMessages: bypassMessages}
 }
 
 func (segment *Branch) ImportBranches(condition interface{}, then_branch interface{}, else_branch interface{}) {
@@ -52,29 +62,31 @@ func (segment *Branch) Run(wg *sync.WaitGroup) {
 	go segment.then_branch.Start()
 	go segment.else_branch.Start()
 
-	go func() { // drain our output
-		from_then := segment.then_branch.GetOutput()
-		from_else := segment.else_branch.GetOutput()
-		for {
-			select {
-			case msg, ok := <-from_then:
-				if !ok {
-					from_then = nil
-				} else {
-					segment.Out <- msg
+	if !segment.bypassMessages {
+		go func() { // drain our output
+			from_then := segment.then_branch.GetOutput()
+			from_else := segment.else_branch.GetOutput()
+			for {
+				select {
+				case msg, ok := <-from_then:
+					if !ok {
+						from_then = nil
+					} else {
+						segment.Out <- msg
+					}
+				case msg, ok := <-from_else:
+					if !ok {
+						from_else = nil
+					} else {
+						segment.Out <- msg
+					}
 				}
-			case msg, ok := <-from_else:
-				if !ok {
-					from_else = nil
-				} else {
-					segment.Out <- msg
+				if from_then == nil && from_else == nil {
+					return
 				}
 			}
-			if from_then == nil && from_else == nil {
-				return
-			}
-		}
-	}()
+		}()
+	}
 	go func() { // move anything from conditional to our two branches
 		from_condition_out := segment.condition.GetOutput()
 		from_condition_drop := segment.condition.GetDrop()
@@ -98,8 +110,12 @@ func (segment *Branch) Run(wg *sync.WaitGroup) {
 			}
 		}
 	}()
+
 	for msg := range segment.In { // connect our own input to conditional
 		segment.condition.GetInput() <- msg
+		if segment.bypassMessages {
+			segment.Out <- msg
+		}
 	}
 }
 
