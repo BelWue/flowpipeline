@@ -1,14 +1,15 @@
 package dropfields
 
 import (
-	"github.com/BelWue/flowpipeline/pb"
-	"github.com/BelWue/flowpipeline/segments"
 	"io"
 	"log"
 	"os"
 	"reflect"
 	"sync"
 	"testing"
+
+	"github.com/BelWue/flowpipeline/pb"
+	"github.com/BelWue/flowpipeline/segments"
 )
 
 var (
@@ -104,7 +105,7 @@ func BenchmarkDropFields(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

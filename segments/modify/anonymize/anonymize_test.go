@@ -7,9 +7,9 @@ import (
 	"sync"
 	"testing"
 
-	cryptopan "github.com/Yawning/cryptopan"
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
+	cryptopan "github.com/Yawning/cryptopan"
 )
 
 // Influx Segment test, passthrough test only
@@ -46,7 +46,7 @@ func BenchmarkAnonymize(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 123}, SamplerAddress: []byte{193, 168, 88, 2}}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

@@ -1,7 +1,7 @@
 package protomap
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -31,7 +31,7 @@ func TestSegment_protomap_tcp(t *testing.T) {
 
 // Protomap Segment benchmark passthrough
 func BenchmarkProtomap(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Protomap{}.New(map[string]string{})
@@ -45,7 +45,7 @@ func BenchmarkProtomap(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{Proto: 6}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

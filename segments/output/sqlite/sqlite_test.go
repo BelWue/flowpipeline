@@ -4,7 +4,7 @@
 package sqlite
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -39,7 +39,7 @@ func TestSegment_Sqlite_passthrough(t *testing.T) {
 
 // Sqlite Segment benchmark with 1000 samples stored in memory
 func BenchmarkSqlite_1000(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Sqlite{}.New(map[string]string{"filename": "bench.sqlite"})
@@ -53,14 +53,14 @@ func BenchmarkSqlite_1000(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, Proto: 45}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }
 
 // Sqlite Segment benchmark with 10000 samples stored in memory
 func BenchmarkSqlite_10000(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Sqlite{}.New(map[string]string{"filename": "bench.sqlite", "batchsize": "10000"})
@@ -74,14 +74,14 @@ func BenchmarkSqlite_10000(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, Proto: 45}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }
 
 // Sqlite Segment benchmark with 10000 samples stored in memory
 func BenchmarkSqlite_100000(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Sqlite{}.New(map[string]string{"filename": "bench.sqlite", "batchsize": "100000"})
@@ -95,7 +95,7 @@ func BenchmarkSqlite_100000(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, Proto: 45}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

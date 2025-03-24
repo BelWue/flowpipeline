@@ -59,7 +59,7 @@ func BenchmarkMongodb_1000(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, Proto: 45}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }
@@ -83,7 +83,7 @@ func BenchmarkMongodb_10000(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, Proto: 45}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }
@@ -107,7 +107,7 @@ func BenchmarkMongodb_100000(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, Proto: 45}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }
@@ -131,7 +131,7 @@ func BenchmarkMongodb_100000_with_storage_limit(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, Proto: 45}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

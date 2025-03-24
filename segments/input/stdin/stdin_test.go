@@ -2,7 +2,7 @@ package stdin
 
 import (
 	"bufio"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -23,7 +23,7 @@ func TestSegment_StdIn_passthrough(t *testing.T) {
 
 // Stdin Segment benchmark passthrough
 func BenchmarkStdin(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := StdIn{
@@ -39,7 +39,7 @@ func BenchmarkStdin(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

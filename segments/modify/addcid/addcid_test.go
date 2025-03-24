@@ -1,7 +1,7 @@
 package addcid
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -54,7 +54,7 @@ func TestSegment_AddCid_bothAddrs(t *testing.T) {
 
 // AddCid Segment benchmark passthrough
 func BenchmarkAddCid(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := AddCid{}.New(map[string]string{"filename": "../../../examples/enricher/customer_subnets.csv"})
@@ -68,7 +68,7 @@ func BenchmarkAddCid(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

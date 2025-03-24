@@ -1,7 +1,7 @@
 package remoteaddress
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -30,7 +30,7 @@ func TestSegment_RemoteAddress_localAddrIsDst(t *testing.T) {
 
 // RemoteAddress Segment benchmark passthrough
 func BenchmarkRemoteAddress(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := RemoteAddress{}.New(map[string]string{"policy": "cidr", "filename": "../../../examples/enricher/customer_subnets.csv"})
@@ -44,7 +44,7 @@ func BenchmarkRemoteAddress(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 42}}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

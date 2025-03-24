@@ -1,7 +1,7 @@
 package json
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -22,7 +22,7 @@ func TestSegment_Json_passthrough(t *testing.T) {
 
 // Json Segment benchmark passthrough
 func BenchmarkJson(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Json{}.New(map[string]string{})
@@ -36,7 +36,7 @@ func BenchmarkJson(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

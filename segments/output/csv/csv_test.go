@@ -1,7 +1,7 @@
 package csv
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -24,7 +24,7 @@ func TestSegment_Csv_passthrough(t *testing.T) {
 
 // Csv Segment benchmark passthrough
 func BenchmarkCsv(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Csv{}.New(map[string]string{})
@@ -38,7 +38,7 @@ func BenchmarkCsv(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{Proto: 45}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

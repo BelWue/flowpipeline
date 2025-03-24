@@ -1,7 +1,7 @@
 package pass
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -22,7 +22,7 @@ func TestSegment_Pass(t *testing.T) {
 
 // Pass Segment benchmark passthrough
 func BenchmarkPass(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Pass{}
@@ -36,7 +36,7 @@ func BenchmarkPass(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

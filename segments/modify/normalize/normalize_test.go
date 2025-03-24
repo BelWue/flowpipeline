@@ -1,7 +1,7 @@
 package normalize
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -40,7 +40,7 @@ func TestSegment_Normalize_noFallbackSamplingRate(t *testing.T) {
 
 // Normalize Segment benchmark passthrough
 func BenchmarkNormalize(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Normalize{}.New(map[string]string{})
@@ -54,7 +54,7 @@ func BenchmarkNormalize(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SamplingRate: 0, Bytes: 1}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

@@ -1,7 +1,7 @@
 package geolocation
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -54,7 +54,7 @@ func TestSegment_GeoLocation_both(t *testing.T) {
 
 // GeoLocation Segment benchmark passthrough
 func BenchmarkGeoLocation(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := GeoLocation{}.New(map[string]string{"filename": "../../../examples/enricher/GeoLite2-Country-Test.mmdb"})
@@ -68,7 +68,7 @@ func BenchmarkGeoLocation(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{RemoteAddr: 2, DstAddr: []byte{2, 125, 160, 218}}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

@@ -1,7 +1,7 @@
 package elephant
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -39,7 +39,7 @@ func TestSegment_Elephant_passthrough(t *testing.T) {
 
 // Elephant Segment benchmark passthrough
 func BenchmarkElephant(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Elephant{}
@@ -53,7 +53,7 @@ func BenchmarkElephant(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }

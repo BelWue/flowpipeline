@@ -1,7 +1,7 @@
 package flowfilter
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -39,7 +39,7 @@ func TestSegment_FlowFilter_syntax(t *testing.T) {
 
 // FlowFilter Segment benchmark passthrough
 func BenchmarkFlowFilter(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	log.SetOutput(io.Discard)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := FlowFilter{}.New(map[string]string{"filter": "port <50"})
@@ -53,7 +53,7 @@ func BenchmarkFlowFilter(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		in <- &pb.EnrichedFlow{SrcPort: uint32(rand.Intn(100))}
-		_ = <-out
+		<-out
 	}
 	close(in)
 }
