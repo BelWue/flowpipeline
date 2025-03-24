@@ -156,7 +156,7 @@ message LegacyEnrichedFlow {
   uint32 DstAddrPreservedLen = 1163;
 
   AnonymizedType SamplerAddrAnon = 1164;
-  uint32 SamplerAddrAnonPreservedPrefixLen = 1165;
+  uint32 SamplerAddrPreservedPrefixLen = 1165;
 
   // modify/bgp
   // as done by a number of Netflow implementations, these refer to the destination
