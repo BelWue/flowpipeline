@@ -381,7 +381,7 @@ type LegacyEnrichedFlow struct {
 	SrcAddrPreservedLen               uint32                            `protobuf:"varint,1162,opt,name=SrcAddrPreservedLen,proto3" json:"SrcAddrPreservedLen,omitempty"`
 	DstAddrPreservedLen               uint32                            `protobuf:"varint,1163,opt,name=DstAddrPreservedLen,proto3" json:"DstAddrPreservedLen,omitempty"`
 	SamplerAddrAnon                   LegacyEnrichedFlow_AnonymizedType `protobuf:"varint,1164,opt,name=SamplerAddrAnon,proto3,enum=flowpb.LegacyEnrichedFlow_AnonymizedType" json:"SamplerAddrAnon,omitempty"`
-	SamplerAddrAnonPreservedPrefixLen uint32                            `protobuf:"varint,1165,opt,name=SamplerAddrAnonPreservedPrefixLen,proto3" json:"SamplerAddrAnonPreservedPrefixLen,omitempty"`
+	SamplerAddrPreservedPrefixLen uint32                            `protobuf:"varint,1165,opt,name=SamplerAddrPreservedPrefixLen,proto3" json:"SamplerAddrPreservedPrefixLen,omitempty"`
 	// modify/bgp
 	// as done by a number of Netflow implementations, these refer to the destination
 	ASPath           []uint32                                `protobuf:"varint,1171,rep,packed,name=ASPath,proto3" json:"ASPath,omitempty"`
@@ -1056,9 +1056,9 @@ func (x *LegacyEnrichedFlow) GetSamplerAddrAnon() LegacyEnrichedFlow_AnonymizedT
 	return LegacyEnrichedFlow_NotAnonymized
 }
 
-func (x *LegacyEnrichedFlow) GetSamplerAddrAnonPreservedPrefixLen() uint32 {
+func (x *LegacyEnrichedFlow) GetSamplerAddrPreservedPrefixLen() uint32 {
 	if x != nil {
-		return x.SamplerAddrAnonPreservedPrefixLen
+		return x.SamplerAddrPreservedPrefixLen
 	}
 	return 0
 }

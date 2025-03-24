@@ -195,6 +195,8 @@ message EnrichedFlow {
   enum AnonymizedType {
     NotAnonymized = 0;
     CryptoPAN = 1;
+    Subnet = 2;
+    SubnetAndCryptoPAN = 3;
   }
   AnonymizedType SrcAddrAnon = 2160;
   AnonymizedType DstAddrAnon = 2161;
@@ -202,7 +204,7 @@ message EnrichedFlow {
   uint32 DstAddrPreservedLen = 2163;
 
   AnonymizedType SamplerAddrAnon = 2164;
-  uint32 SamplerAddrAnonPreservedPrefixLen = 2165;
+  uint32 SamplerAddrPreservedPrefixLen = 2165;
 
   AnonymizedType NextHopAnon = 2166;
   uint32 NextHopAnonPreservedPrefixLen = 2167;
