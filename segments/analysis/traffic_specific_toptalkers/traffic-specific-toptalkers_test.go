@@ -1,9 +1,10 @@
 package traffic_specific_toptalkers
 
 import (
-	"log"
 	"sync"
 	"testing"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -34,7 +35,7 @@ func TestSegment_Branch_passthrough(t *testing.T) {
 	segment = segment.New(map[string]string{})
 
 	if segment == nil {
-		log.Fatalf("[error] Configured segment traffic_specific_toptalkers could not be initialized properly, see previous messages.")
+		log.Fatal().Msgf("Configured segment traffic_specific_toptalkers could not be initialized properly, see previous messages.")
 	}
 
 	in, out := make(chan *pb.EnrichedFlow), make(chan *pb.EnrichedFlow)

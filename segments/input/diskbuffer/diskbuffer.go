@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -49,7 +50,7 @@ type DiskBuffer struct {
 
 func NoDebugPrintf(format string, v ...any) {}
 func DoDebugPrintf(format string, v ...any) {
-	log.Printf(format, v...)
+	log.Debug().Msgf(format, v...)
 }
 
 func (segment *DiskBuffer) New(config map[string]string) segments.Segment {
@@ -62,26 +63,26 @@ func (segment *DiskBuffer) New(config map[string]string) segments.Segment {
 	if segment.BufferDir != "" {
 		fi, err := os.Stat(segment.BufferDir)
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Could not obtain file info for file %s", segment.BufferDir)
+			log.Fatal().Msgf("Diskbuffer: Could not obtain file info for file %s", segment.BufferDir)
 		}
 		if !fi.IsDir() {
-			log.Fatalf("[error] Diskbuffer: bufferdir %s must be a directory", segment.BufferDir)
+			log.Fatal().Msgf("Diskbuffer: bufferdir %s must be a directory", segment.BufferDir)
 		}
 		if unix.Access(segment.BufferDir, unix.W_OK) != nil {
-			log.Fatal("[error] Diskbuffer: bufferdir must be writeable")
+			log.Fatal().Msg("Diskbuffer: bufferdir must be writeable")
 		}
 	} else {
-		log.Fatal("[error] Diskbuffer: bufferdir must exist")
+		log.Fatal().Msg("Diskbuffer: bufferdir must exist")
 	}
 	// parse HighMemoryMark option
 	segment.HighMemoryMark = defaultHighMemoryMark
 	if config["highmemorymark"] != "" {
 		segment.HighMemoryMark, err = strconv.Atoi(config["highmemorymark"])
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Failed to parse highmemorymark config option: %s", err)
+			log.Fatal().Err(err).Msg("Diskbuffer: Failed to parse highmemorymark config option: ")
 		}
 		if segment.HighMemoryMark < 10 || segment.HighMemoryMark > 95 {
-			log.Fatal("[error] Diskbuffer: HighMemoryMark must be between 10 and 95")
+			log.Fatal().Msg("Diskbuffer: HighMemoryMark must be between 10 and 95")
 		}
 	}
 
@@ -89,10 +90,10 @@ func (segment *DiskBuffer) New(config map[string]string) segments.Segment {
 	if config["readingmemorymark"] != "" {
 		segment.ReadingMemoryMark, err = strconv.Atoi(config["highmemorymark"])
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Failed to parse readingmemorymark config option: %s", err)
+			log.Fatal().Err(err).Msg("Diskbuffer: Failed to parse readingmemorymark config option: ")
 		}
 		if segment.ReadingMemoryMark < 1 || segment.ReadingMemoryMark > 50 {
-			log.Fatal("[error] Diskbuffer: HighMemoryMark must be between 1 and 50")
+			log.Fatal().Msg("Diskbuffer: HighMemoryMark must be between 1 and 50")
 		}
 
 	}
@@ -102,26 +103,26 @@ func (segment *DiskBuffer) New(config map[string]string) segments.Segment {
 	if config["lowmemorymark"] != "" {
 		segment.LowMemoryMark, err = strconv.Atoi(config["lowmemorymark"])
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Failed to parse lowmemorymark config option: %s", err)
+			log.Fatal().Err(err).Msg("Diskbuffer: Failed to parse lowmemorymark config option: ")
 		}
 		if segment.LowMemoryMark < 5 || segment.LowMemoryMark > 70 {
-			log.Fatal("[error] Diskbuffer: HighMemoryMark must be between 5 and 70")
+			log.Fatal().Msg("Diskbuffer: HighMemoryMark must be between 5 and 70")
 		}
 	}
 
 	//sanity check: lowmemorymark < highmemorymark
 	if segment.LowMemoryMark > segment.HighMemoryMark {
-		log.Fatal("[error] Diskbuffer: HighMemoryMark must be greater than LowMemoryMark")
+		log.Fatal().Msg("Diskbuffer: HighMemoryMark must be greater than LowMemoryMark")
 	}
 	if segment.ReadingMemoryMark > segment.LowMemoryMark {
-		log.Fatal("[error] Diskbuffer: LowMemoryMark must be greater than ReadingMemoryMark")
+		log.Fatal().Msg("Diskbuffer: LowMemoryMark must be greater than ReadingMemoryMark")
 	}
 
 	segment.MaxCacheSize = defaultMaxCacheSize
 	if config["maxcachesize"] != "" {
 		segment.FileSize, err = humanize.ParseBytes(config["maxcachesize"])
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Failed to parse maxcachesize config option: %s", err)
+			log.Fatal().Err(err).Msg("Diskbuffer: Failed to parse maxcachesize config option: ")
 		}
 	}
 
@@ -130,7 +131,7 @@ func (segment *DiskBuffer) New(config map[string]string) segments.Segment {
 	if config["filesize"] != "" {
 		segment.FileSize, err = humanize.ParseBytes(config["filesize"])
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Failed to parse filesize config option: %s", err)
+			log.Fatal().Err(err).Msg("Diskbuffer: Failed to parse filesize config option: ")
 		}
 	}
 
@@ -139,7 +140,7 @@ func (segment *DiskBuffer) New(config map[string]string) segments.Segment {
 	if config["batchsize"] != "" {
 		segment.BatchSize, err = strconv.Atoi(config["batchsize"])
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Failed to parse batchsize config option: %s", err)
+			log.Fatal().Err(err).Msg("Diskbuffer: Failed to parse batchsize config option: ")
 		}
 	}
 	if segment.BatchSize < 0 {
@@ -149,7 +150,7 @@ func (segment *DiskBuffer) New(config map[string]string) segments.Segment {
 	if config["batchdebug"] != "" {
 		batchDebug, err := strconv.ParseBool(config["batchdebug"])
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Failed to parse batchdebug config option: %s", err)
+			log.Fatal().Err(err).Msg("Diskbuffer: Failed to parse batchdebug config option: ")
 		}
 		// set proper BatchDebugPrintf function
 		if batchDebug {
@@ -164,7 +165,7 @@ func (segment *DiskBuffer) New(config map[string]string) segments.Segment {
 	if config["queuestatusinterval"] != "" {
 		segment.QueueStatusInterval, err = time.ParseDuration(config["queuestatusinterval"])
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Failed to parse queuestatussnterval config option: %s", err)
+			log.Fatal().Err(err).Msg("Diskbuffer: Failed to parse queuestatussnterval config option: ")
 		}
 	}
 
@@ -172,13 +173,13 @@ func (segment *DiskBuffer) New(config map[string]string) segments.Segment {
 	if config["queuesize"] != "" {
 		buflen, err = strconv.Atoi(config["queuesize"])
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Failed to parse queuesize config option: %s", err)
+			log.Fatal().Err(err).Msg("Diskbuffer: Failed to parse queuesize config option: ")
 		}
 	} else {
 		buflen = defaultQueueSize
 	}
 	if buflen < 64 {
-		log.Printf("[error] Diskbuffer: queuesize too small, using default %d", defaultQueueSize)
+		log.Error().Msgf("Diskbuffer: queuesize too small, using default %d", defaultQueueSize)
 		buflen = defaultQueueSize
 	}
 	segment.MemoryBuffer = make(chan *pb.EnrichedFlow, buflen)
@@ -194,14 +195,14 @@ func WatchCacheFiles(segment *DiskBuffer, BufferWG *sync.WaitGroup, Signal chan 
 		pattern := fmt.Sprintf("%s/*.json.zst", segment.BufferDir)
 		*CacheFiles, err = filepath.Glob(pattern)
 		if err != nil {
-			log.Fatalf("[error] Diskbuffer: Failed with filepath glob: %s", err)
+			log.Fatal().Err(err).Msg("Diskbuffer: Failed with filepath glob: ")
 		}
 		// sum sizes
 		var CacheFilesSize int64 = 0
 		for _, filename := range *CacheFiles {
 			fi, err := os.Stat(filename)
 			if err != nil {
-				log.Printf("[warning] Diskbuffer: Could not obtain file info for file %s", filename)
+				log.Warn().Msgf("Diskbuffer: Could not obtain file info for file %s", filename)
 			}
 			CacheFilesSize += fi.Size()
 		}
@@ -236,20 +237,20 @@ func WriteToDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan s
 	defer close(Watchdogs)
 	defer ReadWriteWG.Done()
 
-	log.Print("[debug] Diskbuffer: Started Writing to Disk")
-	defer log.Print("[debug] Diskbuffer: Ended Writing to Disk")
+	log.Debug().Msg(" Diskbuffer: Started Writing to Disk")
+	defer log.Debug().Msg(" Diskbuffer: Ended Writing to Disk")
 
 	// we need a new filename
 	filename := fmt.Sprintf("%s/%s.json.zst", segment.BufferDir, uuid.NewString())
 
 	file, err := os.Create(filename)
 	if err != nil {
-		log.Printf("[error] Diskbuffer: File specified in 'filename' is not accessible: %s", err)
+		log.Error().Err(err).Msg(" Diskbuffer: File specified in 'filename' is not accessible: ")
 	}
 	level := zstd.SpeedFastest
 	encoder, err := zstd.NewWriter(file, zstd.WithEncoderLevel(level))
 	if err != nil {
-		log.Fatalf("[error] Diskbuffer: error creating zstd encoder: %s", err)
+		log.Fatal().Err(err).Msg("Diskbuffer: error creating zstd encoder: ")
 	}
 	writer := bufio.NewWriterSize(encoder, 65536)
 
@@ -267,14 +268,14 @@ func WriteToDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan s
 				case msg := <-segment.MemoryBuffer:
 					data, err := protojson.Marshal(msg)
 					if err != nil {
-						log.Printf("[warning] Diskbuffer: Skipping a flow, failed to recode protobuf as JSON: %v", err)
+						log.Warn().Err(err).Msg(" Diskbuffer: Skipping a flow, failed to recode protobuf as JSON: ")
 						continue
 					}
 
 					// use Fprintln because it adds an OS specific newline
 					_, err = fmt.Fprintln(writer, string(data))
 					if err != nil {
-						log.Printf("[warning] Diskbuffer: Skipping a flow, failed to write to file %s: %v", filename, err)
+						log.Warn().Msgf("Diskbuffer: Skipping a flow, failed to write to file %s: %v", filename, err)
 						continue
 					}
 				default:
@@ -284,10 +285,10 @@ func WriteToDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan s
 			}
 			fi, err := file.Stat()
 			if err != nil {
-				log.Printf("[warning] Diskbuffer: Could not obtain file info for file %s", filename)
+				log.Warn().Msgf("Diskbuffer: Could not obtain file info for file %s", filename)
 			}
 			if uint64(fi.Size()) > segment.FileSize {
-				log.Printf("[debug] Diskbuffer: File %s is bigger than %d, stopping write", filename, segment.FileSize)
+				log.Debug().Msgf("Diskbuffer: File %s is bigger than %d, stopping write", filename, segment.FileSize)
 				break
 			}
 		}
@@ -333,8 +334,8 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 	defer close(Watchdogs)
 	defer ReadWriteWG.Done()
 
-	log.Print("[debug] Diskbuffer: Started Reading from Disk")
-	defer log.Print("[debug] Diskbuffer: Ended Reading from Disk")
+	log.Debug().Msg(" Diskbuffer: Started Reading from Disk")
+	defer log.Debug().Msg(" Diskbuffer: Ended Reading from Disk")
 
 	// the ReadWriteWG ensures, that there are no Read and Write at the same time.
 	// hence we can read from every file that exists
@@ -344,7 +345,7 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 			file, err := os.Open(filename)
 
 			if err != nil {
-				log.Printf("[warning] Diskbuffer: Could not open file: %s, with error %s", filename, err)
+				log.Warn().Msgf("Diskbuffer: Could not open file: %s, with error %s", filename, err)
 				continue
 			}
 
@@ -354,11 +355,11 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 				scan := scanner.Scan()
 				err := scanner.Err()
 				if errors.Is(err, io.ErrUnexpectedEOF) {
-					log.Printf("[warning] Diskbuffer: Unexpected EOF: %v", err)
+					log.Warn().Err(err).Msg(" Diskbuffer: Unexpected EOF: ")
 					break
 				}
 				if err != nil {
-					log.Printf("[warning] Diskbuffer: Skipping a flow, could not read line from stdin: %v", err)
+					log.Warn().Err(err).Msg(" Diskbuffer: Skipping a flow, could not read line from stdin: ")
 					continue
 				}
 				if !scan && scanner.Err() == nil {
@@ -373,7 +374,7 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 			file.Close()
 			err = os.Remove(filename)
 			if err != nil {
-				log.Printf("[warning] Diskbuffer: Could not remove file %s with error %s", filename, err)
+				log.Warn().Msgf("Diskbuffer: Could not remove file %s with error %s", filename, err)
 			}
 			// check signal channel, if we have a signal, do not read any new file
 			select {
@@ -391,18 +392,18 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 	for line := range fromReader {
 		select {
 		case <-EmergencySignal:
-			log.Print("[warning] Diskbuffer: While reading from disk, got into high watermark")
+			log.Warn().Msg("Diskbuffer: While reading from disk, got into high watermark")
 			// we are in high watermark again
 			// write every line in a new file, then stop reading
 			filename := fmt.Sprintf("%s/rest_%s.json.zst", segment.BufferDir, uuid.NewString())
 			file, err := os.Create(filename)
 			if err != nil {
-				log.Printf("[error] Diskbuffer: File specified in 'filename' is not accessible: %s", err)
+				log.Error().Err(err).Msg(" Diskbuffer: File specified in 'filename' is not accessible: ")
 			}
 			level := zstd.SpeedDefault
 			encoder, err := zstd.NewWriter(file, zstd.WithEncoderLevel(level))
 			if err != nil {
-				log.Fatalf("[error] Diskbuffer: error creating zstd encoder: %s", err)
+				log.Fatal().Err(err).Msg("Diskbuffer: error creating zstd encoder: ")
 			}
 			writer := bufio.NewWriter(encoder)
 
@@ -414,7 +415,7 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 				// use Fprintln because it adds an OS specific newline
 				_, err = fmt.Fprintln(writer, emerg_line)
 				if err != nil {
-					log.Printf("[warning] Diskbuffer: Skipping a flow, failed to write to file %s: %v", filename, err)
+					log.Warn().Msgf("Diskbuffer: Skipping a flow, failed to write to file %s: %v", filename, err)
 					continue
 				}
 			}
@@ -422,7 +423,7 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 			msg := &pb.EnrichedFlow{}
 			err := protojson.Unmarshal(line, msg)
 			if err != nil {
-				log.Printf("[warning] Diskbuffer: Skipping a flow, failed to recode input to protobuf: %v", err)
+				log.Warn().Err(err).Msg(" Diskbuffer: Skipping a flow, failed to recode input to protobuf: ")
 				continue
 			}
 			select {
@@ -441,7 +442,7 @@ func QueueStatus(segment *DiskBuffer, BufferWG *sync.WaitGroup, StopQueueStatusI
 			return
 		case <-time.After(segment.QueueStatusInterval):
 			fill := len(segment.MemoryBuffer)
-			log.Printf("[debug] Diskbuffer: Queue is %3.2f%% full (%d/%d)", float64(fill)/float64(segment.Capacity)*100, fill, segment.Capacity)
+			log.Debug().Msgf("Diskbuffer: Queue is %3.2f%% full (%d/%d)", float64(fill)/float64(segment.Capacity)*100, fill, segment.Capacity)
 		}
 	}
 }
@@ -477,7 +478,7 @@ func (segment *DiskBuffer) Run(wg *sync.WaitGroup) {
 	defer func() {
 		close(segment.Out)
 		wg.Done()
-		log.Println("[info] Diskbuffer: All writer functions have stopped, exiting…")
+		log.Info().Msg("Diskbuffer: All writer functions have stopped, exiting…")
 	}()
 	defer BufferWG.Wait()
 
@@ -525,8 +526,8 @@ func (segment *DiskBuffer) Run(wg *sync.WaitGroup) {
 	BufferWG.Add(1)
 	go func() {
 		defer BufferWG.Done()
-		defer log.Print("[debug] Diskbuffer: Stopping Decider")
-		log.Print("[debug] Diskbuffer: Starting Decider")
+		defer log.Debug().Msg(" Diskbuffer: Stopping Decider")
+		log.Debug().Msg(" Diskbuffer: Starting Decider")
 		for {
 			select {
 			case <-StopDecider:
@@ -552,7 +553,7 @@ func (segment *DiskBuffer) Run(wg *sync.WaitGroup) {
 					ReadWriteWG.Wait()
 				}
 				if length > segment.HighMemoryMark*segment.Capacity/100 && uint64(CacheFilesSize) < segment.MaxCacheSize {
-					log.Print("[debug] Diskbuffer: Try to buffer to disk")
+					log.Debug().Msg(" Diskbuffer: Try to buffer to disk")
 					// start new go routine
 					ReadWriteWG.Wait()
 					ReadWriteWG.Add(2)

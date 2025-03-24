@@ -1,8 +1,6 @@
 package flowfilter
 
 import (
-	"io"
-	"log"
 	"math/rand"
 	"os"
 	"sync"
@@ -10,6 +8,7 @@ import (
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/rs/zerolog"
 )
 
 // FlowFilter Segment testing is basic, the filtering itself is tested in the flowfilter repo
@@ -17,7 +16,7 @@ func TestSegment_FlowFilter_accept(t *testing.T) {
 	result := segments.TestSegment("flowfilter", map[string]string{"filter": "proto 4"},
 		&pb.EnrichedFlow{Proto: 4})
 	if result == nil {
-		t.Error("Segment FlowFilter dropped a flow incorrectly.")
+		t.Error("([error] Segment FlowFilter dropped a flow incorrectly.")
 	}
 }
 
@@ -25,7 +24,7 @@ func TestSegment_FlowFilter_deny(t *testing.T) {
 	result := segments.TestSegment("flowfilter", map[string]string{"filter": "proto 5"},
 		&pb.EnrichedFlow{Proto: 4})
 	if result != nil {
-		t.Error("Segment FlowFilter accepted a flow incorrectly.")
+		t.Error("([error] Segment FlowFilter accepted a flow incorrectly.")
 	}
 }
 
@@ -33,13 +32,13 @@ func TestSegment_FlowFilter_syntax(t *testing.T) {
 	filter := &FlowFilter{}
 	result := filter.New(map[string]string{"filter": "protoo 4"})
 	if result != nil {
-		t.Error("Segment FlowFilter did something with a syntax error present.")
+		t.Error("([error] Segment FlowFilter did something with a syntax error present.")
 	}
 }
 
 // FlowFilter Segment benchmark passthrough
 func BenchmarkFlowFilter(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := FlowFilter{}.New(map[string]string{"filter": "port <50"})

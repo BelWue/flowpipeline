@@ -1,11 +1,12 @@
 package elephant
 
 import (
-	"io"
-	"log"
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -15,7 +16,7 @@ import (
 func TestSegment_Elephant_passthrough(t *testing.T) {
 	segment := segments.LookupSegment("elephant").New(map[string]string{})
 	if segment == nil {
-		log.Fatal("[error] Configured segment 'elephant' could not be initialized properly, see previous messages.")
+		log.Fatal().Msg("Configured segment 'elephant' could not be initialized properly, see previous messages.")
 	}
 
 	in, out := make(chan *pb.EnrichedFlow), make(chan *pb.EnrichedFlow)
@@ -31,7 +32,7 @@ func TestSegment_Elephant_passthrough(t *testing.T) {
 	in <- &pb.EnrichedFlow{Bytes: 100}
 	result := <-out
 	if result.Bytes != 100 {
-		t.Error("Segment Elephant is not working.")
+		t.Error("([error] Segment Elephant is not working.")
 	}
 	close(in)
 	wg.Wait()
@@ -39,7 +40,7 @@ func TestSegment_Elephant_passthrough(t *testing.T) {
 
 // Elephant Segment benchmark passthrough
 func BenchmarkElephant(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Elephant{}

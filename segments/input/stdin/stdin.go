@@ -4,8 +4,9 @@ package stdin
 
 import (
 	"bufio"
-	"log"
 	"strconv"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -33,7 +34,7 @@ func (segment StdIn) New(config map[string]string) segments.Segment {
 	if config["filename"] != "" {
 		file, err = os.Open(config["filename"])
 		if err != nil {
-			log.Printf("[error] StdIn: File specified in 'filename' is not accessible: %s", err)
+			log.Error().Err(err).Msg(" StdIn: File specified in 'filename' is not accessible: ")
 			return nil
 		}
 		filename = config["filename"]
@@ -41,14 +42,14 @@ func (segment StdIn) New(config map[string]string) segments.Segment {
 			if parsedClose, err := strconv.ParseBool(config["eofcloses"]); err == nil {
 				eofCloses = parsedClose
 			} else {
-				log.Println("[error] StdIn: Could not parse 'eofcloses' parameter, using default false.")
+				log.Error().Msg("StdIn: Could not parse 'eofcloses' parameter, using default false.")
 			}
 		} else {
-			log.Println("[info] StdIn: 'eofcloses' set to default false.")
+			log.Info().Msg("StdIn: 'eofcloses' set to default false.")
 		}
 	} else {
 		file = os.Stdin
-		log.Println("[info] StdIn: 'filename' unset, using stdIn.")
+		log.Info().Msg("StdIn: 'filename' unset, using stdIn.")
 	}
 	newsegment.scanner = bufio.NewScanner(file)
 
@@ -68,11 +69,11 @@ func (segment *StdIn) Run(wg *sync.WaitGroup) {
 		for {
 			scan := segment.scanner.Scan()
 			if err := segment.scanner.Err(); err != nil {
-				log.Printf("[warning] StdIn: Skipping a flow, could not read line from stdin: %v", err)
+				log.Warn().Err(err).Msg(" StdIn: Skipping a flow, could not read line from stdin: ")
 				continue
 			}
 			if segment.EofCloses && !scan && segment.scanner.Err() == nil {
-				log.Printf("[info] Reached eof of %s, closing pipeline", segment.FileName)
+				log.Info().Msgf("Reached eof of %s, closing pipeline", segment.FileName)
 				segment.ShutdownParentPipeline()
 				return
 			}
@@ -95,7 +96,7 @@ func (segment *StdIn) Run(wg *sync.WaitGroup) {
 			msg := &pb.EnrichedFlow{}
 			err := protojson.Unmarshal(line, msg)
 			if err != nil {
-				log.Printf("[warning] StdIn: Skipping a flow, failed to recode input to protobuf: %v", err)
+				log.Warn().Err(err).Msg(" StdIn: Skipping a flow, failed to recode input to protobuf: ")
 				continue
 			}
 			segment.Out <- msg

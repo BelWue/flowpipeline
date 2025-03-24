@@ -5,9 +5,10 @@
 package segments
 
 import (
-	"log"
 	"sync"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 )
@@ -23,7 +24,7 @@ var (
 func RegisterSegment(name string, s Segment) {
 	_, ok := registeredSegments[name]
 	if ok {
-		log.Fatalf("[error] Segments: Tried to register conflicting segment name '%s'.", name)
+		log.Fatal().Msgf("Segments: Tried to register conflicting segment name '%s'.", name)
 	}
 	lock.Lock()
 	registeredSegments[name] = s
@@ -37,7 +38,7 @@ func LookupSegment(name string) Segment {
 	segment, ok := registeredSegments[name]
 	lock.RUnlock()
 	if !ok {
-		log.Fatalf("[error] Segments: Could not find a segment named '%s'.", name)
+		log.Fatal().Msgf("Segments: Could not find a segment named '%s'.", name)
 	}
 	return segment
 }
@@ -46,7 +47,7 @@ func LookupSegment(name string) Segment {
 func TestSegment(name string, config map[string]string, msg *pb.EnrichedFlow) *pb.EnrichedFlow {
 	segment := LookupSegment(name).New(config)
 	if segment == nil {
-		log.Fatalf("[error] Configured segment '%s' could not be initialized properly, see previous messages.", name)
+		log.Fatal().Msgf("Configured segment '%s' could not be initialized properly, see previous messages.", name)
 	}
 
 	in, out := make(chan *pb.EnrichedFlow), make(chan *pb.EnrichedFlow)

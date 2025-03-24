@@ -5,11 +5,12 @@ package anonymize
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -49,7 +50,7 @@ func (segments Anonymize) New(config map[string]string) segments.Segment {
 
 	mode, err := modeFromConfig(config["mode"])
 	if err != nil {
-		log.Printf("[error] Anonymize: unknown anonymization mode: %s", config["mode"])
+		log.Error().Msgf("Anonymize: unknown anonymization mode: %s", config["mode"])
 		return nil
 	}
 
@@ -58,21 +59,21 @@ func (segments Anonymize) New(config map[string]string) segments.Segment {
 		maskV6 := 52
 
 		if config["maskV4"] == "" {
-			log.Print("[info] No maskV4 provided for subnet anonymization - using default 16")
+			log.Info().Msg("No maskV4 provided for subnet anonymization - using default 16")
 		} else {
 			maskV4, err = strconv.Atoi(config["maskV4"])
 			if err != nil || maskV4 > 32 || maskV4 < 8 {
-				log.Printf("[Error] Bad value \"%s\" for argument maskV4 - expected int <=32 && >= 8", config["maskV4"])
+				log.Error().Msgf("Bad value \"%s\" for argument maskV4 - expected int <=32 && >= 8", config["maskV4"])
 				return nil
 			}
 		}
 
 		if config["maskV6"] == "" {
-			log.Print("[info] No maskV6 provided for subnet anonymization - using default 52")
+			log.Info().Msg("No maskV6 provided for subnet anonymization - using default 52")
 		} else {
 			maskV6, err = strconv.Atoi(config["maskV6"])
 			if err != nil || maskV6 > 128 || maskV4 < 4 {
-				log.Printf("[Error] Bad value \"%s\" for argument maskV6 - expected int <=128 && >= 4", config["maskV6"])
+				log.Error().Msgf("Bad value \"%s\" for argument maskV6 - expected int <=128 && >= 4", config["maskV6"])
 				return nil
 			}
 		}
@@ -85,7 +86,7 @@ func (segments Anonymize) New(config map[string]string) segments.Segment {
 	if mode == ModeCryptoPan || mode == ModeAll {
 
 		if config["key"] == "" {
-			log.Println("[error] Anonymize: Missing configuration parameter 'key'. Please set the key to use for anonymization of IP addresses.")
+			log.Error().Msg("Anonymize: Missing configuration parameter 'key'. Please set the key to use for anonymization of IP addresses.")
 			return nil
 		} else {
 			encryptionKey = config["key"]
@@ -95,9 +96,9 @@ func (segments Anonymize) New(config map[string]string) segments.Segment {
 		cryptoPanAnonymizer, err = cryptopan.New(ekb)
 		if err != nil {
 			if _, ok := err.(cryptopan.KeySizeError); ok {
-				log.Printf("[error] Anonymize: Key has insufficient length %d, please specify one with more than 32 chars.", len(encryptionKey))
+				log.Error().Msgf("Anonymize: Key has insufficient length %d, please specify one with more than 32 chars.", len(encryptionKey))
 			} else {
-				log.Printf("[error] Anonymize: error creating anonymizer: %e", err)
+				log.Error().Msgf("Anonymize: error creating anonymizer: %e", err)
 			}
 			return nil
 		}
@@ -111,11 +112,11 @@ func (segments Anonymize) New(config map[string]string) segments.Segment {
 		"SrcAddr",
 	}
 	if config["fields"] == "" {
-		log.Printf("[info] Anonymize: Missing configuration parameter 'fields'. Using default fields '%s' to anonymize.", fields)
+		log.Info().Msgf("Anonymize: Missing configuration parameter 'fields'. Using default fields '%s' to anonymize.", fields)
 	} else {
 		fields = []string{}
 		for _, field := range strings.Split(config["fields"], ",") {
-			log.Printf("[info] Anonymize: custom field found: \"%s\"", field)
+			log.Info().Msgf("Anonymize: custom field found: \"%s\"", field)
 			fields = append(fields, field)
 		}
 	}
@@ -133,7 +134,7 @@ func modeFromConfig(s string) (Mode, error) {
 	switch s {
 	case "":
 		//default == cryptopan for backwards compatibility
-		log.Printf("[Info] Anonymize: no anonymization mode specified: using default \"cryptopan\"")
+		log.Info().Msgf("Anonymize: no anonymization mode specified: using default \"cryptopan\"")
 		return ModeCryptoPan, nil
 	case "cryptopan":
 		return ModeCryptoPan, nil

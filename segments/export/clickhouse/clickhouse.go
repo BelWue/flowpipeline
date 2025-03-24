@@ -4,12 +4,13 @@ package clickhouse_segment
 
 import (
 	"database/sql"
-	"log"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -36,7 +37,7 @@ func (segment Clickhouse) New(config map[string]string) segments.Segment {
 	newsegment := &Clickhouse{}
 
 	if config["dsn"] == "" {
-		log.Println("[error] Clickhouse: Parameter 'dsn' is required.")
+		log.Error().Msg("Clickhouse: Parameter 'dsn' is required.")
 		return nil
 	} else {
 		newsegment.DSN = config["dsn"]
@@ -46,15 +47,15 @@ func (segment Clickhouse) New(config map[string]string) segments.Segment {
 	if config["batchsize"] != "" {
 		if parsedBatchSize, err := strconv.ParseUint(config["batchsize"], 10, 32); err == nil {
 			if parsedBatchSize == 0 {
-				log.Println("[error] Clickhouse: Batch size 0 is not allowed. Set this in relation to the expected flows per second.")
+				log.Error().Msg("Clickhouse: Batch size 0 is not allowed. Set this in relation to the expected flows per second.")
 				return nil
 			}
 			newsegment.BatchSize = int(parsedBatchSize)
 		} else {
-			log.Println("[error] Clickhouse: Could not parse 'batchsize' parameter, using default 1000.")
+			log.Error().Msg("Clickhouse: Could not parse 'batchsize' parameter, using default 1000.")
 		}
 	} else {
-		log.Println("[info] Clickhouse: 'batchsize' set to default '1000'.")
+		log.Info().Msg("Clickhouse: 'batchsize' set to default '1000'.")
 	}
 
 	// determine field set
@@ -111,7 +112,7 @@ func (segment Clickhouse) New(config map[string]string) segments.Segment {
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? , ?, ?, ?)`
 		newsegment.bulkInsert = newsegment.bulkInsertFlowhouse
 	default:
-		log.Printf("[error] Clickhouse: Unknown preset selected.")
+		log.Error().Msgf("Clickhouse: Unknown preset selected.")
 		return nil
 	}
 
@@ -127,17 +128,17 @@ func (segment *Clickhouse) Run(wg *sync.WaitGroup) {
 	var err error
 	segment.db, err = sql.Open("clickhouse", segment.DSN)
 	if err != nil {
-		log.Panicf("[error] Clickhouse: Could not open database with error: %+v", err)
+		log.Panic().Msgf("Clickhouse: Could not open database with error: %+v", err)
 	}
 	defer segment.db.Close()
 
 	tx, err := segment.db.Begin()
 	if err != nil {
-		log.Panicf("[error] Clickhouse: Could not start initiation transaction with error: %+v", err)
+		log.Panic().Msgf("Clickhouse: Could not start initiation transaction with error: %+v", err)
 	}
 	_, err = tx.Exec(segment.createStatement)
 	if err != nil {
-		log.Panicf("[error] Clickhouse: Could not create database, check field configuration: %+v", err)
+		log.Panic().Msgf("Clickhouse: Could not create database, check field configuration: %+v", err)
 	}
 	tx.Commit()
 
@@ -148,7 +149,7 @@ func (segment *Clickhouse) Run(wg *sync.WaitGroup) {
 		if len(unsaved) >= segment.BatchSize {
 			err := segment.bulkInsert(unsaved)
 			if err != nil {
-				log.Printf("[error] %s", err)
+				log.Error().Err(err).Msg(" ")
 			}
 			unsaved = []*pb.EnrichedFlow{}
 		}
@@ -163,7 +164,7 @@ func (segment Clickhouse) bulkInsertFlowhouse(unsavedFlows []*pb.EnrichedFlow) e
 	}
 	tx, err := segment.db.Begin()
 	if err != nil {
-		log.Printf("[error] Clickhouse: Error starting transaction for current batch of %d flows: %+v", len(unsavedFlows), err)
+		log.Error().Msgf("Clickhouse: Error starting transaction for current batch of %d flows: %+v", len(unsavedFlows), err)
 	}
 	for _, msg := range unsavedFlows {
 		var srcPfx, dstPfx net.IP
@@ -198,7 +199,7 @@ func (segment Clickhouse) bulkInsertFlowhouse(unsavedFlows []*pb.EnrichedFlow) e
 		}
 		_, err := tx.Exec(segment.insertStatement, valueArgs...)
 		if err != nil {
-			log.Printf("[error] Clickhouse: Error inserting flow into transaction: %+v", err)
+			log.Error().Msgf("Clickhouse: Error inserting flow into transaction: %+v", err)
 		}
 	}
 	tx.Commit()

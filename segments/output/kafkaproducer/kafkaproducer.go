@@ -6,12 +6,13 @@ package kafkaproducer
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"log"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -51,7 +52,7 @@ func (segment KafkaProducer) New(config map[string]string) segments.Segment {
 	newsegment.saramaConfig = sarama.NewConfig()
 
 	if config["server"] == "" || config["topic"] == "" {
-		log.Println("[error] KafkaProducer: Missing required configuration parameters.")
+		log.Error().Msg("KafkaProducer: Missing required configuration parameters.")
 		return nil
 	} else {
 		newsegment.Server = config["server"]
@@ -63,10 +64,10 @@ func (segment KafkaProducer) New(config map[string]string) segments.Segment {
 		if parsedTls, err := strconv.ParseBool(config["legacy"]); err == nil {
 			legacy = parsedTls
 		} else {
-			log.Println("[Error] KafkaProducer: Could not parse 'legacy' parameter, using default false.")
+			log.Error().Msg("KafkaProducer: Could not parse 'legacy' parameter, using default false.")
 		}
 	} else {
-		log.Println("[Debug] KafkaProducer: 'legacy' set to default false.")
+		log.Debug().Msg("KafkaProducer: 'legacy' set to default false.")
 	}
 	newsegment.Legacy = legacy
 
@@ -80,7 +81,7 @@ func (segment KafkaProducer) New(config map[string]string) segments.Segment {
 	// TODO: parse and set kafka version
 	newsegment.saramaConfig.Version, err = sarama.ParseKafkaVersion("2.4.0")
 	if err != nil {
-		log.Panicf("Error parsing Kafka version: %v", err)
+		log.Panic().Err(err).Msg("Error parsing Kafka version: ")
 	}
 
 	// parse config and setup TLS
@@ -89,21 +90,21 @@ func (segment KafkaProducer) New(config map[string]string) segments.Segment {
 		if parsedTls, err := strconv.ParseBool(config["tls"]); err == nil {
 			useTls = parsedTls
 		} else {
-			log.Println("[error] KafkaProducer: Could not parse 'tls' parameter, using default true.")
+			log.Error().Msg("KafkaProducer: Could not parse 'tls' parameter, using default true.")
 		}
 	} else {
-		log.Println("[info] KafkaProducer: 'tls' set to default true.")
+		log.Info().Msg("KafkaProducer: 'tls' set to default true.")
 	}
 	newsegment.Tls = useTls
 	if newsegment.Tls {
 		rootCAs, err := x509.SystemCertPool()
 		if err != nil {
-			log.Panicf("TLS Error: %v", err)
+			log.Panic().Err(err).Msg("TLS Error: ")
 		}
 		newsegment.saramaConfig.Net.TLS.Enable = true
 		newsegment.saramaConfig.Net.TLS.Config = &tls.Config{RootCAs: rootCAs}
 	} else {
-		log.Println("[info] KafkaProducer: Disabled TLS, operating unencrypted.")
+		log.Info().Msg("KafkaProducer: Disabled TLS, operating unencrypted.")
 	}
 
 	// parse config and setup auth
@@ -112,15 +113,15 @@ func (segment KafkaProducer) New(config map[string]string) segments.Segment {
 		if parsedAuth, err := strconv.ParseBool(config["auth"]); err == nil {
 			useAuth = parsedAuth
 		} else {
-			log.Println("[error] KafkaProducer: Could not parse 'auth' parameter, using default true.")
+			log.Error().Msg("KafkaProducer: Could not parse 'auth' parameter, using default true.")
 		}
 	} else {
-		log.Println("[info] KafkaProducer: 'auth' set to default true.")
+		log.Info().Msg("KafkaProducer: 'auth' set to default true.")
 	}
 
 	// parse and configure credentials, if applicable
 	if useAuth && (config["user"] == "" || config["pass"] == "") {
-		log.Println("[error] KafkaProducer: Missing required configuration parameters for auth.")
+		log.Error().Msg("KafkaProducer: Missing required configuration parameters for auth.")
 		return nil
 	} else {
 		newsegment.User = config["user"]
@@ -133,15 +134,15 @@ func (segment KafkaProducer) New(config map[string]string) segments.Segment {
 		newsegment.saramaConfig.Net.SASL.Enable = true
 		newsegment.saramaConfig.Net.SASL.User = newsegment.User
 		newsegment.saramaConfig.Net.SASL.Password = newsegment.Pass
-		log.Printf("[info] KafkaProducer: Authenticating as user '%s'.", newsegment.User)
+		log.Info().Msgf("KafkaProducer: Authenticating as user '%s'.", newsegment.User)
 	} else {
 		newsegment.saramaConfig.Net.SASL.Enable = false
-		log.Println("[info] KafkaProducer: Disabled auth.")
+		log.Info().Msg("KafkaProducer: Disabled auth.")
 	}
 
 	// warn if we're leaking credentials
 	if newsegment.Auth && !newsegment.Tls {
-		log.Println("[warning] KafkaProducer: Authentication will be done in plain text!")
+		log.Warn().Msg("KafkaProducer: Authentication will be done in plain text!")
 	}
 
 	// parse special target topic handling information
@@ -149,17 +150,17 @@ func (segment KafkaProducer) New(config map[string]string) segments.Segment {
 		fmsg := reflect.ValueOf(pb.EnrichedFlow{})
 		field := fmsg.FieldByName(config["topicsuffix"])
 		if !field.IsValid() {
-			log.Println("[error] KafkaProducer: The 'topicsuffix' is not a valid FlowMessage field.")
+			log.Error().Msg("KafkaProducer: The 'topicsuffix' is not a valid FlowMessage field.")
 			return nil
 		}
 		fieldtype := field.Type().String()
 		if fieldtype != "string" && fieldtype != "uint32" && fieldtype != "uint64" {
-			log.Println("[error] KafkaProducer: TopicSuffix must be of type uint or string.")
+			log.Error().Msg("KafkaProducer: TopicSuffix must be of type uint or string.")
 			return nil
 		}
 		newsegment.TopicSuffix = config["topicsuffix"]
 	} else {
-		log.Println("[info] KafkaProducer: 'topicsuffix' set to default disabled.")
+		log.Info().Msg("KafkaProducer: 'topicsuffix' set to default disabled.")
 	}
 
 	return newsegment
@@ -179,7 +180,7 @@ func (segment *KafkaProducer) Run(wg *sync.WaitGroup) {
 		if segment.Legacy {
 			legacyFlow := msg.ConvertToLegacyEnrichedFlow()
 			if binary, err = proto.Marshal(legacyFlow); err != nil {
-				log.Printf("[error] KafkaProducer: Error encoding protobuf. %s", err)
+				log.Error().Err(err).Msg(" KafkaProducer: Error encoding protobuf. ")
 				continue
 			}
 		} else {
@@ -188,11 +189,11 @@ func (segment *KafkaProducer) Run(wg *sync.WaitGroup) {
 				msg.SyncMissingTimeStamps()
 				protoProducerMessage.EnrichedFlow = *msg
 				if binary, err = protoProducerMessage.MarshalBinary(); err != nil {
-					log.Printf("[error] KafkaProducer: Error encoding protobuf. %s", err)
+					log.Error().Err(err).Msg(" KafkaProducer: Error encoding protobuf. ")
 					continue
 				}
 			} else {
-				log.Printf("[error] KafkaProducer: Empty message")
+				log.Error().Msgf("KafkaProducer: Empty message")
 				continue
 			}
 		}
@@ -214,7 +215,7 @@ func (segment *KafkaProducer) Run(wg *sync.WaitGroup) {
 			case "string": // this is because doing nothing is also much faster than Sprint
 				suffix = field.Interface().(string)
 			default:
-				log.Println("[error] KafkaProducer: TopicSuffix must be of type uint or string.")
+				log.Error().Msg("KafkaProducer: TopicSuffix must be of type uint or string.")
 				segment.ShutdownParentPipeline()
 				return
 			}

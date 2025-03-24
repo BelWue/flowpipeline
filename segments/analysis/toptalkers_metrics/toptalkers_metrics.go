@@ -1,10 +1,10 @@
 package toptalkers_metrics
 
 import (
-	"log"
 	"sync"
 
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/rs/zerolog/log"
 )
 
 type ToptalkersMetrics struct {
@@ -20,22 +20,22 @@ func (segment ToptalkersMetrics) New(config map[string]string) segments.Segment 
 
 	err := newsegment.ParsePrometheusConfig(config)
 	if err != nil {
-		log.Println(err.Error())
+		log.Error().Err(err)
 		return nil
 	}
 	if config["endpoint"] == "" {
-		log.Println("[info] ToptalkersMetrics Missing configuration parameter 'endpoint'. Using default port \":8080\"")
+		log.Info().Msg("ToptalkersMetrics Missing configuration parameter 'endpoint'. Using default port \":8080\"")
 	} else {
 		newsegment.Endpoint = config["endpoint"]
 	}
 
 	if config["metricspath"] == "" {
-		log.Println("[info] ToptalkersMetrics: Missing configuration parameter 'metricspath'. Using default path \"/metrics\"")
+		log.Info().Msg("ToptalkersMetrics: Missing configuration parameter 'metricspath'. Using default path \"/metrics\"")
 	} else {
 		newsegment.MetricsPath = config["metricspath"]
 	}
 	if config["flowdatapath"] == "" {
-		log.Println("[info] ThresholdToptalkersMetrics: Missing configuration parameter 'flowdatapath'. Using default path \"/flowdata\"")
+		log.Info().Msg("ThresholdToptalkersMetrics: Missing configuration parameter 'flowdatapath'. Using default path \"/flowdata\"")
 	} else {
 		newsegment.FlowdataPath = config["flowdatapath"]
 	}

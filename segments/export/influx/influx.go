@@ -6,11 +6,12 @@
 package influx
 
 import (
-	"log"
 	"net/url"
 	"reflect"
 	"strings"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -34,30 +35,30 @@ func (segment Influx) New(config map[string]string) segments.Segment {
 		// check if a valid url has been passed
 		_, err := url.Parse(config["address"])
 		if err != nil {
-			log.Printf("[error] Influx: error parsing given url: %e", err)
+			log.Error().Msgf("Influx: error parsing given url: %e", err)
 		}
 		newsegment.Address = config["address"]
 	} else {
 		newsegment.Address = "http://127.0.0.1:8086"
-		log.Println("[info] Influx: Missing configuration parameter 'address'. Using default address 'http://127.0.0.1:8086'")
+		log.Info().Msg("Influx: Missing configuration parameter 'address'. Using default address 'http://127.0.0.1:8086'")
 	}
 
 	if config["org"] == "" {
-		log.Println("[error] Influx: Missing configuration parameter 'org'. Please set the organization to use.")
+		log.Error().Msg("Influx: Missing configuration parameter 'org'. Please set the organization to use.")
 		return nil
 	} else {
 		newsegment.Org = config["org"]
 	}
 
 	if config["bucket"] == "" {
-		log.Println("[error] Influx: Missing configuration parameter 'bucket'. Please set the bucket to use.")
+		log.Error().Msg("Influx: Missing configuration parameter 'bucket'. Please set the bucket to use.")
 		return nil
 	} else {
 		newsegment.Bucket = config["bucket"]
 	}
 
 	if config["token"] == "" {
-		log.Println("[error] Influx: Missing configuration parameter 'token'. Please set the token to use.")
+		log.Error().Msg("Influx: Missing configuration parameter 'token'. Please set the token to use.")
 		return nil
 	} else {
 		newsegment.Token = config["token"]
@@ -65,7 +66,7 @@ func (segment Influx) New(config map[string]string) segments.Segment {
 
 	// set default Tags if not configured
 	if config["tags"] == "" {
-		log.Println("[info] Influx: Configuration parameter 'tags' not set. Using default tags 'ProtoName' to export.")
+		log.Info().Msg("Influx: Configuration parameter 'tags' not set. Using default tags 'ProtoName' to export.")
 		newsegment.Tags = []string{"ProtoName"}
 	} else {
 		newsegment.Tags = strings.Split(config["tags"], ",")
@@ -74,7 +75,7 @@ func (segment Influx) New(config map[string]string) segments.Segment {
 			tagname = strings.TrimSpace(tagname)
 			_, found := protomembers.FieldByName(tagname)
 			if !found {
-				log.Printf("[error] Influx: Unknown name '%s' specified in 'tags'.", tagname)
+				log.Error().Msgf("Influx: Unknown name '%s' specified in 'tags'.", tagname)
 				return nil
 			}
 		}
@@ -82,7 +83,7 @@ func (segment Influx) New(config map[string]string) segments.Segment {
 
 	// set default Fields if not configured
 	if config["fields"] == "" {
-		log.Println("[info] Influx: Configuration parameter 'fields' not set. Using default fields 'Bytes,Packets' to export.")
+		log.Info().Msg("Influx: Configuration parameter 'fields' not set. Using default fields 'Bytes,Packets' to export.")
 		newsegment.Fields = []string{"Bytes", "Packets"}
 	} else {
 		newsegment.Fields = strings.Split(config["fields"], ",")
@@ -90,7 +91,7 @@ func (segment Influx) New(config map[string]string) segments.Segment {
 			protomembers := reflect.TypeOf(pb.EnrichedFlow{})
 			_, found := protomembers.FieldByName(fieldname)
 			if !found {
-				log.Printf("[error] Influx: Unknown name '%s' specified in 'fields'.", fieldname)
+				log.Error().Msgf("Influx: Unknown name '%s' specified in 'fields'.", fieldname)
 				return nil
 			}
 		}

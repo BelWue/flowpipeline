@@ -1,14 +1,13 @@
 package json
 
 import (
-	"io"
-	"log"
 	"os"
 	"sync"
 	"testing"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/rs/zerolog"
 )
 
 // Json Segment test, passthrough test only
@@ -16,13 +15,13 @@ func TestSegment_Json_passthrough(t *testing.T) {
 	result := segments.TestSegment("json", map[string]string{},
 		&pb.EnrichedFlow{})
 	if result == nil {
-		t.Error("Segment Json is not passing through flows.")
+		t.Error("([error] Segment Json is not passing through flows.")
 	}
 }
 
 // Json Segment benchmark passthrough
 func BenchmarkJson(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Json{}.New(map[string]string{})

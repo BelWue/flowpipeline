@@ -1,14 +1,13 @@
 package printflowdump
 
 import (
-	"io"
-	"log"
 	"os"
 	"sync"
 	"testing"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/rs/zerolog"
 )
 
 // PrintFlowdump Segment test, passthrough test only
@@ -16,13 +15,13 @@ func TestSegment_PrintFlowdump_passthrough(t *testing.T) {
 	result := segments.TestSegment("printflowdump", map[string]string{},
 		&pb.EnrichedFlow{})
 	if result == nil {
-		t.Error("Segment PrintFlowDump is not passing through flows.")
+		t.Error("([error] Segment PrintFlowDump is not passing through flows.")
 	}
 }
 
 // PrintFlowdump Segment benchmark passthrough
 func BenchmarkPrintFlowdump(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := PrintFlowdump{}

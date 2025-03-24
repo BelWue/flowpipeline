@@ -4,13 +4,12 @@
 package sqlite
 
 import (
-	"io"
-	"log"
 	"os"
 	"sync"
 	"testing"
 
 	"github.com/BelWue/flowpipeline/pb"
+	"github.com/rs/zerolog"
 	// "github.com/BelWue/flowpipeline/segments"
 )
 
@@ -19,7 +18,7 @@ func TestSegment_Sqlite_passthrough(t *testing.T) {
 	// result := segments.TestSegment("sqlite", map[string]string{"filename": "test.sqlite"},
 	// 	&pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, Proto: 45})
 	// if result == nil {
-	// 	t.Error("Segment Sqlite is not passing through flows.")
+	// 	t.Error("([error] Segment Sqlite is not passing through flows.")
 	// }
 	segment := Sqlite{}.New(map[string]string{"filename": "test.sqlite"})
 
@@ -39,7 +38,7 @@ func TestSegment_Sqlite_passthrough(t *testing.T) {
 
 // Sqlite Segment benchmark with 1000 samples stored in memory
 func BenchmarkSqlite_1000(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Sqlite{}.New(map[string]string{"filename": "bench.sqlite"})
@@ -60,7 +59,7 @@ func BenchmarkSqlite_1000(b *testing.B) {
 
 // Sqlite Segment benchmark with 10000 samples stored in memory
 func BenchmarkSqlite_10000(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Sqlite{}.New(map[string]string{"filename": "bench.sqlite", "batchsize": "10000"})
@@ -81,7 +80,7 @@ func BenchmarkSqlite_10000(b *testing.B) {
 
 // Sqlite Segment benchmark with 10000 samples stored in memory
 func BenchmarkSqlite_100000(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Sqlite{}.New(map[string]string{"filename": "bench.sqlite", "batchsize": "100000"})

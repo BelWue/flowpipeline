@@ -1,14 +1,13 @@
 package normalize
 
 import (
-	"io"
-	"log"
 	"os"
 	"sync"
 	"testing"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/rs/zerolog"
 )
 
 // Normalize Segment test, in-flow SampleingRate test
@@ -16,7 +15,7 @@ func TestSegment_Normalize_inFlowSamplingRate(t *testing.T) {
 	result := segments.TestSegment("normalize", map[string]string{},
 		&pb.EnrichedFlow{SamplingRate: 32, Bytes: 1})
 	if result.Bytes != 32 {
-		t.Error("Segment Normalize is not working with in-flow SamplingRate.")
+		t.Error("([error] Segment Normalize is not working with in-flow SamplingRate.")
 	}
 }
 
@@ -25,7 +24,7 @@ func TestSegment_Normalize_fallbackSamplingRate(t *testing.T) {
 	result := segments.TestSegment("normalize", map[string]string{"fallback": "42"},
 		&pb.EnrichedFlow{SamplingRate: 0, Bytes: 1})
 	if result.Bytes != 42 {
-		t.Error("Segment Normalize is not working with fallback SamplingRate.")
+		t.Error("([error] Segment Normalize is not working with fallback SamplingRate.")
 	}
 }
 
@@ -34,13 +33,13 @@ func TestSegment_Normalize_noFallbackSamplingRate(t *testing.T) {
 	result := segments.TestSegment("normalize", map[string]string{},
 		&pb.EnrichedFlow{SamplingRate: 0, Bytes: 1})
 	if result.Bytes != 1 {
-		t.Error("Segment Normalize is not working with fallback SamplingRate.")
+		t.Error("([error] Segment Normalize is not working with fallback SamplingRate.")
 	}
 }
 
 // Normalize Segment benchmark passthrough
 func BenchmarkNormalize(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Normalize{}.New(map[string]string{})

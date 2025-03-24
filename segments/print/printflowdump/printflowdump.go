@@ -6,11 +6,12 @@ package printflowdump
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -43,10 +44,10 @@ func (segment PrintFlowdump) New(config map[string]string) segments.Segment {
 		if parsedUseProtoname, err := strconv.ParseBool(config["useprotoname"]); err == nil {
 			useProtoname = parsedUseProtoname
 		} else {
-			log.Println("[error] PrintFlowdump: Could not parse 'useprotoname' parameter, using default true.")
+			log.Error().Msg("PrintFlowdump: Could not parse 'useprotoname' parameter, using default true.")
 		}
 	} else {
-		log.Println("[info] PrintFlowdump: 'useprotoname' set to default true.")
+		log.Info().Msg("PrintFlowdump: 'useprotoname' set to default true.")
 	}
 
 	var verbose bool = false
@@ -54,10 +55,10 @@ func (segment PrintFlowdump) New(config map[string]string) segments.Segment {
 		if parsedVerbose, err := strconv.ParseBool(config["verbose"]); err == nil {
 			verbose = parsedVerbose
 		} else {
-			log.Println("[error] PrintFlowdump: Could not parse 'verbose' parameter, using default false.")
+			log.Error().Msg("PrintFlowdump: Could not parse 'verbose' parameter, using default false.")
 		}
 	} else {
-		log.Println("[info] PrintFlowdump: 'verbose' set to default false.")
+		log.Info().Msg("PrintFlowdump: 'verbose' set to default false.")
 	}
 
 	var highlight bool = false
@@ -65,10 +66,10 @@ func (segment PrintFlowdump) New(config map[string]string) segments.Segment {
 		if parsedHighlight, err := strconv.ParseBool(config["highlight"]); err == nil {
 			highlight = parsedHighlight
 		} else {
-			log.Println("[error] PrintFlowdump: Could not parse 'highlight' parameter, using default false.")
+			log.Error().Msg("PrintFlowdump: Could not parse 'highlight' parameter, using default false.")
 		}
 	} else {
-		log.Println("[info] PrintFlowdump: 'highlight' set to default false.")
+		log.Info().Msg("PrintFlowdump: 'highlight' set to default false.")
 	}
 
 	return &PrintFlowdump{UseProtoname: useProtoname, Verbose: verbose, Highlight: highlight}

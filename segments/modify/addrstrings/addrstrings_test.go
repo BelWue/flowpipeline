@@ -1,10 +1,11 @@
 package addrstrings
 
 import (
-	"github.com/BelWue/flowpipeline/pb"
-	"github.com/BelWue/flowpipeline/segments"
 	"reflect"
 	"testing"
+
+	"github.com/BelWue/flowpipeline/pb"
+	"github.com/BelWue/flowpipeline/segments"
 )
 
 func init() {
@@ -73,7 +74,7 @@ func TestAddrStrings(t *testing.T) {
 		t.Run(testname, func(t *testing.T) {
 			result := segments.TestSegment("addrstrings", nil, test.input)
 			if !reflect.DeepEqual(result, test.expected) {
-				t.Errorf("Segment addrstrings is not returning the proper fields. Got: »%+v« Expected »%+v«", result, test.expected)
+				t.Errorf("[error] Segment addrstrings is not returning the proper fields. Got: »%+v« Expected »%+v«", result, test.expected)
 			}
 		})
 	}

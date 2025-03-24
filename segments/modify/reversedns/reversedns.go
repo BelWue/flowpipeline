@@ -3,10 +3,11 @@ package reversedns
 
 import (
 	"context"
-	"log"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 	"github.com/rs/dnscache"
@@ -29,7 +30,7 @@ func (segment ReverseDns) New(config map[string]string) segments.Segment {
 	if config["cache"] != "" {
 		var err error
 		if cache, err = strconv.ParseBool(config["cache"]); err == nil {
-			log.Println("[error] ReverseDns: Invalid 'cache' parameter.")
+			log.Error().Msg("ReverseDns: Invalid 'cache' parameter.")
 			return nil
 		}
 	}
@@ -41,7 +42,7 @@ func (segment ReverseDns) New(config map[string]string) segments.Segment {
 		}
 		duration, err := time.ParseDuration(refresh)
 		if err != nil {
-			log.Println("[error] ReverseDns: Invalid 'refreshinterval' parameter.")
+			log.Error().Msg("ReverseDns: Invalid 'refreshinterval' parameter.")
 			return nil
 		}
 		go func() {

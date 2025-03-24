@@ -2,13 +2,14 @@
 package lumberjack
 
 import (
-	"log"
 	"net/url"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -43,7 +44,7 @@ type Lumberjack struct {
 
 func NoDebugPrintf(format string, v ...any) {}
 func DoDebugPrintf(format string, v ...any) {
-	log.Printf(format, v...)
+	log.Debug().Msgf(format, v...)
 }
 
 func (segment *Lumberjack) New(config map[string]string) segments.Segment {
@@ -60,10 +61,10 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 	} else {
 		defaultCompression, err = strconv.Atoi(defaultCompressionString)
 		if err != nil {
-			log.Fatalf("[error] Lumberjack: Failed to parse default compression level %s: %s", defaultCompressionString, err)
+			log.Fatal().Msgf("Lumberjack: Failed to parse default compression level %s: %s", defaultCompressionString, err)
 		}
 		if defaultCompression < 0 || defaultCompression > 9 {
-			log.Fatalf("[error] Lumberjack: Default compression level %d is out of range", defaultCompression)
+			log.Fatal().Msgf("Lumberjack: Default compression level %d is out of range", defaultCompression)
 		}
 	}
 
@@ -73,13 +74,13 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 		rawServerStrings[idx] = strings.TrimSpace(serverName)
 	}
 	if len(rawServerStrings) == 0 {
-		log.Fatal("[error] Lumberjack: No servers specified in 'servers' config option.")
+		log.Fatal().Msg("Lumberjack: No servers specified in 'servers' config option.")
 	} else {
 		segment.Servers = make(map[string]ServerOptions)
 		for _, rawServerString := range rawServerStrings {
 			serverURL, err := url.Parse(rawServerString)
 			if err != nil {
-				log.Fatalf("[error] Lumberjack: Failed to parse server URL %s: %s", rawServerString, err)
+				log.Fatal().Msgf("Lumberjack: Failed to parse server URL %s: %s", rawServerString, err)
 			}
 			urlQueryParams := serverURL.Query()
 
@@ -96,7 +97,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 				useTLS = true
 				verifyTLS = false
 			default:
-				log.Fatalf("[error] Lumberjack: Unknown scheme %s in server URL %s", serverURL.Scheme, rawServerString)
+				log.Fatal().Msgf("Lumberjack: Unknown scheme %s in server URL %s", serverURL.Scheme, rawServerString)
 			}
 
 			// parse compression level
@@ -109,10 +110,10 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 			} else {
 				compressionLevel, err = strconv.Atoi(compressionString)
 				if err != nil {
-					log.Fatalf("[error] Lumberjack: Failed to parse compression level %s for host %s: %s", compressionString, serverURL.Host, err)
+					log.Fatal().Msgf("Lumberjack: Failed to parse compression level %s for host %s: %s", compressionString, serverURL.Host, err)
 				}
 				if compressionLevel < 0 || compressionLevel > 9 {
-					log.Fatalf("[error] Lumberjack: Compression level %d out of range for host %s", compressionLevel, serverURL.Host)
+					log.Fatal().Msgf("Lumberjack: Compression level %d out of range for host %s", compressionLevel, serverURL.Host)
 				}
 			}
 
@@ -125,12 +126,12 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 				numRoutines, err = strconv.Atoi(numRoutinesString)
 				switch {
 				case err != nil:
-					log.Fatalf("[error] Lumberjack: Failed to parse count %s for host %s: %s", numRoutinesString, serverURL.Host, err)
+					log.Fatal().Msgf("Lumberjack: Failed to parse count %s for host %s: %s", numRoutinesString, serverURL.Host, err)
 				case numRoutines < 1:
-					log.Printf("[warning] Lumberjack: count is smaller than 1, setting to 1")
+					log.Warn().Msgf("Lumberjack: count is smaller than 1, setting to 1")
 					numRoutines = 1
 				case numRoutines > runtime.NumCPU():
-					log.Printf("[warning] Lumberjack: count is larger than runtime.NumCPU (%d). This will most likely hurt performance.", runtime.NumCPU())
+					log.Warn().Msgf("Lumberjack: count is larger than runtime.NumCPU (%d). This will most likely hurt performance.", runtime.NumCPU())
 				}
 			}
 
@@ -148,7 +149,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 	if config["batchsize"] != "" {
 		segment.BatchSize, err = strconv.Atoi(strings.ReplaceAll(config["batchsize"], "_", ""))
 		if err != nil {
-			log.Fatalf("[error] Lumberjack: Failed to parse batchsize config option: %s", err)
+			log.Fatal().Err(err).Msg("Lumberjack: Failed to parse batchsize config option: ")
 		}
 	}
 	if segment.BatchSize < 0 {
@@ -159,23 +160,23 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 	if config["batchtimeout"] != "" {
 		segment.BatchTimeout, err = time.ParseDuration(config["batchtimeout"])
 		if err != nil {
-			log.Fatalf("[error] Lumberjack: Failed to parse timeout config option: %s", err)
+			log.Fatal().Err(err).Msg("Lumberjack: Failed to parse timeout config option: ")
 		}
 	}
 
 	if segment.BatchTimeout < minimalBatchTimeout {
-		log.Printf("[error] Lumberjack: timeout %s too small, using default %s", segment.BatchTimeout.String(), defaultTimeout.String())
+		log.Error().Msgf("Lumberjack: timeout %s too small, using default %s", segment.BatchTimeout.String(), defaultTimeout.String())
 		segment.BatchTimeout = defaultTimeout
 	}
 	if segment.BatchTimeout > time.Minute {
-		log.Printf("[error] Lumberjack: timeout %s too large, using default %s", segment.BatchTimeout.String(), defaultTimeout)
+		log.Error().Msgf("Lumberjack: timeout %s too large, using default %s", segment.BatchTimeout.String(), defaultTimeout)
 		segment.BatchTimeout = defaultTimeout
 	}
 	// parse batchdebug option
 	if config["batchdebug"] != "" {
 		batchDebug, err := strconv.ParseBool(config["batchdebug"])
 		if err != nil {
-			log.Fatalf("[error] Lumberjack: Failed to parse batchdebug config option: %s", err)
+			log.Fatal().Err(err).Msg("Lumberjack: Failed to parse batchdebug config option: ")
 		}
 		// set proper BatchDebugPrintf function
 		if batchDebug {
@@ -190,7 +191,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 	if config["reconnectwait"] != "" {
 		segment.ReconnectWait, err = time.ParseDuration(config["reconnectwait"])
 		if err != nil {
-			log.Fatalf("[error] Lumberjack: Failed to parse reconnectwait config option: %s", err)
+			log.Fatal().Err(err).Msg("Lumberjack: Failed to parse reconnectwait config option: ")
 		}
 	}
 
@@ -199,7 +200,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 	if config["queuestatusinterval"] != "" {
 		segment.QueueStatusInterval, err = time.ParseDuration(config["queuestatusinterval"])
 		if err != nil {
-			log.Fatalf("[error] Lumberjack: Failed to parse queuestatussnterval config option: %s", err)
+			log.Fatal().Err(err).Msg("Lumberjack: Failed to parse queuestatussnterval config option: ")
 		}
 	}
 
@@ -207,13 +208,13 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 	if config["queuesize"] != "" {
 		buflen, err = strconv.Atoi(strings.ReplaceAll(config["queuesize"], "_", ""))
 		if err != nil {
-			log.Fatalf("[error] Lumberjack: Failed to parse queuesize config option: %s", err)
+			log.Fatal().Err(err).Msg("Lumberjack: Failed to parse queuesize config option: ")
 		}
 	} else {
 		buflen = defaultQueueSize
 	}
 	if buflen < 64 {
-		log.Printf("[error] Lumberjack: queuesize too small, using default %d", defaultQueueSize)
+		log.Error().Msgf("Lumberjack: queuesize too small, using default %d", defaultQueueSize)
 		buflen = defaultQueueSize
 	}
 	segment.LumberjackOut = make(chan *pb.EnrichedFlow, buflen)
@@ -228,7 +229,7 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 		close(segment.Out)
 		writerWG.Wait()
 		wg.Done()
-		log.Println("[info] Lumberjack: All writer functions have stopped, exiting…")
+		log.Info().Msg("Lumberjack: All writer functions have stopped, exiting…")
 	}()
 
 	// print queue status information
@@ -238,7 +239,7 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 			for {
 				time.Sleep(segment.QueueStatusInterval)
 				fill := len(segment.LumberjackOut)
-				log.Printf("[debug] Lumberjack: Queue is %3.2f%% full (%d/%d)", float64(fill)/float64(length)*100, fill, length)
+				log.Debug().Msgf("Lumberjack: Queue is %3.2f%% full (%d/%d)", float64(fill)/float64(length)*100, fill, length)
 			}
 		}()
 	}
@@ -253,7 +254,7 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 				// connect to lumberjack server
 				client := NewResilientClient(server, options, segment.ReconnectWait)
 				defer client.Close()
-				log.Printf("[info] Lumberjack: Connected to %s (TLS: %v, VerifyTLS: %v, Compression: %d, number %d/%d)", server, options.UseTLS, options.VerifyCertificate, options.CompressionLevel, numServer+1, options.Parallism)
+				log.Info().Msgf("Lumberjack: Connected to %s (TLS: %v, VerifyTLS: %v, Compression: %d, number %d/%d)", server, options.UseTLS, options.VerifyCertificate, options.CompressionLevel, numServer+1, options.Parallism)
 
 				flowInterface := make([]interface{}, segment.BatchSize)
 				idx := 0
@@ -272,9 +273,9 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 							// send local buffer
 							count, err := client.SendNoRetry(flowInterface[:idx])
 							if err != nil {
-								log.Printf("[error] Lumberjack: Failed to send final flow batch upon exit to %s: %s", server, err)
+								log.Error().Msgf("Lumberjack: Failed to send final flow batch upon exit to %s: %s", server, err)
 							} else {
-								segment.BatchDebugPrintf("[debug] Lumberjack: %s Sent final batch (%d)", server, count)
+								segment.BatchDebugPrintf("Lumberjack: %s Sent final batch (%d)", server, count)
 							}
 							wg.Done()
 							return
@@ -297,7 +298,7 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 							}
 
 							client.Send(flowInterface)
-							segment.BatchDebugPrintf("[debug] Lumberjack: %s Sent full batch (%d)", server, segment.BatchSize)
+							segment.BatchDebugPrintf("Lumberjack: %s Sent full batch (%d)", server, segment.BatchSize)
 
 							// reset idx
 							idx = 0
@@ -311,11 +312,11 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 					case <-timer.C:
 						// timer expired, send batch
 						if idx > 0 {
-							segment.BatchDebugPrintf("[debug] Lumberjack: %s Sending incomplete batch (%d/%d)", server, idx, segment.BatchSize)
+							segment.BatchDebugPrintf("Lumberjack: %s Sending incomplete batch (%d/%d)", server, idx, segment.BatchSize)
 							client.Send(flowInterface[:idx])
 							idx = 0
 						} else {
-							segment.BatchDebugPrintf("[debug] Lumberjack: %s Timer expired with empty batch", server)
+							segment.BatchDebugPrintf("Lumberjack: %s Timer expired with empty batch", server)
 						}
 
 						timer.Reset(segment.BatchTimeout)

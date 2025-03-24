@@ -3,11 +3,12 @@ package influx
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"reflect"
 	"strconv"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
@@ -42,9 +43,9 @@ func (c *Connector) checkBucket() {
 	bucket, err := c.influxClient.BucketsAPI().FindBucketByName(context.Background(), c.Bucket)
 	if err != nil {
 		// The bucket should be created by the Influxdb admin.
-		log.Printf("[warning] Influx: Given bucket %s not found.", c.Bucket)
+		log.Warn().Msgf("Influx: Given bucket %s not found.", c.Bucket)
 	} else {
-		log.Printf("[info] Influx: Bucket found with result: %s", bucket.Name)
+		log.Info().Msgf("Influx: Bucket found with result: %s", bucket.Name)
 	}
 }
 

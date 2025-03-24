@@ -2,9 +2,10 @@ package toptalkers_metrics
 
 import (
 	"errors"
-	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -86,10 +87,10 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 				return errors.New("[error] : Buckets has to be >0")
 			}
 		} else {
-			log.Println("[error] ToptalkersMetrics: Could not parse 'buckets' parameter, using default 60.")
+			log.Error().Msg("ToptalkersMetrics: Could not parse 'buckets' parameter, using default 60.")
 		}
 	} else {
-		log.Println("[info] ToptalkersMetrics: 'buckets' set to default 60.")
+		log.Info().Msg("ToptalkersMetrics: 'buckets' set to default 60.")
 	}
 
 	if config["thresholdbuckets"] != "" {
@@ -99,10 +100,10 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 				return errors.New("[error] : thresholdbuckets has to be >0")
 			}
 		} else {
-			log.Println("[error] ToptalkersMetrics: Could not parse 'thresholdbuckets' parameter, using default (60 buckets).")
+			log.Error().Msg("ToptalkersMetrics: Could not parse 'thresholdbuckets' parameter, using default (60 buckets).")
 		}
 	} else {
-		log.Println("[info] ToptalkersMetrics: 'thresholdbuckets' set to default (60 buckets).")
+		log.Info().Msg("ToptalkersMetrics: 'thresholdbuckets' set to default (60 buckets).")
 	}
 
 	if config["reportbuckets"] != "" {
@@ -112,36 +113,36 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 				return errors.New("[error] : reportbuckets has to be >0")
 			}
 		} else {
-			log.Println("[error] ReportPrometheus: Could not parse 'reportbuckets' parameter, using default (60 buckets).")
+			log.Error().Msg("ReportPrometheus: Could not parse 'reportbuckets' parameter, using default (60 buckets).")
 		}
 	} else {
-		log.Println("[info] ReportPrometheus: 'reportbuckets' set to default (60 buckets).")
+		log.Info().Msg("ReportPrometheus: 'reportbuckets' set to default (60 buckets).")
 	}
 
 	if config["traffictype"] != "" {
 		prometheusParams.TrafficType = config["traffictype"]
 	} else {
-		log.Println("[info] ToptalkersMetrics: 'traffictype' is empty.")
+		log.Info().Msg("ToptalkersMetrics: 'traffictype' is empty.")
 	}
 
 	if config["thresholdbps"] != "" {
 		if parsedThresholdBps, err := strconv.ParseUint(config["thresholdbps"], 10, 32); err == nil {
 			prometheusParams.ThresholdBps = parsedThresholdBps
 		} else {
-			log.Println("[error] ToptalkersMetrics: Could not parse 'thresholdbps' parameter, using default 0.")
+			log.Error().Msg("ToptalkersMetrics: Could not parse 'thresholdbps' parameter, using default 0.")
 		}
 	} else {
-		log.Println("[info] ToptalkersMetrics: 'thresholdbps' set to default '0'.")
+		log.Info().Msg("ToptalkersMetrics: 'thresholdbps' set to default '0'.")
 	}
 
 	if config["thresholdpps"] != "" {
 		if parsedThresholdPps, err := strconv.ParseUint(config["thresholdpps"], 10, 32); err == nil {
 			prometheusParams.ThresholdPps = parsedThresholdPps
 		} else {
-			log.Println("[error] ToptalkersMetrics: Could not parse 'thresholdpps' parameter, using default 0.")
+			log.Error().Msg("ToptalkersMetrics: Could not parse 'thresholdpps' parameter, using default 0.")
 		}
 	} else {
-		log.Println("[info] ToptalkersMetrics: 'thresholdpps' set to default '0'.")
+		log.Info().Msg("ToptalkersMetrics: 'thresholdpps' set to default '0'.")
 	}
 
 	switch config["relevantaddress"] {
@@ -151,9 +152,9 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 		"both":
 		prometheusParams.RelevantAddress = config["relevantaddress"]
 	case "":
-		log.Println("[info] ToptalkersMetrics: 'relevantaddress' set to default 'destination'.")
+		log.Info().Msg("ToptalkersMetrics: 'relevantaddress' set to default 'destination'.")
 	default:
-		log.Println("[error] ToptalkersMetrics: Could not parse 'relevantaddress', using default value 'destination'.")
+		log.Error().Msg("ToptalkersMetrics: Could not parse 'relevantaddress', using default value 'destination'.")
 	}
 	return nil
 }
@@ -246,5 +247,5 @@ func (e *PrometheusExporter) ServeEndpoints(promParams *PrometheusParams) {
 	go func() {
 		http.ListenAndServe(promParams.Endpoint, mux)
 	}()
-	log.Printf("Enabled metrics on %s and %s, listening at %s.", promParams.MetricsPath, promParams.FlowdataPath, promParams.Endpoint)
+	log.Info().Msgf("Enabled metrics on %s and %s, listening at %s.", promParams.MetricsPath, promParams.FlowdataPath, promParams.Endpoint)
 }

@@ -2,8 +2,9 @@
 package traffic_specific_toptalkers
 
 import (
-	"log"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowfilter/parser"
 	"github.com/BelWue/flowpipeline/pb"
@@ -31,18 +32,18 @@ func (segment TrafficSpecificToptalkers) New(config map[string]string) segments.
 	newSegment := &TrafficSpecificToptalkers{}
 	newSegment.InitDefaultPrometheusParams()
 	if config["endpoint"] == "" {
-		log.Println("[info] ToptalkersMetrics Missing configuration parameter 'endpoint'. Using default port \":8080\"")
+		log.Info().Msg("ToptalkersMetrics Missing configuration parameter 'endpoint'. Using default port \":8080\"")
 	} else {
 		newSegment.Endpoint = config["endpoint"]
 	}
 
 	if config["metricspath"] == "" {
-		log.Println("[info] ToptalkersMetrics: Missing configuration parameter 'metricspath'. Using default path \"/metrics\"")
+		log.Info().Msg("ToptalkersMetrics: Missing configuration parameter 'metricspath'. Using default path \"/metrics\"")
 	} else {
 		newSegment.FlowdataPath = config["metricspath"]
 	}
 	if config["flowdatapath"] == "" {
-		log.Println("[info] ThresholdToptalkersMetrics: Missing configuration parameter 'flowdatapath'. Using default path \"/flowdata\"")
+		log.Info().Msg("ThresholdToptalkersMetrics: Missing configuration parameter 'flowdatapath'. Using default path \"/flowdata\"")
 	} else {
 		newSegment.FlowdataPath = config["flowdatapath"]
 	}
@@ -55,7 +56,7 @@ func (segment *TrafficSpecificToptalkers) SetThresholdMetricDefinition(definitio
 	for _, definition := range segment.ThresholdMetricDefinition {
 		err := initThresholdMetrics(definition)
 		if err != nil {
-			log.Println(err.Error())
+			log.Error().Err(err)
 		}
 	}
 }
@@ -65,7 +66,7 @@ func initThresholdMetrics(definition *ThresholdMetricDefinition) error {
 	var err error
 	definition.Expression, err = parser.Parse(definition.FilterDefinition)
 	if err != nil {
-		log.Printf("[error] FlowFilter: Syntax error in filter expression: %v", err)
+		log.Error().Err(err).Msg("FlowFilter: Syntax error in filter expression")
 		return nil
 	}
 	for _, subDefinition := range definition.SubDefinitions {
@@ -107,7 +108,7 @@ func (segment *TrafficSpecificToptalkers) Run(wg *sync.WaitGroup) {
 		}
 		segment.Out <- msg
 	}
-	log.Printf("[info] Threshold Metric Report runing on " + segment.Endpoint)
+	log.Info().Msgf("Threshold Metric Report runing on %s", segment.Endpoint)
 }
 
 func initDatabasesAndCollector(promExporter toptalkers_metrics.PrometheusExporter, segment *TrafficSpecificToptalkers) *[]*toptalkers_metrics.Database {

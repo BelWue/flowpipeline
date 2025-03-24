@@ -4,13 +4,12 @@
 package mongodb
 
 import (
-	"io"
-	"log"
 	"os"
 	"sync"
 	"testing"
 
 	"github.com/BelWue/flowpipeline/pb"
+	"github.com/rs/zerolog"
 	// "github.com/BelWue/flowpipeline/segments"
 )
 
@@ -19,7 +18,7 @@ func TestSegment_Mongodb_passthrough(t *testing.T) {
 	// result := segments.TestSegment("Mongodb", map[string]string{"mongodb_uri": "mongodb://localhost:27017/" , "database":"testing"},
 	// 	&pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, Proto: 45})
 	// if result == nil {
-	// 	t.Error("Segment Mongodb is not passing through flows.")
+	// 	t.Error("([error] Segment Mongodb is not passing through flows.")
 	// }
 	segment := Mongodb{}.New(map[string]string{"mongodb_uri": "mongodb://localhost:27017/", "database": "testing"})
 	if segment == nil {
@@ -42,7 +41,7 @@ func TestSegment_Mongodb_passthrough(t *testing.T) {
 
 // Mongodb Segment benchmark with 1000 samples stored in memory
 func BenchmarkMongodb_1000(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Mongodb{}.New(map[string]string{"mongodb_uri": "mongodb://localhost:27017/", "database": "testing"})
@@ -66,7 +65,7 @@ func BenchmarkMongodb_1000(b *testing.B) {
 
 // Mongodb Segment benchmark with 10000 samples stored in memory
 func BenchmarkMongodb_10000(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Mongodb{}.New(map[string]string{"mongodb_uri": "mongodb://localhost:27017/", "database": "testing", "batchsize": "10000"})
@@ -90,7 +89,7 @@ func BenchmarkMongodb_10000(b *testing.B) {
 
 // Mongodb Segment benchmark with 10000 samples stored in memory
 func BenchmarkMongodb_100000(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Mongodb{}.New(map[string]string{"mongodb_uri": "mongodb://localhost:27017/", "database": "testing", "batchsize": "100000"})
@@ -114,7 +113,7 @@ func BenchmarkMongodb_100000(b *testing.B) {
 
 // Mongodb Segment benchmark with 10000 samples stored in memory
 func BenchmarkMongodb_100000_with_storage_limit(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Mongodb{}.New(map[string]string{"mongodb_uri": "mongodb://localhost:27017/", "database": "testing", "batchsize": "100000", "max_disk_usage": "100 MB"})

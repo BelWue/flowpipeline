@@ -14,7 +14,7 @@ func TestSegment_ReverseDns_passthrough(t *testing.T) {
 	result := segments.TestSegment("reversedns", map[string]string{},
 		&pb.EnrichedFlow{Bytes: 1})
 	if result.Bytes != 1 {
-		t.Error("Segment ReverseDns is not working correctly.")
+		t.Error("([error] Segment ReverseDns is not working correctly.")
 	}
 }
 

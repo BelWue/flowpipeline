@@ -6,13 +6,14 @@ package csv
 import (
 	"encoding/csv"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -36,12 +37,12 @@ func (segment Csv) New(config map[string]string) segments.Segment {
 	if config["filename"] != "" {
 		file, err = os.Create(config["filename"])
 		if err != nil {
-			log.Printf("[error] Csv: File specified in 'filename' is not accessible: %s", err)
+			log.Error().Err(err).Msg(" Csv: File specified in 'filename' is not accessible: ")
 		}
 		filename = config["filename"]
 	} else {
 		file = os.Stdout
-		log.Println("[info] Csv: 'filename' unset, using stdout.")
+		log.Info().Msg("Csv: 'filename' unset, using stdout.")
 	}
 	newsegment.FileName = filename
 
@@ -53,7 +54,7 @@ func (segment Csv) New(config map[string]string) segments.Segment {
 			field = strings.TrimSpace(field)
 			protoField, found := protofields.FieldByName(field)
 			if !found || !protoField.IsExported() {
-				log.Printf("[error] Csv: Field '%s' specified in 'fields' does not exist.", field)
+				log.Error().Msgf("Csv: Field '%s' specified in 'fields' does not exist.", field)
 				return nil
 			}
 			heading = append(heading, field)
@@ -73,7 +74,7 @@ func (segment Csv) New(config map[string]string) segments.Segment {
 
 	newsegment.writer = csv.NewWriter(file)
 	if err := newsegment.writer.Write(heading); err != nil {
-		log.Println("[error] Csv: Failed to write to destination:", err)
+		log.Error().Err(err).Msg("Csv: Failed to write to destination:")
 		return nil
 	}
 	newsegment.writer.Flush()

@@ -4,8 +4,11 @@
 package count
 
 import (
-	"log"
+	"os"
 	"sync"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 )
@@ -31,8 +34,10 @@ func (segment *Count) Run(wg *sync.WaitGroup) {
 		segment.count += 1
 		segment.Out <- msg
 	}
-	// use log without level to print to stderr but never filter it
-	log.Printf("%s%d", segment.Prefix, segment.count)
+	// use custom log to print to stderr without any filtering
+	logger := log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	logger.Level(zerolog.DebugLevel)
+	logger.Info().Msgf("%s%d", segment.Prefix, segment.count)
 }
 
 func init() {

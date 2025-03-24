@@ -1,10 +1,11 @@
 package aslookup
 
 import (
-	"log"
 	"net"
 	"os"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 	"github.com/banviktor/asnlookup/pkg/database"
@@ -24,7 +25,7 @@ func (segment AsLookup) New(config map[string]string) segments.Segment {
 
 	// parse options
 	if config["filename"] == "" {
-		log.Println("[error] AsLookup: This segment requires a 'filename' parameter.")
+		log.Error().Msg("AsLookup: This segment requires a 'filename' parameter.")
 		return nil
 	}
 	newSegment.FileName = config["filename"]
@@ -34,14 +35,14 @@ func (segment AsLookup) New(config map[string]string) segments.Segment {
 	} else if config["type"] == "mrt" {
 		newSegment.Type = "mrt"
 	} else {
-		log.Println("[info] AsLookup: 'type' set to default 'db'.")
+		log.Info().Msg("AsLookup: 'type' set to default 'db'.")
 		newSegment.Type = "db"
 	}
 
 	// open lookup file
 	lookupfile, err := os.OpenFile(config["filename"], os.O_RDONLY, 0)
 	if err != nil {
-		log.Printf("[error] AsLookup: Error opening lookup file: %s", err)
+		log.Error().Err(err).Msg(" AsLookup: Error opening lookup file: ")
 		return nil
 	}
 	defer lookupfile.Close()
@@ -52,20 +53,20 @@ func (segment AsLookup) New(config map[string]string) segments.Segment {
 		// open lookup db
 		db, err := database.NewFromDump(lookupfile)
 		if err != nil {
-			log.Printf("[error] AsLookup: Error parsing database file: %s", err)
+			log.Error().Err(err).Msg(" AsLookup: Error parsing database file: ")
 		}
 		newSegment.asDatabase = db
 	} else {
 		// parse with asnlookup
 		builder := database.NewBuilder()
 		if err = builder.ImportMRT(lookupfile); err != nil {
-			log.Printf("[error] AsLookup: Error parsing MRT file: %s", err)
+			log.Error().Err(err).Msg(" AsLookup: Error parsing MRT file: ")
 		}
 
 		// build lookup database
 		db, err := builder.Build()
 		if err != nil {
-			log.Printf("[error] AsLookup: Error building lookup database: %s", err)
+			log.Error().Err(err).Msg(" AsLookup: Error building lookup database: ")
 		}
 		newSegment.asDatabase = db
 	}
@@ -83,7 +84,7 @@ func (segment *AsLookup) Run(wg *sync.WaitGroup) {
 		dstIp := net.ParseIP(msg.DstAddrObj().String())
 		dstAs, err := segment.asDatabase.Lookup(dstIp)
 		if err != nil {
-			log.Printf("[warning] AsLookup: Failed to look up ASN for %s: %s", msg.DstAddrObj().String(), err)
+			log.Warn().Msgf("AsLookup: Failed to look up ASN for %s: %s", msg.DstAddrObj().String(), err)
 			segment.Out <- msg
 			continue
 		}
@@ -93,7 +94,7 @@ func (segment *AsLookup) Run(wg *sync.WaitGroup) {
 		srcIp := net.ParseIP(msg.SrcAddrObj().String())
 		srcAs, err := segment.asDatabase.Lookup(srcIp)
 		if err != nil {
-			log.Printf("[warning] AsLookup: Failed to look up ASN for %s: %s", msg.SrcAddrObj().String(), err)
+			log.Warn().Msgf("AsLookup: Failed to look up ASN for %s: %s", msg.SrcAddrObj().String(), err)
 			segment.Out <- msg
 			continue
 		}

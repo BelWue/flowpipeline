@@ -7,11 +7,12 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"log"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -42,7 +43,7 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 	newsegment.saramaConfig = sarama.NewConfig()
 
 	if config["server"] == "" || config["topic"] == "" || config["group"] == "" {
-		log.Println("[error] KafkaConsumer: Missing required configuration parameters.")
+		log.Error().Msg("KafkaConsumer: Missing required configuration parameters.")
 		return nil
 	} else {
 		newsegment.Server = config["server"]
@@ -55,10 +56,10 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 		if parsedTls, err := strconv.ParseBool(config["legacy"]); err == nil {
 			legacy = parsedTls
 		} else {
-			log.Println("[Error] KafkaConsumer: Could not parse 'legacy' parameter, using default false.")
+			log.Error().Msg("KafkaConsumer: Could not parse 'legacy' parameter, using default false.")
 		}
 	} else {
-		log.Println("[Debug] KafkaConsumer: 'legacy' set to default false.")
+		log.Debug().Msg("KafkaConsumer: 'legacy' set to default false.")
 	}
 	newsegment.Legacy = legacy
 
@@ -69,7 +70,7 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 	// TODO: parse and set kafka version
 	newsegment.saramaConfig.Version, err = sarama.ParseKafkaVersion("2.4.0")
 	if err != nil {
-		log.Panicf("Error parsing Kafka version: %v", err)
+		log.Panic().Err(err).Msg("Error parsing Kafka version: ")
 	}
 
 	// parse config and setup TLS
@@ -78,21 +79,21 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 		if parsedTls, err := strconv.ParseBool(config["tls"]); err == nil {
 			useTls = parsedTls
 		} else {
-			log.Println("[error] KafkaConsumer: Could not parse 'tls' parameter, using default true.")
+			log.Error().Msg("KafkaConsumer: Could not parse 'tls' parameter, using default true.")
 		}
 	} else {
-		log.Println("[info] KafkaConsumer: 'tls' set to default true.")
+		log.Info().Msg("KafkaConsumer: 'tls' set to default true.")
 	}
 	newsegment.Tls = useTls
 	if newsegment.Tls {
 		rootCAs, err := x509.SystemCertPool()
 		if err != nil {
-			log.Panicf("TLS Error: %v", err)
+			log.Panic().Err(err).Msg("TLS Error: ")
 		}
 		newsegment.saramaConfig.Net.TLS.Enable = true
 		newsegment.saramaConfig.Net.TLS.Config = &tls.Config{RootCAs: rootCAs}
 	} else {
-		log.Println("[info] KafkaConsumer: Disabled TLS, operating unencrypted.")
+		log.Info().Msg("KafkaConsumer: Disabled TLS, operating unencrypted.")
 	}
 
 	// parse config and setup auth
@@ -101,15 +102,15 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 		if parsedAuth, err := strconv.ParseBool(config["auth"]); err == nil {
 			useAuth = parsedAuth
 		} else {
-			log.Println("[error] KafkaConsumer: Could not parse 'auth' parameter, using default true.")
+			log.Error().Msg("KafkaConsumer: Could not parse 'auth' parameter, using default true.")
 		}
 	} else {
-		log.Println("[info] KafkaConsumer: 'auth' set to default true.")
+		log.Info().Msg("KafkaConsumer: 'auth' set to default true.")
 	}
 
 	// parse and configure credentials, if applicable
 	if useAuth && (config["user"] == "" || config["pass"] == "") {
-		log.Println("[error] KafkaConsumer: Missing required configuration parameters for auth.")
+		log.Error().Msg("KafkaConsumer: Missing required configuration parameters for auth.")
 		return nil
 	} else {
 		newsegment.User = config["user"]
@@ -122,15 +123,15 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 		newsegment.saramaConfig.Net.SASL.Enable = true
 		newsegment.saramaConfig.Net.SASL.User = newsegment.User
 		newsegment.saramaConfig.Net.SASL.Password = newsegment.Pass
-		log.Printf("[info] KafkaConsumer: Authenticating as user '%s'.", newsegment.User)
+		log.Info().Msgf("KafkaConsumer: Authenticating as user '%s'.", newsegment.User)
 	} else {
 		newsegment.saramaConfig.Net.SASL.Enable = false
-		log.Println("[info] KafkaConsumer: Disabled auth.")
+		log.Info().Msg("KafkaConsumer: Disabled auth.")
 	}
 
 	// warn if we're leaking credentials
 	if newsegment.Auth && !newsegment.Tls {
-		log.Println("[warning] KafkaConsumer: Authentication will be done in plain text!")
+		log.Warn().Msg("KafkaConsumer: Authentication will be done in plain text!")
 	}
 
 	// parse and set starting point of fresh consumer groups
@@ -140,12 +141,12 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 		if strings.ToLower(config["startat"]) == "oldest" {
 			startAt = "oldest"
 			startingOffset = sarama.OffsetOldest // see sarama const OffsetOldest
-			log.Println("[info] KafkaConsumer: Starting at oldest flows.")
+			log.Info().Msg("KafkaConsumer: Starting at oldest flows.")
 		} else if strings.ToLower(config["startat"]) != "newest" {
-			log.Println("[error] KafkaConsumer: Could not parse 'startat' parameter, using default 'newest'.")
+			log.Error().Msg("KafkaConsumer: Could not parse 'startat' parameter, using default 'newest'.")
 		}
 	} else {
-		log.Println("[info] KafkaConsumer: 'startat' set to default 'newest'.")
+		log.Info().Msg("KafkaConsumer: 'startat' set to default 'newest'.")
 	}
 	newsegment.startingOffset = startingOffset
 	newsegment.saramaConfig.Consumer.Offsets.Initial = startingOffset
@@ -154,12 +155,12 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 	newsegment.Timeout = 15 * time.Second
 	if timeout, err := time.ParseDuration(config["timeout"]); err == nil {
 		newsegment.Timeout = timeout
-		log.Printf("[info] KafkaConsumer: Set timeout to '%s'.", config["timeout"])
+		log.Info().Msgf("KafkaConsumer: Set timeout to '%s'.", config["timeout"])
 	} else {
 		if config["timeout"] != "" {
-			log.Printf("[warning] KafkaConsumer: Bad configuration of timeout, set to default '15s'.")
+			log.Warn().Msgf("KafkaConsumer: Bad configuration of timeout, set to default '15s'.")
 		} else {
-			log.Printf("[info] KafkaConsumer: Timeout set to default '15s'.")
+			log.Info().Msgf("KafkaConsumer: Timeout set to default '15s'.")
 		}
 	}
 	newsegment.saramaConfig.Net.DialTimeout = newsegment.Timeout
@@ -175,9 +176,9 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 	client, err := sarama.NewConsumerGroup(strings.Split(segment.Server, ","), segment.Group, segment.saramaConfig)
 	if err != nil {
 		if client == nil {
-			log.Fatalf("[error] KafkaConsumer: Creating Kafka client failed, this indicates an unreachable server, invalid credentials, or a SSL problem. Original error:\n  %v", err)
+			log.Fatal().Err(err).Msg("KafkaConsumer: Creating Kafka client failed, this indicates an unreachable server, invalid credentials, or a SSL problem. Original error:\n  ")
 		} else {
-			log.Fatalf("[error] KafkaConsumer: Creating Kafka consumer group failed while the connection was okay. Original error:\n  %v", err)
+			log.Fatal().Err(err).Msg("KafkaConsumer: Creating Kafka consumer group failed while the connection was okay. Original error:\n  ")
 		}
 	}
 
@@ -194,7 +195,7 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 		for {
 			// This loop ensures recreation of our consumer session when server-side rebalances happen.
 			if err := client.Consume(handlerCtx, strings.Split(segment.Topic, ","), handler); err != nil {
-				log.Printf("[error] KafkaConsumer: Could not create new consumer session, retry in 5s. Original error:\n  %v", err)
+				log.Error().Err(err).Msg(" KafkaConsumer: Could not create new consumer session, retry in 5s. Original error:\n  ")
 				time.Sleep(5 * time.Second) // TODO: although this never occured for me, make configurable
 				continue
 			}
@@ -206,12 +207,12 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 		}
 	}()
 	<-handler.ready
-	log.Println("[info] KafkaConsumer: Connected and operational.")
+	log.Info().Msg("KafkaConsumer: Connected and operational.")
 
 	defer func() {
 		handlerWg.Wait()
 		if err = client.Close(); err != nil {
-			log.Panicf("[error] KafkaConsumer: Error closing Kafka client: %v", err)
+			log.Panic().Err(err).Msg(" KafkaConsumer: Error closing Kafka client: ")
 		}
 	}()
 

@@ -1,9 +1,10 @@
 package branch
 
 import (
-	"log"
 	"sync"
 	"testing"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -18,7 +19,7 @@ import (
 func TestSegment_Branch_passthrough(t *testing.T) {
 	segment := segments.LookupSegment("branch").New(map[string]string{}).(*Branch)
 	if segment == nil {
-		log.Fatal("[error] Configured segment 'branch' could not be initialized properly, see previous messages.")
+		log.Fatal().Msg("Configured segment 'branch' could not be initialized properly, see previous messages.")
 	}
 	segment.condition = NewMockPipeline()
 	segment.then_branch = NewMockPipeline()
@@ -41,7 +42,7 @@ func TestSegment_Branch_passthrough(t *testing.T) {
 func TestSegment_Branch_passthrough_bypass(t *testing.T) {
 	segment := segments.LookupSegment("branch").New(map[string]string{"bypass-messages": "true"}).(*Branch)
 	if segment == nil {
-		log.Fatal("[error] Configured segment 'branch' could not be initialized properly, see previous messages.")
+		log.Fatal().Msg("Configured segment 'branch' could not be initialized properly, see previous messages.")
 	}
 	segment.condition = NewMockPipeline()
 	segment.then_branch = NewMockPipeline()

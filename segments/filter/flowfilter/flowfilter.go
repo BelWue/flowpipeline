@@ -3,8 +3,9 @@
 package flowfilter
 
 import (
-	"log"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowfilter/parser"
 	"github.com/BelWue/flowpipeline/pb"
@@ -27,12 +28,12 @@ func (segment FlowFilter) New(config map[string]string) segments.Segment {
 
 	newSegment.expression, err = parser.Parse(config["filter"])
 	if err != nil {
-		log.Printf("[error] FlowFilter: Syntax error in filter expression: %v", err)
+		log.Error().Err(err).Msg(" FlowFilter: Syntax error in filter expression: ")
 		return nil
 	}
 	filter := &Filter{}
 	if _, err := filter.CheckFlow(newSegment.expression, &pb.EnrichedFlow{}); err != nil {
-		log.Printf("[error] FlowFilter: Semantic error in filter expression: %v", err)
+		log.Error().Err(err).Msg(" FlowFilter: Semantic error in filter expression: ")
 		return nil
 	}
 	return newSegment
@@ -44,7 +45,7 @@ func (segment *FlowFilter) Run(wg *sync.WaitGroup) {
 		wg.Done()
 	}()
 
-	log.Printf("[info] FlowFilter: Using filter expression: %s", segment.Filter)
+	log.Info().Msgf("FlowFilter: Using filter expression: %s", segment.Filter)
 
 	filter := &Filter{}
 	for msg := range segment.In {

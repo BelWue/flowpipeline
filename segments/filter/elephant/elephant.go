@@ -2,14 +2,15 @@
 package elephant
 
 import (
-	"log"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/asecurityteam/rolling"
+	"github.com/rs/zerolog/log"
+
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/asecurityteam/rolling"
 )
 
 type Elephant struct {
@@ -28,10 +29,10 @@ func (segment Elephant) New(config map[string]string) segments.Segment {
 		if strings.ToLower(config["aspect"]) == "bytes" || strings.ToLower(config["aspect"]) == "packets" || strings.ToLower(config["aspect"]) == "bps" || strings.ToLower(config["aspect"]) == "pps" {
 			aspect = strings.ToLower(config["aspect"])
 		} else {
-			log.Println("[error] Elephant: Could not parse 'aspect' parameter, using default 'bytes'.")
+			log.Error().Msg("Elephant: Could not parse 'aspect' parameter, using default 'bytes'.")
 		}
 	} else {
-		log.Println("[info] Elephant: 'aspect' set to default 'bytes'.")
+		log.Info().Msg("Elephant: 'aspect' set to default 'bytes'.")
 	}
 
 	var percentile = 99.00
@@ -39,14 +40,14 @@ func (segment Elephant) New(config map[string]string) segments.Segment {
 		if parsedPercentile, err := strconv.ParseFloat(config["percentile"], 64); err == nil {
 			percentile = parsedPercentile
 			if percentile == 0 {
-				log.Println("[error] Elephant: Using 0-Percentile corresponds to no-op. Remove this segment or use a higher value.")
+				log.Error().Msg("Elephant: Using 0-Percentile corresponds to no-op. Remove this segment or use a higher value.")
 				return nil
 			}
 		} else {
-			log.Println("[error] Elephant: Could not parse 'percentile' parameter, using default 99.00.")
+			log.Error().Msg("Elephant: Could not parse 'percentile' parameter, using default 99.00.")
 		}
 	} else {
-		log.Println("[info] Elephant: 'percentile' set to default 99.00.")
+		log.Info().Msg("Elephant: 'percentile' set to default 99.00.")
 	}
 
 	var exact = false
@@ -54,10 +55,10 @@ func (segment Elephant) New(config map[string]string) segments.Segment {
 		if parsedExact, err := strconv.ParseBool(config["exact"]); err == nil {
 			exact = parsedExact
 		} else {
-			log.Println("[error] Elephant: Could not parse 'exact' parameter, using default false.")
+			log.Error().Msg("Elephant: Could not parse 'exact' parameter, using default false.")
 		}
 	} else {
-		log.Println("[info] Elephant: 'exact' set to default false.")
+		log.Info().Msg("Elephant: 'exact' set to default false.")
 	}
 
 	var window = 300
@@ -65,14 +66,14 @@ func (segment Elephant) New(config map[string]string) segments.Segment {
 		if parsedWindow, err := strconv.ParseInt(config["window"], 10, 64); err == nil {
 			window = int(parsedWindow)
 			if window <= 0 {
-				log.Println("[error] Elephant: Window has to be >0.")
+				log.Error().Msg("Elephant: Window has to be >0.")
 				return nil
 			}
 		} else {
-			log.Println("[error] Elephant: Could not parse 'window' parameter, using default 300.")
+			log.Error().Msg("Elephant: Could not parse 'window' parameter, using default 300.")
 		}
 	} else {
-		log.Println("[info] Elephant: 'window' set to default 300.")
+		log.Info().Msg("Elephant: 'window' set to default 300.")
 	}
 
 	var rampuptime = 0
@@ -80,14 +81,14 @@ func (segment Elephant) New(config map[string]string) segments.Segment {
 		if ramptime, err := strconv.ParseInt(config["rampuptime"], 10, 64); err == nil {
 			rampuptime = int(ramptime)
 			if rampuptime < 0 {
-				log.Println("[error] Elephant: Rampuptime has to be >= 0.")
+				log.Error().Msg("Elephant: Rampuptime has to be >= 0.")
 				return nil
 			}
 		} else {
-			log.Println("[error] Elephant: Could not parse 'rampuptime' parameter, using default 0.")
+			log.Error().Msg("Elephant: Could not parse 'rampuptime' parameter, using default 0.")
 		}
 	} else {
-		log.Println("[info] Elephant: 'rampuptime' set to default 0.")
+		log.Info().Msg("Elephant: 'rampuptime' set to default 0.")
 	}
 
 	return &Elephant{
@@ -139,7 +140,7 @@ func (segment *Elephant) Run(wg *sync.WaitGroup) {
 		// permanent checks against time.Now().
 		if inRampup && time.Now().After(rampupEnd) {
 			inRampup = false
-			log.Println("[info] Elephant: RampupTime complete, passing through flows now.")
+			log.Info().Msg("Elephant: RampupTime complete, passing through flows now.")
 		}
 		// Only do expensive threshold calculation when out of ramp up
 		// phase.
@@ -154,7 +155,7 @@ func (segment *Elephant) Run(wg *sync.WaitGroup) {
 				threshold = window.Reduce(rolling.FastPercentile(segment.Percentile))
 			}
 			if aspect >= threshold {
-				log.Printf("[debug] Elephant: Found elephant with size %d (>=%f)", msg.Bytes, threshold)
+				log.Debug().Msgf("Elephant: Found elephant with size %d (>=%f)", msg.Bytes, threshold)
 				segment.Out <- msg
 				continue
 			}
