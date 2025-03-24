@@ -4,10 +4,11 @@
 package bpf
 
 import (
-	"log"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 )
@@ -30,7 +31,7 @@ func (segment Bpf) New(config map[string]string) segments.Segment {
 	var ok bool
 	newsegment.Device, ok = config["device"]
 	if !ok {
-		log.Printf("[error] Bpf: setting the config parameter 'device' is required.")
+		log.Error().Msgf("Bpf: setting the config parameter 'device' is required.")
 		return nil
 	}
 
@@ -39,14 +40,14 @@ func (segment Bpf) New(config map[string]string) segments.Segment {
 		if parsedBufferSize, err := strconv.ParseInt(config["buffersize"], 10, 32); err == nil {
 			newsegment.BufferSize = int(parsedBufferSize)
 			if newsegment.BufferSize <= 0 {
-				log.Println("[error] Bpf: Buffer size needs to be at least 1 and will be rounded up to the nearest multiple of the current page size.")
+				log.Error().Msg("Bpf: Buffer size needs to be at least 1 and will be rounded up to the nearest multiple of the current page size.")
 				return nil
 			}
 		} else {
-			log.Println("[error] Bpf: Could not parse 'buffersize' parameter, using default 65536 (64kB).")
+			log.Error().Msg("Bpf: Could not parse 'buffersize' parameter, using default 65536 (64kB).")
 		}
 	} else {
-		log.Println("[info] Bpf: 'buffersize' set to default 65536 (64kB).")
+		log.Info().Msg("Bpf: 'buffersize' set to default 65536 (64kB).")
 	}
 
 	// setup bpf dumping
@@ -54,7 +55,7 @@ func (segment Bpf) New(config map[string]string) segments.Segment {
 
 	err := newsegment.dumper.Setup(newsegment.Device)
 	if err != nil {
-		log.Printf("[error] Bpf: error setting up BPF dumping: %s", err)
+		log.Error().Err(err).Msg(" Bpf: error setting up BPF dumping: ")
 		return nil
 	}
 
@@ -62,32 +63,32 @@ func (segment Bpf) New(config map[string]string) segments.Segment {
 	_, err = time.ParseDuration(config["activetimeout"])
 	if err != nil {
 		if config["activetimeout"] == "" {
-			log.Println("[info] Bpf: 'activetimeout' set to default '30m'.")
+			log.Info().Msg("Bpf: 'activetimeout' set to default '30m'.")
 		} else {
-			log.Println("[warning] Bpf: 'activetimeout' was invalid, fallback to default '30m'.")
+			log.Warn().Msg("Bpf: 'activetimeout' was invalid, fallback to default '30m'.")
 		}
 		newsegment.ActiveTimeout = "30m"
 	} else {
 		newsegment.ActiveTimeout = config["activetimeout"]
-		log.Printf("[info] Bpf: 'activetimeout' set to '%s'.", config["activetimeout"])
+		log.Info().Msgf("Bpf: 'activetimeout' set to '%s'.", config["activetimeout"])
 	}
 
 	_, err = time.ParseDuration(config["inactivetimeout"])
 	if err != nil {
 		if config["inactivetimeout"] == "" {
-			log.Println("[info] Bpf: 'inactivetimeout' set to default '15s'.")
+			log.Info().Msg("Bpf: 'inactivetimeout' set to default '15s'.")
 		} else {
-			log.Println("[warning] Bpf: 'inactivetimeout' was invalid, fallback to default '15s'.")
+			log.Warn().Msg("Bpf: 'inactivetimeout' was invalid, fallback to default '15s'.")
 		}
 		newsegment.InactiveTimeout = "15s"
 	} else {
 		newsegment.ActiveTimeout = config["inactivetimeout"]
-		log.Printf("[info] Bpf: 'inactivetimeout' set to '%s'.", config["inactivetimeout"])
+		log.Info().Msgf("Bpf: 'inactivetimeout' set to '%s'.", config["inactivetimeout"])
 	}
 
 	newsegment.exporter, err = NewFlowExporter(newsegment.ActiveTimeout, newsegment.InactiveTimeout)
 	if err != nil {
-		log.Printf("[error] Bpf: error setting up exporter: %s", err)
+		log.Error().Err(err).Msg(" Bpf: error setting up exporter: ")
 		return nil
 	}
 	return newsegment
@@ -96,7 +97,7 @@ func (segment Bpf) New(config map[string]string) segments.Segment {
 func (segment *Bpf) Run(wg *sync.WaitGroup) {
 	err := segment.dumper.Start()
 	if err != nil {
-		log.Printf("[error] Bpf: error starting up BPF dumping: %s", err)
+		log.Error().Err(err).Msg(" Bpf: error starting up BPF dumping: ")
 		segment.ShutdownParentPipeline()
 		return
 	}
@@ -108,7 +109,7 @@ func (segment *Bpf) Run(wg *sync.WaitGroup) {
 		wg.Done()
 	}()
 
-	log.Printf("[info] Bpf: Startup finished, exporting flows from '%s'", segment.Device)
+	log.Info().Msgf("Bpf: Startup finished, exporting flows from '%s'", segment.Device)
 	for {
 		select {
 		case msg, ok := <-segment.exporter.Flows:

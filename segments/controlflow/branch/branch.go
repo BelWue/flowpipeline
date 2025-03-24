@@ -1,8 +1,9 @@
 package branch
 
 import (
-	"log"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -37,7 +38,7 @@ func (segment *Branch) ImportBranches(condition interface{}, then_branch interfa
 
 func (segment *Branch) Run(wg *sync.WaitGroup) {
 	if segment.condition == nil || segment.then_branch == nil || segment.else_branch == nil {
-		log.Println("[error] Branch: Uninitialized branches. This is expected during standalone testing of this package. The actual test is done as part of the pipeline package, as this segment embeds further pipelines.")
+		log.Error().Msg("Branch: Uninitialized branches. This is expected during standalone testing of this package. The actual test is done as part of the pipeline package, as this segment embeds further pipelines.")
 		return
 	}
 	defer func() {

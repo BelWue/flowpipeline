@@ -8,6 +8,6 @@ package bpf
 // 	result := segments.TestSegment("bpf", map[string]string{"device": "eth0"},
 // 		&pb.EnrichedFlow{Type: 3})
 // 	if result.Type != 3 {
-// 		t.Error("Segment Bpf is not working.")
+// 		t.Error("([error] Segment Bpf is not working.")
 // 	}
 // }

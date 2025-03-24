@@ -12,6 +12,6 @@ func TestSegment_Goflow_passthrough(t *testing.T) {
 	result := segments.TestSegment("goflow", map[string]string{"port": "2055"},
 		&pb.EnrichedFlow{})
 	if result == nil {
-		t.Error("Segment Goflow is not passing through flows.")
+		t.Error("([error] Segment Goflow is not passing through flows.")
 	}
 }

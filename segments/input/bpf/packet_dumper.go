@@ -11,9 +11,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"syscall"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/perf"
@@ -131,18 +132,18 @@ func (b *PacketDumper) Packets() chan Packet {
 				if errors.Is(err, perf.ErrClosed) {
 					return
 				}
-				log.Printf("[error] BPF packet dump: Error reading from kernel perf event reader: %s", err)
+				log.Error().Err(err).Msg(" BPF packet dump: Error reading from kernel perf event reader: ")
 				continue
 			}
 
 			if record.LostSamples != 0 {
-				log.Printf("[warning] BPF packet dump: Dropped %d samples from kernel perf buffer, consider increasing BufSize (currently %d bytes)", record.LostSamples, b.BufSize)
+				log.Warn().Msgf("BPF packet dump: Dropped %d samples from kernel perf buffer, consider increasing BufSize (currently %d bytes)", record.LostSamples, b.BufSize)
 				continue
 			}
 
 			// Parse the perf event entry into an Event structure.
 			if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &rawPacket); err != nil {
-				log.Printf("[error] BPF packet dump: Skipped 1 sample, error decoding raw perf event data: %s", err)
+				log.Error().Err(err).Msg(" BPF packet dump: Skipped 1 sample, error decoding raw perf event data: ")
 				continue
 			}
 			b.packets <- parseRawPacket(rawPacket)
@@ -154,17 +155,17 @@ func (b *PacketDumper) Packets() chan Packet {
 func (b *PacketDumper) Setup(device string) error {
 	// allow the current process to lock memory for eBPF resources
 	if err := rlimit.RemoveMemlock(); err != nil {
-		log.Fatalf("[error] BPF packet dump: Error during required memlock removal: %s", err)
+		log.Fatal().Err(err).Msg("BPF packet dump: Error during required memlock removal: ")
 	}
 
 	b.objs = bpfObjects{} // load pre-compiled programs and maps into the kernel
 	if err := loadBpfObjects(&b.objs, nil); err != nil {
-		log.Fatalf("[error] BPF packet dump: Error loading objects: %v", err)
+		log.Fatal().Err(err).Msg("BPF packet dump: Error loading objects: ")
 	}
 
 	var err error
 	if b.iface, err = net.InterfaceByName(device); err != nil {
-		return fmt.Errorf("Unable to get interface, err: %v", err)
+		return fmt.Errorf("[error] Unable to get interface, err: %v", err)
 	}
 
 	var addrs []net.Addr
@@ -183,7 +184,7 @@ func (b *PacketDumper) Start() error {
 	var err error
 	// 768 is the network byte order representation of 0x3 (constant syscall.ETH_P_ALL)
 	if b.socketFd, err = syscall.Socket(syscall.AF_PACKET, syscall.SOCK_RAW, 768); err != nil {
-		return fmt.Errorf("Unable to open raw socket, err: %v", err)
+		return fmt.Errorf("[error] Unable to open raw socket, err: %v", err)
 	}
 
 	sll := syscall.SockaddrLinklayer{
@@ -191,11 +192,11 @@ func (b *PacketDumper) Start() error {
 		Protocol: 768,
 	}
 	if err := syscall.Bind(b.socketFd, &sll); err != nil {
-		return fmt.Errorf("Unable to bind interface to raw socket, err: %v", err)
+		return fmt.Errorf("[error] Unable to bind interface to raw socket, err: %v", err)
 	}
 
 	if err := syscall.SetsockoptInt(b.socketFd, syscall.SOL_SOCKET, 50, b.objs.PacketDump.FD()); err != nil {
-		return fmt.Errorf("Unable to attach BPF socket filter: %v", err)
+		return fmt.Errorf("[error] Unable to attach BPF socket filter: %v", err)
 	}
 
 	if b.BufSize == 0 {
@@ -210,7 +211,7 @@ func (b *PacketDumper) Start() error {
 	}
 	b.perfReader, err = perf.NewReader(b.objs.Packets, b.BufSize)
 	if err != nil {
-		return fmt.Errorf("Unable to connect kernel perf event reader: %s", err)
+		return fmt.Errorf("[error] Unable to connect kernel perf event reader: %s", err)
 	}
 
 	return nil
@@ -261,7 +262,7 @@ func loadBpf() (*ebpf.CollectionSpec, error) {
 	reader := bytes.NewReader(_BpfBytes)
 	spec, err := ebpf.LoadCollectionSpecFromReader(reader)
 	if err != nil {
-		return nil, fmt.Errorf("can't load bpf: %w", err)
+		return nil, fmt.Errorf("[error] can't load bpf: %w", err)
 	}
 
 	return spec, err

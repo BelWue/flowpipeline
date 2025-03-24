@@ -2,8 +2,9 @@ package prometheus
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -52,7 +53,7 @@ func (e *Exporter) Initialize(labels []string) {
 }
 
 func (e *Exporter) ResetCounter() {
-	log.Printf("[INFO] prometheus export: resetting counter")
+	log.Info().Msgf("prometheus export: resetting counter")
 	e.kafkaOffsets.Reset()
 	e.flowBits.Reset()
 
@@ -83,7 +84,7 @@ func (e *Exporter) ServeEndpoints(segment *Prometheus) {
 	go func() {
 		http.ListenAndServe(segment.Endpoint, mux)
 	}()
-	log.Printf("Enabled metrics on %s and %s, listening at %s.", segment.MetricsPath, segment.FlowdataPath, segment.Endpoint)
+	log.Info().Msgf("Enabled metrics on %s and %s, listening at %s.", segment.MetricsPath, segment.FlowdataPath, segment.Endpoint)
 }
 
 func (e *Exporter) Increment(bytes uint64, packets uint64, labelset prometheus.Labels) {

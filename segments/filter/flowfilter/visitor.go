@@ -76,7 +76,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 	case *parser.TcpFlagsMatch:
 	case *parser.VrfRangeMatch:
 	default:
-		return fmt.Errorf("Encountered unknown node type: %T", node)
+		return fmt.Errorf("[error] Encountered unknown node type: %T", node)
 	}
 
 	err := next() // descend to child nodes
@@ -107,7 +107,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 		(*node).EvalResultSrc, _ = processNumericRange(node.NumericRange, uint64(f.flowmsg.SrcAs))
 		(*node).EvalResultDst, err = processNumericRange(node.NumericRange, uint64(f.flowmsg.DstAs))
 		if err != nil { // errs from above calls will be the same anyways
-			return fmt.Errorf("Bad ASN range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad ASN range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -121,7 +121,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 	case *parser.ByteRangeMatch:
 		(*node).EvalResult, err = processNumericRange(node.NumericRange, f.flowmsg.Bytes)
 		if err != nil {
-			return fmt.Errorf("Bad byte size range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad byte size range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -130,7 +130,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 		(*node).EvalResultSrc, _ = processNumericRange(node.NumericRange, uint64(f.flowmsg.SrcCid))
 		(*node).EvalResultDst, err = processNumericRange(node.NumericRange, uint64(f.flowmsg.DstCid))
 		if err != nil {
-			return fmt.Errorf("Bad cid range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad cid range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -242,7 +242,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 		duration := f.flowmsg.TimeFlowEnd - f.flowmsg.TimeFlowStart
 		(*node).EvalResult, err = processNumericRange(node.NumericRange, duration)
 		if err != nil {
-			return fmt.Errorf("Bad duration range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad duration range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -299,7 +299,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 		(*node).EvalResultSrc, _ = processNumericRange(node.NumericRange, uint64(f.flowmsg.SrcIfSpeed)/1000)
 		(*node).EvalResultDst, err = processNumericRange(node.NumericRange, uint64(f.flowmsg.DstIfSpeed)/1000)
 		if err != nil { // errs from above calls will be the same anyways
-			return fmt.Errorf("Bad iface speed range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad iface speed range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -333,21 +333,21 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 	case *parser.IpTosRangeMatch:
 		(*node).EvalResult, err = processNumericRange(node.NumericRange, uint64(f.flowmsg.IpTos))
 		if err != nil {
-			return fmt.Errorf("Bad iptos range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad iptos range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
 	case *parser.LocalPrefRangeMatch:
 		(*node).EvalResult, err = processNumericRange(node.NumericRange, uint64(f.flowmsg.LocalPref))
 		if err != nil {
-			return fmt.Errorf("Bad localpref range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad localpref range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
 	case *parser.MedRangeMatch:
 		(*node).EvalResult, err = processNumericRange(node.NumericRange, uint64(f.flowmsg.Med))
 		if err != nil {
-			return fmt.Errorf("Bad med range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad med range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -355,7 +355,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 		(*node).EvalResultSrc, _ = processNumericRange(node.NumericRange, uint64(f.flowmsg.SrcNet))
 		(*node).EvalResultDst, err = processNumericRange(node.NumericRange, uint64(f.flowmsg.DstNet))
 		if err != nil { // errs from above calls will be the same anyways
-			return fmt.Errorf("Bad netsize range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad netsize range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -368,7 +368,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 	case *parser.PacketRangeMatch:
 		(*node).EvalResult, err = processNumericRange(node.NumericRange, f.flowmsg.Packets)
 		if err != nil {
-			return fmt.Errorf("Bad packet count range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad packet count range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -376,7 +376,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 		(*node).EvalResultSrc, _ = processNumericRange(node.NumericRange, uint64(f.flowmsg.SrcPort))
 		(*node).EvalResultDst, err = processNumericRange(node.NumericRange, uint64(f.flowmsg.DstPort))
 		if err != nil { // errs from above calls will be the same anyways
-			return fmt.Errorf("Bad port range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad port range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -389,7 +389,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 		pps := f.flowmsg.Packets / duration
 		(*node).EvalResult, err = processNumericRange(node.NumericRange, pps)
 		if err != nil {
-			return fmt.Errorf("Bad range: %v.", err)
+			return fmt.Errorf("[error] Bad range: %v.", err)
 		}
 	case *parser.PassesThroughListMatch:
 		sliceEq := func(a []parser.Number, b []uint32) bool {
@@ -432,7 +432,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 	case *parser.SamplingRateRangeMatch:
 		(*node).EvalResult, err = processNumericRange(node.NumericRange, f.flowmsg.SamplingRate)
 		if err != nil {
-			return fmt.Errorf("Bad samplingrate range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad samplingrate range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -470,7 +470,7 @@ func (f *Filter) Visit(n parser.Node, next func() error) error {
 		(*node).EvalResultSrc, _ = processNumericRange(node.NumericRange, uint64(f.flowmsg.IngressVrfIDBW))
 		(*node).EvalResultDst, err = processNumericRange(node.NumericRange, uint64(f.flowmsg.EgressVrfIDBW))
 		if err != nil { // errs from above calls will be the same anyways
-			return fmt.Errorf("Bad ASN range, lower %d > upper %d",
+			return fmt.Errorf("[error] Bad ASN range, lower %d > upper %d",
 				*node.Lower,
 				*node.Upper)
 		}
@@ -482,7 +482,7 @@ func processNumericRange(node parser.NumericRange, compare uint64) (bool, error)
 	var err error
 	if node.Lower != nil && node.Upper != nil {
 		if uint64(*node.Lower) > uint64(*node.Upper) {
-			err = fmt.Errorf("Bad range, %d - %d", *node.Lower, *node.Upper)
+			err = fmt.Errorf("[error] Bad range, %d - %d", *node.Lower, *node.Upper)
 		}
 		return uint64(*node.Lower) <= compare && compare <= uint64(*node.Upper), err
 	} else {

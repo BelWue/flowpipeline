@@ -1,11 +1,11 @@
 package anonymize
 
 import (
-	"io/ioutil"
-	"log"
 	"os"
 	"sync"
 	"testing"
+
+	"github.com/rs/zerolog"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -17,13 +17,13 @@ func TestSegment_Influx_passthrough(t *testing.T) {
 	result := segments.TestSegment("anonymize", map[string]string{"key": "testkey123jfh789fhj456ezhskila73"},
 		&pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 123}, SamplerAddress: []byte{193, 168, 88, 2}})
 	if result == nil {
-		t.Error("Segment Anonymize is not passing through flows.")
+		t.Error("([error] Segment Anonymize is not passing through flows.")
 	}
 }
 
 // Anonymize Segment benchmark passthrough
 func BenchmarkAnonymize(b *testing.B) {
-	log.SetOutput(ioutil.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 	var fields = []string{
 		"SrcAddr",

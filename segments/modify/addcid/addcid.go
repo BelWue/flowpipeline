@@ -10,11 +10,12 @@ package addcid
 import (
 	"encoding/csv"
 	"io"
-	"log"
 	"net"
 	"os"
 	"strconv"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 	"github.com/bwNetFlow/ip_prefix_trie"
@@ -33,14 +34,14 @@ type AddCid struct {
 func (segment AddCid) New(config map[string]string) segments.Segment {
 	drop, err := strconv.ParseBool(config["dropunmatched"])
 	if err != nil {
-		log.Println("[info] AddCid: 'dropunmatched' set to default 'false'.")
+		log.Info().Msg("AddCid: 'dropunmatched' set to default 'false'.")
 	}
 	both, err := strconv.ParseBool(config["matchboth"])
 	if err != nil {
-		log.Println("[info] AddCid: 'matchboth' set to default 'false'.")
+		log.Info().Msg("AddCid: 'matchboth' set to default 'false'.")
 	}
 	if config["filename"] == "" {
-		log.Println("[error] AddCid: This segment requires a 'filename' parameter.")
+		log.Error().Msg("AddCid: This segment requires a 'filename' parameter.")
 		return nil
 	}
 
@@ -112,7 +113,7 @@ func (segment *AddCid) Run(wg *sync.WaitGroup) {
 func (segment *AddCid) readPrefixList() {
 	f, err := os.Open(segments.ContainerVolumePrefix + segment.FileName)
 	if err != nil {
-		log.Printf("[error] AddCid: Could not open prefix list: %v", err)
+		log.Error().Err(err).Msg(" AddCid: Could not open prefix list: ")
 		return
 	}
 	defer f.Close()
@@ -125,14 +126,14 @@ func (segment *AddCid) readPrefixList() {
 			if err == io.EOF {
 				break
 			} else {
-				log.Printf("[warning] AddCid: Encountered non-CSV line in prefix list: %v", err)
+				log.Warn().Err(err).Msg(" AddCid: Encountered non-CSV line in prefix list: ")
 				continue
 			}
 		}
 
 		cid, err := strconv.ParseInt(row[1], 10, 32)
 		if err != nil {
-			log.Printf("[warning] AddCid: Encountered non-integer customer id: %v", err)
+			log.Warn().Err(err).Msg(" AddCid: Encountered non-integer customer id: ")
 			continue
 		}
 
@@ -153,7 +154,7 @@ func (segment *AddCid) readPrefixList() {
 			}
 		}
 	}
-	log.Printf("[info] AddCid: Read prefix list with %d prefixes.", count)
+	log.Info().Msgf("AddCid: Read prefix list with %d prefixes.", count)
 }
 
 func init() {

@@ -3,10 +3,11 @@ package bgp
 
 import (
 	"io/ioutil"
-	"log"
 	"net"
 	"strconv"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/bgp_routeinfo/routeinfo"
 	"github.com/BelWue/flowpipeline/pb"
@@ -26,29 +27,29 @@ type Bgp struct {
 func (segment Bgp) New(config map[string]string) segments.Segment {
 	rsconfig, err := ioutil.ReadFile(config["filename"])
 	if err != nil {
-		log.Printf("[error] Bgp: Error reading BGP session config file: %s", err)
+		log.Error().Err(err).Msg(" Bgp: Error reading BGP session config file: ")
 		return nil
 	}
 	var rs routeinfo.RouteInfoServer
 	err = yaml.Unmarshal(rsconfig, &rs)
 	if err != nil {
-		log.Printf("[error] Bgp: Error parsing BGP session configuration YAML: %v", err)
+		log.Error().Err(err).Msg(" Bgp: Error parsing BGP session configuration YAML: ")
 		return nil
 	}
 
 	if fallback, present := config["fallbackrouter"]; present {
 		if _, ok := rs.Routers[fallback]; !ok {
-			log.Printf("[error] Bgp: No fallback router named \"%s\" has been configured.", fallback)
+			log.Error().Msgf("Bgp: No fallback router named \"%s\" has been configured.", fallback)
 			return nil
 		}
 	}
 
 	fallbackonly, err := strconv.ParseBool(config["usefallbackonly"])
 	if err != nil {
-		log.Println("[info] Bgp: 'usefallbackonly' set to default 'false'.")
+		log.Info().Msg("Bgp: 'usefallbackonly' set to default 'false'.")
 	}
 	if fallbackonly && config["fallbackrouter"] == "" {
-		log.Printf("[error] Bgp: Forcing fallback requires a fallbackrouter parameter.")
+		log.Error().Msgf("Bgp: Forcing fallback requires a fallbackrouter parameter.")
 		return nil
 	}
 

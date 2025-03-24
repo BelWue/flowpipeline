@@ -3,8 +3,8 @@ package kafkaconsumer
 import (
 	"bytes"
 	"context"
-	"log"
-	"log/slog"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/IBM/sarama"
@@ -22,7 +22,7 @@ type Handler struct {
 
 // Setup is run at the beginning of a new session, before ConsumeClaim
 func (h *Handler) Setup(session sarama.ConsumerGroupSession) error {
-	log.Println("[info] KafkaConsumer: Received new partition set to claim:", session.Claims()) // TODO: print those
+	log.Info().Msgf("KafkaConsumer: Received new partition set to claim: %v", session.Claims()) // TODO: print those
 	// reopen flows channel
 	h.flows = make(chan *pb.EnrichedFlow)
 	// Mark the consumer as ready
@@ -48,12 +48,12 @@ func (h *Handler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama
 				if err := proto.Unmarshal(message.Value, flowMsg); err == nil {
 					h.flows <- flowMsg.ConvertToEnrichedFlow()
 				} else {
-					log.Printf("[warning] KafkaConsumer: Error decoding flow, this might be due to the use of Goflow custom fields. Original error:\n  %s", err)
+					log.Warn().Err(err).Msg(" KafkaConsumer: Error decoding flow, this might be due to the use of Goflow custom fields. Original error:\n  ")
 				}
 			} else {
 				msg := new(pb.ProtoProducerMessage)
 				if err := protodelim.UnmarshalFrom(bytes.NewReader(message.Value), msg); err != nil {
-					slog.Error("error unmarshalling message", slog.String("error", err.Error()))
+					log.Error().Err(err).Msg("Failed unmarshalling message")
 					continue
 				}
 				h.flows <- &msg.EnrichedFlow

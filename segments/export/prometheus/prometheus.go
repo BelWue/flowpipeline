@@ -17,13 +17,14 @@ package prometheus
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -42,19 +43,19 @@ type Prometheus struct {
 func (segment Prometheus) New(config map[string]string) segments.Segment {
 	var endpoint string = ":8080"
 	if config["endpoint"] == "" {
-		log.Println("[info] prometheus: Missing configuration parameter 'endpoint'. Using default port \":8080\"")
+		log.Info().Msg("prometheus: Missing configuration parameter 'endpoint'. Using default port \":8080\"")
 	} else {
 		endpoint = config["endpoint"]
 	}
 	var metricsPath string = "/metrics"
 	if config["metricspath"] == "" {
-		log.Println("[info] prometheus: Missing configuration parameter 'metricspath'. Using default path \"/metrics\"")
+		log.Info().Msg("prometheus: Missing configuration parameter 'metricspath'. Using default path \"/metrics\"")
 	} else {
 		metricsPath = config["metricspath"]
 	}
 	var flowdataPath string = "/flowdata"
 	if config["flowdatapath"] == "" {
-		log.Println("[info] prometheus: Missing configuration parameter 'flowdatapath'. Using default path \"/flowdata\"")
+		log.Info().Msg("prometheus: Missing configuration parameter 'flowdatapath'. Using default path \"/flowdata\"")
 	} else {
 		flowdataPath = config["flowdatapath"]
 	}
@@ -62,9 +63,9 @@ func (segment Prometheus) New(config map[string]string) segments.Segment {
 	if config["vacuum_interval"] != "" {
 		vacuumIntervalDuration, err := time.ParseDuration(config["vacuum_interval"])
 		if err != nil {
-			log.Println("[warning] prometheus: Failed to parse vacuum intervall \"" + config["vacuum_interval"] + "\" - continuing without vacuum interval")
+			log.Warn().Msg("prometheus: Failed to parse vacuum intervall \"" + config["vacuum_interval"] + "\" - continuing without vacuum interval")
 		} else {
-			log.Println("[info] prometheus: Setting prometheus vacuum interval to " + config["vacuum_interval"] + " this will lead to data loss of up to one scraping intervall!")
+			log.Info().Msg("prometheus: Setting prometheus vacuum interval to " + config["vacuum_interval"] + " this will lead to data loss of up to one scraping intervall!")
 			vacuumInterval = &vacuumIntervalDuration
 		}
 	}
@@ -79,7 +80,7 @@ func (segment Prometheus) New(config map[string]string) segments.Segment {
 	// set default labels if not configured
 	var labels []string
 	if config["labels"] == "" {
-		log.Println("[info] prometheus: Configuration parameter 'labels' not set. Using default labels 'Etype,Proto' to export")
+		log.Info().Msg("prometheus: Configuration parameter 'labels' not set. Using default labels 'Etype,Proto' to export")
 		labels = strings.Split("Etype,Proto", ",")
 	} else {
 		labels = strings.Split(config["labels"], ",")
@@ -89,7 +90,7 @@ func (segment Prometheus) New(config map[string]string) segments.Segment {
 		field = strings.TrimSpace(field)
 		_, found := protofields.FieldByName(field)
 		if !found {
-			log.Printf("[error] Prometheus: Field '%s' specified in 'labels' does not exist.", field)
+			log.Error().Msgf("Prometheus: Field '%s' specified in 'labels' does not exist.", field)
 			return nil
 		}
 		newsegment.Labels = append(newsegment.Labels, field)
@@ -144,14 +145,14 @@ func (segment *Prometheus) initializeExporter(exporter *Exporter) {
 func (segment *Prometheus) AddVacuumCronJob(promExporter *Exporter) {
 	scheduler, err := gocron.NewScheduler()
 	if err != nil {
-		log.Printf("%s", "[Error] Failed inizialiozing prometheus exporter vacuum job: "+err.Error())
+		log.Warn().Err(err).Msg("Failed initializing prometheus exporter vacuum job")
 	}
 	_, err = scheduler.NewJob(
 		gocron.DurationJob(*segment.VacuumInterval),
 		gocron.NewTask(promExporter.ResetCounter),
 	)
 	if err != nil {
-		log.Printf("%s", "[Error] Failed inizialiozing prometheus exporter vacuum job: "+err.Error())
+		log.Warn().Err(err).Msg("Failed initializing prometheus exporter vacuum job")
 	}
 	// start the scheduler
 	scheduler.Start()

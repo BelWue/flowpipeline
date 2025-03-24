@@ -2,9 +2,10 @@
 package normalize
 
 import (
-	"log"
 	"strconv"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 )
@@ -21,10 +22,10 @@ func (segment Normalize) New(config map[string]string) segments.Segment {
 		if parsedFallback, err := strconv.ParseUint(config["fallback"], 10, 32); err == nil {
 			fallback = parsedFallback
 		} else {
-			log.Println("[error] Normalize: Could not parse 'fallback' parameter, using default 0.")
+			log.Error().Msg("Normalize: Could not parse 'fallback' parameter, using default 0.")
 		}
 	} else {
-		log.Println("[info] Normalize: 'fallback' set to default '0'.")
+		log.Info().Msg("Normalize: 'fallback' set to default '0'.")
 	}
 
 	return &Normalize{

@@ -7,13 +7,13 @@ package goflow
 import (
 	"bytes"
 	"context"
-	"log"
-	"log/slog"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -56,41 +56,41 @@ func (segment Goflow) New(config map[string]string) segments.Segment {
 	for _, listenAddress := range strings.Split(listen, ",") {
 		listenAddrUrl, err := url.Parse(listenAddress)
 		if err != nil {
-			log.Printf("[error] Goflow: error parsing listenAddresses: %e", err)
+			log.Error().Msgf("Goflow: error parsing listenAddresses: %e", err)
 			return nil
 		}
 		// Check if given Port can be parsed to int
 		_, err = strconv.ParseUint(listenAddrUrl.Port(), 10, 64)
 		if err != nil {
-			log.Printf("[error] Goflow: Port %s could not be converted to integer", listenAddrUrl.Port())
+			log.Error().Msgf("Goflow: Port %s could not be converted to integer", listenAddrUrl.Port())
 			return nil
 		}
 
 		switch listenAddrUrl.Scheme {
 		case "netflow", "sflow", "nfl":
-			log.Printf("[info] Goflow: Scheme %s supported.", listenAddrUrl.Scheme)
+			log.Info().Msgf("Goflow: Scheme %s supported.", listenAddrUrl.Scheme)
 		default:
-			log.Printf("[error] Goflow: Scheme %s not supported.", listenAddrUrl.Scheme)
+			log.Error().Msgf("Goflow: Scheme %s not supported.", listenAddrUrl.Scheme)
 			return nil
 		}
 
 		listenAddressesSlice = append(listenAddressesSlice, *listenAddrUrl)
 	}
-	log.Printf("[info] Goflow: Configured for for %s", listen)
+	log.Info().Msgf("Goflow: Configured for for %s", listen)
 
 	var workers uint64 = 1
 	if config["workers"] != "" {
 		if parsedWorkers, err := strconv.ParseUint(config["workers"], 10, 32); err == nil {
 			workers = parsedWorkers
 			if workers == 0 {
-				log.Println("[error] Goflow: Limiting workers to 0 will not work. Remove this segment or use a higher value >= 1.")
+				log.Error().Msg("Goflow: Limiting workers to 0 will not work. Remove this segment or use a higher value >= 1.")
 				return nil
 			}
 		} else {
-			log.Println("[error] Goflow: Could not parse 'workers' parameter, using default 1.")
+			log.Error().Msg("Goflow: Could not parse 'workers' parameter, using default 1.")
 		}
 	} else {
-		log.Println("[info] Goflow: 'workers' set to default '1'.")
+		log.Info().Msg("Goflow: 'workers' set to default '1'.")
 	}
 
 	return &Goflow{
@@ -134,7 +134,7 @@ func (d *channelDriver) Send(key, data []byte) error {
 	msg := new(pb.ProtoProducerMessage)
 	// TODO: can we shave of this Unmarshal here by writing a custom formatter
 	if err := protodelim.UnmarshalFrom(bytes.NewReader(data), msg); err != nil {
-		log.Println("[error] Goflow: Conversion error for received flow.")
+		log.Error().Msg("Goflow: Conversion error for received flow.")
 		return nil
 	}
 	d.out <- &msg.EnrichedFlow
@@ -149,7 +149,7 @@ func (d *channelDriver) Close(context.Context) error {
 func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 	formatter, err := format.FindFormat("bin")
 	if err != nil {
-		slog.Error("error formatter", slog.String("error", err.Error()))
+		log.Fatal().Err(err).Msg("(Failed loading formatter")
 		os.Exit(1)
 	}
 	var pipes []utils.FlowPipe
@@ -178,23 +178,18 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 			}
 			recv, err := utils.NewUDPReceiver(cfg)
 			if err != nil {
-				log.Println("error creating UDP receiver", slog.String("error", err.Error()))
-				os.Exit(1)
-			}
-
-			if err != nil {
-				slog.Error("error transporter", slog.String("error", err.Error()))
+				log.Fatal().Err(err).Msg("Failed creating UDP receiver")
 				os.Exit(1)
 			}
 
 			var cfgProducer = &protoproducer.ProducerConfig{}
 			cfgm, err := cfgProducer.Compile()
 			if err != nil {
-				log.Fatal(err)
+				log.Fatal().Err(err)
 			}
 			flowProducer, err := protoproducer.CreateProtoProducer(cfgm, protoproducer.CreateSamplingSystem)
 			if err != nil {
-				slog.Error("error producer", slog.String("error", err.Error()))
+				log.Fatal().Err(err).Msg("Failed creating proto producer")
 				os.Exit(1)
 			}
 
@@ -209,15 +204,15 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 			switch scheme := listenAddrUrl.Scheme; scheme {
 			case "netflow":
 				pipeline = utils.NewNetFlowPipe(cfgPipe)
-				log.Printf("[info] Goflow: Listening for Netflow v9 on port %d...", port)
+				log.Info().Msgf("Goflow: Listening for Netflow v9 on port %d...", port)
 			case "sflow":
 				pipeline = utils.NewSFlowPipe(cfgPipe)
-				log.Printf("[info] Goflow: Listening for sflow on port %d...", port)
+				log.Info().Msgf("Goflow: Listening for sflow on port %d...", port)
 			case "flow":
 				pipeline = utils.NewFlowPipe(cfgPipe)
-				log.Printf("[info] Goflow: Listening for netflow legacy on port %d...", port)
+				log.Info().Msgf("Goflow: Listening for netflow legacy on port %d...", port)
 			default:
-				log.Fatal("scheme does not exist", slog.String("error", listenAddrUrl.Scheme))
+				log.Fatal().Msgf("scheme \"%s\" does not exist", listenAddrUrl.Scheme)
 			}
 
 			decodeFunc := pipeline.DecodeFlow
@@ -230,7 +225,7 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 			err = recv.Start(hostname, int(port), decodeFunc)
 
 			if err != nil {
-				log.Fatalf("[error] Goflow: %s", err.Error())
+				log.Fatal().Err(err)
 			}
 
 		}(listenAddrUrl)
