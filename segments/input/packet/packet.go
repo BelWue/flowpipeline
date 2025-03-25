@@ -5,12 +5,13 @@ package packet
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 	"github.com/BelWue/flowpipeline/segments/filter/aggregate"
@@ -46,11 +47,11 @@ func (c conf) parseOption(o opt) (error, string) {
 	case "option":
 		if c[o.Name] == "" {
 			if o.Default != "" {
-				log.Printf("[info] Packet: '%s' set to default '%s'.", o.Name, o.Default)
+				log.Info().Msgf("Packet: '%s' set to default '%s'.", o.Name, o.Default)
 				return nil, o.Default
 			} else {
-				log.Printf("[error] Packet: Field '%s' is required.", o.Name)
-				return fmt.Errorf("parse error"), ""
+				log.Error().Msgf("Packet: Field '%s' is required.", o.Name)
+				return fmt.Errorf("[error] parse error"), ""
 			}
 		}
 		for _, option := range o.Options {
@@ -58,31 +59,31 @@ func (c conf) parseOption(o opt) (error, string) {
 				return nil, option
 			}
 		}
-		log.Printf("[error] Packet: Field '%s' must be set to a valid option: %s.", o.Name, strings.Join(o.Options, "|"))
-		return fmt.Errorf("parse error"), ""
+		log.Error().Msgf("Packet: Field '%s' must be set to a valid option: %s.", o.Name, strings.Join(o.Options, "|"))
+		return fmt.Errorf("[error] parse error"), ""
 	case "duration":
 		_, err := time.ParseDuration(c[o.Name])
 		if err != nil {
 			if c[o.Name] == "" {
-				log.Printf("[info] Packet: '%s' set to default '%s'.", o.Name, o.Default)
+				log.Info().Msgf("Packet: '%s' set to default '%s'.", o.Name, o.Default)
 			} else {
-				log.Printf("[warning] Packet: '%s' was invalid, fallback to default '%s'.", o.Name, o.Default)
+				log.Warn().Msgf("Packet: '%s' was invalid, fallback to default '%s'.", o.Name, o.Default)
 			}
 			return nil, o.Default
 		} else {
-			log.Printf("[info] Packet: '%s' set to '%s'.", o.Name, c[o.Name])
+			log.Info().Msgf("Packet: '%s' set to '%s'.", o.Name, c[o.Name])
 			return nil, c[o.Name]
 		}
 	case "rfile":
 		if _, err := os.Stat(c[o.Name]); err != nil {
 			if o.Default != "" {
 				if _, err := os.Stat(o.Default); err != nil {
-					log.Printf("[info] Packet: '%s' set to default '%s'.", o.Name, o.Default)
+					log.Info().Msgf("Packet: '%s' set to default '%s'.", o.Name, o.Default)
 					return nil, o.Default
 				}
 				return err, ""
 			} else {
-				log.Printf("[error] Packet: Field '%s' is required.", o.Name)
+				log.Error().Msgf("Packet: Field '%s' is required.", o.Name)
 				return err, ""
 			}
 		}
@@ -90,20 +91,20 @@ func (c conf) parseOption(o opt) (error, string) {
 	case "iface":
 		if c[o.Name] == "" {
 			if o.Default != "" {
-				log.Printf("[info] Packet: '%s' set to default '%s'.", o.Name, o.Default)
+				log.Info().Msgf("Packet: '%s' set to default '%s'.", o.Name, o.Default)
 				return nil, o.Default
 			} else {
-				log.Printf("[error] Packet: Field '%s' is required.", o.Name)
-				return fmt.Errorf("parse error"), ""
+				log.Error().Msgf("Packet: Field '%s' is required.", o.Name)
+				return fmt.Errorf("[error] parse error"), ""
 			}
 		}
 		if _, err := net.InterfaceByName(c[o.Name]); err == nil {
 			return nil, c[o.Name]
 		}
-		log.Printf("[error] Packet: Field '%s' must be set to a valid interface.", o.Name)
-		return fmt.Errorf("parse error"), ""
+		log.Error().Msgf("Packet: Field '%s' must be set to a valid interface.", o.Name)
+		return fmt.Errorf("[error] parse error"), ""
 	}
-	return fmt.Errorf("parse error"), ""
+	return fmt.Errorf("[error] parse error"), ""
 }
 
 func (segment Packet) New(config map[string]string) segments.Segment {
@@ -132,15 +133,15 @@ func (segment Packet) New(config map[string]string) segments.Segment {
 	}
 
 	if cgoEnabled && config["filter"] != "" {
-		log.Printf("[info] Packet: Using BPF filter '%s' on packet stream, flows will be generated matches only.", config["filter"])
+		log.Info().Msgf("Packet: Using BPF filter '%s' on packet stream, flows will be generated matches only.", config["filter"])
 		newsegment.Filter = config["filter"] // this might be a Run()-time error later on
 	} else if config["filter"] != "" {
-		log.Println("[warning] Packet: Parameter 'filter' has been ignored as this requires a binary with CGO enabled.")
+		log.Warn().Msg("Packet: Parameter 'filter' has been ignored as this requires a binary with CGO enabled.")
 	}
 
 	newsegment.exporter, err = aggregate.NewFlowExporter(newsegment.ActiveTimeout, newsegment.InactiveTimeout)
 	if err != nil {
-		log.Printf("[error] Packet: error setting up exporter: %s", err)
+		log.Error().Err(err).Msg(" Packet: error setting up exporter: ")
 		return nil
 	}
 	return newsegment
@@ -152,14 +153,14 @@ func (segment *Packet) Run(wg *sync.WaitGroup) {
 	case "pcapgo":
 		handle, err := pcapgo.NewEthernetHandle(segment.Source)
 		if err != nil {
-			log.Fatalf("[error]: Packet: Could not initiate capture: %v", err)
+			log.Fatal().Err(err).Msg("Packet: Could not initiate capture: ")
 		}
 
 		pktsrc = gopacket.NewPacketSource(handle, layers.LayerTypeEthernet)
 
 	case "pcap":
 		if !cgoEnabled {
-			log.Fatalln("[error]: Packet: CGO feature 'pcap' requested from binary compiled without CGO support.")
+			log.Fatal().Msg("Packet: CGO feature 'pcap' requested from binary compiled without CGO support.")
 		} else {
 			handle := getPcapHandle(segment.Source, segment.Filter)
 			defer handle.Close()
@@ -167,7 +168,7 @@ func (segment *Packet) Run(wg *sync.WaitGroup) {
 		}
 	case "pfring":
 		if !cgoEnabled {
-			log.Fatalln("[error]: Packet: CGO feature 'pcap' requested from binary compiled without CGO support.")
+			log.Fatal().Msg("Packet: CGO feature 'pcap' requested from binary compiled without CGO support.")
 		} else {
 			ring := getPfringHandle(segment.Source, segment.Filter)
 			defer ring.Close()
@@ -176,7 +177,7 @@ func (segment *Packet) Run(wg *sync.WaitGroup) {
 	case "file":
 		f, err := os.Open(segment.Source)
 		if err != nil {
-			log.Fatalf("[error]: Packet: Could not open file: %v", err)
+			log.Fatal().Err(err).Msg("Packet: Could not open file: ")
 		}
 		defer f.Close()
 
@@ -188,14 +189,14 @@ func (segment *Packet) Run(wg *sync.WaitGroup) {
 		} else {
 			if err.Error() == "Unknown magic a1b2c3d4" && cgoEnabled {
 				if cgoEnabled {
-					log.Printf("[warning]: Packet: Legacy pcap file detected, falling back to using libpcap instead of pure-Go implementation.")
+					log.Warn().Msgf("Packet: Legacy pcap file detected, falling back to using libpcap instead of pure-Go implementation.")
 					handle := getPcapFile(segment.Source, segment.Filter)
 					pktsrc = gopacket.NewPacketSource(handle, handle.LinkType())
 				} else {
-					log.Fatalf("[error]: Packet: Could not read legacy pcap file, and classic libpcap is unavailable.")
+					log.Fatal().Msgf("Packet: Could not read legacy pcap file, and classic libpcap is unavailable.")
 				}
 			} else {
-				log.Fatalf("[error]: Packet: Could not read capture from file: %v", err)
+				log.Fatal().Err(err).Msg("Packet: Could not read capture from file: ")
 			}
 		}
 	}
@@ -207,7 +208,7 @@ func (segment *Packet) Run(wg *sync.WaitGroup) {
 		var samplerAddress net.IP
 		addrs, err := iface.Addrs()
 		if err != nil {
-			log.Fatalf("[error]: Packet: Could not determine sampler address: %v", err)
+			log.Fatal().Err(err).Msg("Packet: Could not determine sampler address: ")
 		}
 		for _, a := range addrs {
 			if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
@@ -221,10 +222,10 @@ func (segment *Packet) Run(wg *sync.WaitGroup) {
 	go func() {
 		segment.exporter.ConsumeFrom(pktsrc.Packets())
 		if segment.Method == "file" {
-			log.Println("[info] Packet: The pcap has ended.")
+			log.Info().Msg("Packet: The pcap has ended.")
 			os.Exit(0)
 		} else {
-			log.Fatalln("[error] Packet: The packet stream has ended for an unknown reason.")
+			log.Fatal().Msg("Packet: The packet stream has ended for an unknown reason.")
 		}
 	}()
 

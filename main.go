@@ -8,14 +8,15 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"plugin"
 	"strings"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/BelWue/flowpipeline/pipeline"
-	"github.com/hashicorp/logutils"
 
 	_ "github.com/BelWue/flowpipeline/segments/alert/http"
 
@@ -83,9 +84,9 @@ func (i *flagArray) Set(value string) error {
 func main() {
 	var pluginPaths flagArray
 	flag.Var(&pluginPaths, "p", "path to load segment plugins from, can be specified multiple times")
-	loglevel := flag.String("l", "warning", "loglevel: one of 'debug', 'info', 'warning' or 'error'")
+	logLevel := flag.String("l", "warning", "loglevel: one of 'trace', 'debug', 'info', 'warning', 'error', 'fatal', or 'panic'")
 	version := flag.Bool("v", false, "print version")
-	configfile := flag.String("c", "config.yml", "location of the config file in yml format")
+	configFile := flag.String("c", "config.yml", "location of the config file in yml format")
 	flag.Parse()
 
 	if *version {
@@ -93,29 +94,26 @@ func main() {
 		return
 	}
 
-	log.SetOutput(&logutils.LevelFilter{
-		Levels:   []logutils.LogLevel{"debug", "info", "warning", "error"},
-		MinLevel: logutils.LogLevel(*loglevel),
-		Writer:   os.Stderr,
-	})
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.SetGlobalLevel(zerologLogLevel(logLevel))
 
 	for _, path := range pluginPaths {
 		_, err := plugin.Open(path)
 		if err != nil {
 			if err.Error() == "plugin: not implemented" {
-				log.Println("[error] Loading plugins is unsupported when running a static, not CGO-enabled binary.")
+				log.Error().Msg("Loading plugins is unsupported when running a static, not CGO-enabled binary.")
 			} else {
-				log.Printf("[error] Problem loading the specified plugin: %s", err)
+				log.Error().Err(err).Msgf("Problem loading the specified plugin '%s'", path)
 			}
 			return
 		} else {
-			log.Printf("[info] Loaded plugin: %s", path)
+			log.Info().Msgf("Loaded plugin: %s", path)
 		}
 	}
 
-	config, err := os.ReadFile(*configfile)
+	config, err := os.ReadFile(*configFile)
 	if err != nil {
-		log.Printf("[error] reading config file: %s", err)
+		log.Error().Err(err).Msg(" reading config file: ")
 		return
 	}
 	pipe := pipeline.NewFromConfig(config)
@@ -127,4 +125,34 @@ func main() {
 	<-sigs
 
 	pipe.Close()
+}
+
+func zerologLogLevel(logLevel *string) zerolog.Level {
+	if logLevel != nil && *logLevel != "" {
+		switch *logLevel {
+		case "trace":
+			log.Info().Msg("Using log level 'trace'")
+			return zerolog.TraceLevel
+		case "debug":
+			log.Info().Msg("Using log level 'debug'")
+			return zerolog.DebugLevel
+		case "info":
+			log.Info().Msg("Using log level 'info'")
+			return zerolog.InfoLevel
+		case "warning":
+			return zerolog.WarnLevel
+		case "error":
+			return zerolog.ErrorLevel
+		case "fatal":
+			return zerolog.FatalLevel
+		case "panic":
+			return zerolog.PanicLevel
+		default:
+			log.Warn().Msgf("Unknown log level '%s' using default 'info'", *logLevel)
+		}
+	} else {
+		log.Info().Msg("Using default log level 'info'")
+	}
+
+	return zerolog.InfoLevel
 }

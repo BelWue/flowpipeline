@@ -2,12 +2,13 @@ package flowpipeline
 
 import (
 	"bufio"
-	"log"
 	"net/http"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 	"github.com/prometheus/client_golang/prometheus"
@@ -288,7 +289,7 @@ func (e *PrometheusExporter) ServeEndpoints(segment *ToptalkersMetrics) {
 	go func() {
 		http.ListenAndServe(segment.Endpoint, mux)
 	}()
-	log.Printf("Enabled metrics on %s and %s, listening at %s.", segment.MetricsPath, segment.FlowdataPath, segment.Endpoint)
+	log.Info().Msgf("Enabled metrics on %s and %s, listening at %s.", segment.MetricsPath, segment.FlowdataPath, segment.Endpoint)
 }
 
 func (segment ToptalkersMetrics) New(config map[string]string) segments.Segment {
@@ -308,83 +309,83 @@ func (segment ToptalkersMetrics) New(config map[string]string) segments.Segment 
 		if parsedBuckets, err := strconv.ParseInt(config["buckets"], 10, 64); err == nil {
 			newsegment.Buckets = int(parsedBuckets)
 			if newsegment.Buckets <= 0 {
-				log.Println("[error] : Buckets has to be >0.")
+				log.Error().Msg(": Buckets has to be >0.")
 				return nil
 			}
 		} else {
-			log.Println("[error] ToptalkersMetrics: Could not parse 'buckets' parameter, using default 60.")
+			log.Error().Msg("ToptalkersMetrics: Could not parse 'buckets' parameter, using default 60.")
 		}
 	} else {
-		log.Println("[info] ToptalkersMetrics: 'buckets' set to default 60.")
+		log.Info().Msg("ToptalkersMetrics: 'buckets' set to default 60.")
 	}
 
 	if config["thresholdbuckets"] != "" {
 		if parsedThresholdBuckets, err := strconv.ParseInt(config["thresholdbuckets"], 10, 64); err == nil {
 			newsegment.ThresholdBuckets = int(parsedThresholdBuckets)
 			if newsegment.ThresholdBuckets <= 0 {
-				log.Println("[error] : thresholdbuckets has to be >0.")
+				log.Error().Msg(": thresholdbuckets has to be >0.")
 				return nil
 			}
 		} else {
-			log.Println("[error] ToptalkersMetrics: Could not parse 'thresholdbuckets' parameter, using default (60 buckets).")
+			log.Error().Msg("ToptalkersMetrics: Could not parse 'thresholdbuckets' parameter, using default (60 buckets).")
 		}
 	} else {
-		log.Println("[info] ToptalkersMetrics: 'thresholdbuckets' set to default (60 buckets).")
+		log.Info().Msg("ToptalkersMetrics: 'thresholdbuckets' set to default (60 buckets).")
 	}
 
 	if config["reportbuckets"] != "" {
 		if parsedReportBuckets, err := strconv.ParseInt(config["reportbuckets"], 10, 64); err == nil {
 			newsegment.ReportBuckets = int(parsedReportBuckets)
 			if newsegment.ReportBuckets <= 0 {
-				log.Println("[error] : reportbuckets has to be >0.")
+				log.Error().Msg(": reportbuckets has to be >0.")
 				return nil
 			}
 		} else {
-			log.Println("[error] ReportPrometheus: Could not parse 'reportbuckets' parameter, using default (60 buckets).")
+			log.Error().Msg("ReportPrometheus: Could not parse 'reportbuckets' parameter, using default (60 buckets).")
 		}
 	} else {
-		log.Println("[info] ReportPrometheus: 'reportbuckets' set to default (60 buckets).")
+		log.Info().Msg("ReportPrometheus: 'reportbuckets' set to default (60 buckets).")
 	}
 
 	if config["traffictype"] != "" {
 		newsegment.TrafficType = config["traffictype"]
 	} else {
-		log.Println("[info] ToptalkersMetrics: 'traffictype' is empty.")
+		log.Info().Msg("ToptalkersMetrics: 'traffictype' is empty.")
 	}
 
 	if config["thresholdbps"] != "" {
 		if parsedThresholdBps, err := strconv.ParseUint(config["thresholdbps"], 10, 32); err == nil {
 			newsegment.ThresholdBps = parsedThresholdBps
 		} else {
-			log.Println("[error] ToptalkersMetrics: Could not parse 'thresholdbps' parameter, using default 0.")
+			log.Error().Msg("ToptalkersMetrics: Could not parse 'thresholdbps' parameter, using default 0.")
 		}
 	} else {
-		log.Println("[info] ToptalkersMetrics: 'thresholdbps' set to default '0'.")
+		log.Info().Msg("ToptalkersMetrics: 'thresholdbps' set to default '0'.")
 	}
 
 	if config["thresholdpps"] != "" {
 		if parsedThresholdPps, err := strconv.ParseUint(config["thresholdpps"], 10, 32); err == nil {
 			newsegment.ThresholdPps = parsedThresholdPps
 		} else {
-			log.Println("[error] ToptalkersMetrics: Could not parse 'thresholdpps' parameter, using default 0.")
+			log.Error().Msg("ToptalkersMetrics: Could not parse 'thresholdpps' parameter, using default 0.")
 		}
 	} else {
-		log.Println("[info] ToptalkersMetrics: 'thresholdpps' set to default '0'.")
+		log.Info().Msg("ToptalkersMetrics: 'thresholdpps' set to default '0'.")
 	}
 
 	if config["endpoint"] == "" {
-		log.Println("[info] ToptalkersMetrics Missing configuration parameter 'endpoint'. Using default port \":8080\"")
+		log.Info().Msg("ToptalkersMetrics Missing configuration parameter 'endpoint'. Using default port ':8080'")
 	} else {
 		newsegment.Endpoint = config["endpoint"]
 	}
 
 	if config["metricspath"] == "" {
-		log.Println("[info] ToptalkersMetrics: Missing configuration parameter 'metricspath'. Using default path \"/metrics\"")
+		log.Info().Msg("ToptalkersMetrics: Missing configuration parameter 'metricspath'. Using default path 'metrics'")
 	} else {
 		newsegment.FlowdataPath = config["metricspath"]
 	}
 	if config["flowdatapath"] == "" {
-		log.Println("[info] ThresholdToptalkersMetrics: Missing configuration parameter 'flowdatapath'. Using default path \"/flowdata\"")
+		log.Info().Msg("ThresholdToptalkersMetrics: Missing configuration parameter 'flowdatapath'. Using default path 'flowdata'")
 	} else {
 		newsegment.FlowdataPath = config["flowdatapath"]
 	}
@@ -396,9 +397,9 @@ func (segment ToptalkersMetrics) New(config map[string]string) segments.Segment 
 		"both":
 		newsegment.RelevantAddress = config["relevantaddress"]
 	case "":
-		log.Println("[info] ToptalkersMetrics: 'relevantaddress' set to default 'destination'.")
+		log.Info().Msg("ToptalkersMetrics: 'relevantaddress' set to default 'destination'.")
 	default:
-		log.Println("[error] ToptalkersMetrics: Could not parse 'relevantaddress', using default value 'destination'.")
+		log.Error().Msg("ToptalkersMetrics: Could not parse 'relevantaddress', using default value 'destination'.")
 	}
 	return newsegment
 }

@@ -12,6 +12,6 @@ func TestSegment_Count_passthrough(t *testing.T) {
 	result := segments.TestSegment("count", map[string]string{"prefix": "Test: "},
 		&pb.EnrichedFlow{})
 	if result == nil {
-		t.Error("Segment Count is not passing through flows.")
+		t.Error("([error] Segment Count is not passing through flows.")
 	}
 }

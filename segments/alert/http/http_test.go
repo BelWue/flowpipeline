@@ -12,6 +12,6 @@ func TestSegment_Http_passthrough(t *testing.T) {
 	result := segments.TestSegment("http", map[string]string{"url": "http://localhost:8000"},
 		&pb.EnrichedFlow{Type: 3})
 	if result.Type != 3 {
-		t.Error("Segment Http is not working.")
+		t.Error("([error] Segment Http is not working.")
 	}
 }

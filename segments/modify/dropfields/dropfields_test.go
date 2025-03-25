@@ -1,8 +1,6 @@
 package dropfields
 
 import (
-	"io"
-	"log"
 	"os"
 	"reflect"
 	"sync"
@@ -10,6 +8,7 @@ import (
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/rs/zerolog"
 )
 
 var (
@@ -83,7 +82,7 @@ func TestSegment_DropFields(t *testing.T) {
 		t.Run(testname, func(t *testing.T) {
 			result := segments.TestSegment("dropfields", test.config, &test.input)
 			if !reflect.DeepEqual(result, test.expected) {
-				t.Errorf("Segment DropFields is not returning the proper fields. Got: »%+v« Expected »%+v«", result, test.expected)
+				t.Errorf("[error] Segment DropFields is not returning the proper fields. Got: »%+v« Expected »%+v«", result, test.expected)
 			}
 		})
 	}
@@ -91,7 +90,7 @@ func TestSegment_DropFields(t *testing.T) {
 
 // DropFields Segment benchmark passthrough
 func BenchmarkDropFields(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := DropFields{Policy: PolicyDrop, Fields: []string{"SrcAddr"}}

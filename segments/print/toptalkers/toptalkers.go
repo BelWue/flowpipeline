@@ -3,15 +3,16 @@ package toptalkers
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strconv"
 	"sync"
 	"time"
 
-	"github.com/asecurityteam/rolling"
+	"github.com/rs/zerolog/log"
+
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/asecurityteam/rolling"
 	"github.com/dustin/go-humanize"
 )
 
@@ -47,74 +48,74 @@ func (segment TopTalkers) New(config map[string]string) segments.Segment {
 		if parsedWindow, err := strconv.ParseInt(config["window"], 10, 64); err == nil {
 			newsegment.Window = int(parsedWindow)
 			if newsegment.Window <= 0 {
-				log.Println("[error] TopTalkers: Window has to be >0.")
+				log.Error().Msg("TopTalkers: Window has to be >0.")
 				return nil
 			}
 		} else {
-			log.Println("[error] TopTalkers: Could not parse 'window' parameter, using default 60.")
+			log.Error().Msg("TopTalkers: Could not parse 'window' parameter, using default 60.")
 		}
 	} else {
-		log.Println("[info] TopTalkers: 'window' set to default 60.")
+		log.Info().Msg("TopTalkers: 'window' set to default 60.")
 	}
 
 	if config["reportinterval"] != "" {
 		if parsedReportInterval, err := strconv.ParseInt(config["reportinterval"], 10, 64); err == nil {
 			newsegment.ReportInterval = int(parsedReportInterval)
 			if newsegment.ReportInterval <= 0 {
-				log.Println("[error] TopTalkers: Reportinterval has to be >0.")
+				log.Error().Msg("TopTalkers: Reportinterval has to be >0.")
 				return nil
 			}
 		} else {
-			log.Println("[error] TopTalkers: Could not parse 'reportinterval' parameter, using default 60.")
+			log.Error().Msg("TopTalkers: Could not parse 'reportinterval' parameter, using default 60.")
 		}
 	} else {
-		log.Println("[info] TopTalkers: 'reportinterval' set to default 60.")
+		log.Info().Msg("TopTalkers: 'reportinterval' set to default 60.")
 	}
 
 	if config["filename"] != "" {
 		file, err := os.Create(config["filename"])
 		if err != nil {
-			log.Printf("[error] Json: File specified in 'filename' is not accessible: %s", err)
+			log.Error().Err(err).Msg(" Json: File specified in 'filename' is not accessible: ")
 		}
 		newsegment.FileName = config["filename"]
 		newsegment.writer = bufio.NewWriter(file)
 	} else {
 		newsegment.writer = bufio.NewWriter(os.Stdout)
-		log.Println("[info] TopTalkers: Parameter 'filename' empty, output goes to StdOut by default.")
+		log.Info().Msg("TopTalkers: Parameter 'filename' empty, output goes to StdOut by default.")
 	}
 
 	if config["thresholdbps"] != "" {
 		if parsedThresholdBps, err := strconv.ParseUint(config["thresholdbps"], 10, 32); err == nil {
 			newsegment.ThresholdBps = parsedThresholdBps
 		} else {
-			log.Println("[error] TopTalkers: Could not parse 'thresholdbps' parameter, using default 0.")
+			log.Error().Msg("TopTalkers: Could not parse 'thresholdbps' parameter, using default 0.")
 		}
 	} else {
-		log.Println("[info] TopTalkers: 'thresholdbps' set to default '0'.")
+		log.Info().Msg("TopTalkers: 'thresholdbps' set to default '0'.")
 	}
 
 	if config["thresholdpps"] != "" {
 		if parsedThresholdPps, err := strconv.ParseUint(config["thresholdpps"], 10, 32); err == nil {
 			newsegment.ThresholdPps = parsedThresholdPps
 		} else {
-			log.Println("[error] TopTalkers: Could not parse 'thresholdpps' parameter, using default 0.")
+			log.Error().Msg("TopTalkers: Could not parse 'thresholdpps' parameter, using default 0.")
 		}
 	} else {
-		log.Println("[info] TopTalkers: 'thresholdpps' set to default '0'.")
+		log.Info().Msg("TopTalkers: 'thresholdpps' set to default '0'.")
 	}
 
 	if config["topn"] != "" {
 		if parsedTopN, err := strconv.ParseUint(config["topn"], 10, 64); err == nil {
 			newsegment.TopN = parsedTopN
 			if newsegment.TopN <= 0 {
-				log.Println("[error] TopTalkers: TopN has to be >0.")
+				log.Error().Msg("TopTalkers: TopN has to be >0.")
 				return nil
 			}
 		} else {
-			log.Println("[error] TopTalkers: Could not parse 'topn' parameter, using default 10.")
+			log.Error().Msg("TopTalkers: Could not parse 'topn' parameter, using default 10.")
 		}
 	} else {
-		log.Println("[info] TopTalkers: 'topn' set to default 10.")
+		log.Info().Msg("TopTalkers: 'topn' set to default 10.")
 	}
 
 	return newsegment

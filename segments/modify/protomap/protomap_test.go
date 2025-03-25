@@ -1,14 +1,13 @@
 package protomap
 
 import (
-	"io"
-	"log"
 	"os"
 	"sync"
 	"testing"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/rs/zerolog"
 )
 
 // Protomap Segment test, passthrough test only
@@ -16,7 +15,7 @@ func TestSegment_protomap_passthrough(t *testing.T) {
 	result := segments.TestSegment("protomap", map[string]string{},
 		&pb.EnrichedFlow{})
 	if result == nil {
-		t.Error("Segment protomap is not passing through flows.")
+		t.Error("([error] Segment protomap is not passing through flows.")
 	}
 }
 
@@ -25,13 +24,13 @@ func TestSegment_protomap_tcp(t *testing.T) {
 	result := segments.TestSegment("protomap", map[string]string{},
 		&pb.EnrichedFlow{Proto: 6})
 	if result.ProtoName != "TCP" {
-		t.Error("Segment protomap is not tagging ProtoName correctly.")
+		t.Error("([error] Segment protomap is not tagging ProtoName correctly.")
 	}
 }
 
 // Protomap Segment benchmark passthrough
 func BenchmarkProtomap(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Protomap{}.New(map[string]string{})

@@ -4,10 +4,11 @@ package filegate
 
 import (
 	"errors"
-	"log"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 )
@@ -23,16 +24,16 @@ func (segment *Filegate) New(config map[string]string) segments.Segment {
 	var ()
 	if config["filename"] != "" {
 		segment.filename = config["filename"]
-		log.Printf("[info] Filegate: gate file is %s", segment.filename)
+		log.Info().Msgf("Filegate: gate file is %s", segment.filename)
 	} else {
-		log.Fatalf("[error] Filegate: No filename config option")
+		log.Fatal().Msgf("Filegate: No filename config option")
 	}
 	// do config stuff here, add it to fields maybe
 	return segment
 }
 
 func checkFileExists(filename string) bool {
-	log.Printf("[debug] Filegate: check if filename %s exists", filename)
+	log.Debug().Msgf("Filegate: check if filename %s exists", filename)
 	_, err := os.Stat(filename)
 	if errors.Is(err, os.ErrNotExist) {
 		return false
@@ -50,7 +51,7 @@ func (segment *Filegate) Run(wg *sync.WaitGroup) {
 	}()
 	for msg := range segment.In {
 		for checkFileExists(segment.filename) {
-			log.Printf("[info] Filegate: gate file %s exists", segment.filename)
+			log.Info().Msgf("Filegate: gate file %s exists", segment.filename)
 			time.Sleep(2 * time.Second)
 		}
 		segment.Out <- msg

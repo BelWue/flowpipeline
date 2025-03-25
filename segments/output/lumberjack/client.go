@@ -3,13 +3,14 @@ package lumberjack
 import (
 	"crypto/tls"
 	"encoding/json"
-	"github.com/BelWue/flowpipeline/pb"
-	lumber "github.com/elastic/go-lumber/client/v2"
-	"google.golang.org/protobuf/encoding/protojson"
 	"io"
-	"log"
 	"net"
 	"time"
+
+	"github.com/BelWue/flowpipeline/pb"
+	lumber "github.com/elastic/go-lumber/client/v2"
+	"github.com/rs/zerolog/log"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 type resilientClient struct {
@@ -57,7 +58,7 @@ func (c *resilientClient) connect() {
 		if err == nil {
 			return
 		}
-		log.Printf("[error] Lumberjack: Failed to connect to server %s: %s", c.ServerName, err)
+		log.Error().Msgf("Lumberjack: Failed to connect to server %s: %s", c.ServerName, err)
 		time.Sleep(c.ReconnectWait)
 	}
 }
@@ -79,7 +80,7 @@ func (c *resilientClient) Send(events []interface{}) {
 
 		// connection is closed. Reopen connection and retry
 		if err == io.EOF {
-			log.Printf("[error] Lumberjack: Connection to server %s closed by peer", c.ServerName)
+			log.Error().Msgf("Lumberjack: Connection to server %s closed by peer", c.ServerName)
 			_ = c.sc.Close()
 			c.connect()
 			goto sendEvents
@@ -90,12 +91,12 @@ func (c *resilientClient) Send(events []interface{}) {
 			goto sendEvents
 		}
 
-		log.Printf("[error] Lumberjack: Error sending flows to server %s: %s", c.ServerName, err)
+		log.Error().Msgf("Lumberjack: Error sending flows to server %s: %s", c.ServerName, err)
 		time.Sleep(500 * time.Millisecond) // TODO: implement a better retry strategy
 
 		// unexpected error. Close connection and retry.
 		{
-			log.Printf("[error] Lumberjack: Unexpected error while sending to %s. Restarting connection…", c.ServerName)
+			log.Error().Msgf("Lumberjack: Unexpected error while sending to %s. Restarting connection…", c.ServerName)
 			_ = c.sc.Close()
 			c.connect()
 			goto sendEvents
@@ -113,6 +114,6 @@ func (c *resilientClient) SendNoRetry(events []interface{}) (int, error) {
 func (c *resilientClient) Close() {
 	err := c.sc.Close()
 	if err != nil {
-		log.Printf("[error] Lumberjack: Error closing connection to server %s: %s", c.ServerName, err)
+		log.Error().Msgf("Lumberjack: Error closing connection to server %s: %s", c.ServerName, err)
 	}
 }

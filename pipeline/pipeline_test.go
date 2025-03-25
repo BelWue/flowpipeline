@@ -20,7 +20,7 @@ func TestPipelineBuild(t *testing.T) {
 	pipeline.In <- &pb.EnrichedFlow{Type: 3}
 	fmsg := <-pipeline.Out
 	if fmsg.Type != 3 {
-		t.Error("Pipeline Setup is not working.")
+		t.Error("([error] Pipeline Setup is not working.")
 	}
 }
 
@@ -43,7 +43,7 @@ func TestPipelineConfigSuccess(t *testing.T) {
 	pipeline.In <- &pb.EnrichedFlow{Type: 3}
 	fmsg := <-pipeline.Out
 	if fmsg.Type != 3 {
-		t.Error("Pipeline built from config is not working.")
+		t.Error("([error] Pipeline built from config is not working.")
 	}
 }
 
@@ -69,12 +69,12 @@ func Test_Branch_passthrough(t *testing.T) {
 	pipeline.In <- &pb.EnrichedFlow{Proto: 6, InIf: 1, OutIf: 1}
 	fmsg := <-pipeline.Out
 	if fmsg.Proto != 6 || fmsg.InIf == 1 || fmsg.OutIf != 1 {
-		t.Errorf("Branch segment did not work correctly, state is Proto %d, InIf %d, OutIf %d, should be (6, 0, 1).", fmsg.Proto, fmsg.InIf, fmsg.OutIf)
+		t.Errorf("[error] Branch segment did not work correctly, state is Proto %d, InIf %d, OutIf %d, should be (6, 0, 1).", fmsg.Proto, fmsg.InIf, fmsg.OutIf)
 	}
 	pipeline.In <- &pb.EnrichedFlow{Proto: 42, InIf: 1, OutIf: 1}
 	fmsg = <-pipeline.Out
 	if fmsg.Proto != 42 || fmsg.InIf != 1 || fmsg.OutIf == 1 {
-		t.Errorf("Branch segment did not work correctly, state is Proto %d, InIf %d, OutIf %d, should be (42, 1, 0).", fmsg.Proto, fmsg.InIf, fmsg.OutIf)
+		t.Errorf("[error] Branch segment did not work correctly, state is Proto %d, InIf %d, OutIf %d, should be (42, 1, 0).", fmsg.Proto, fmsg.InIf, fmsg.OutIf)
 	}
 }
 
@@ -97,9 +97,9 @@ func Test_Branch_DeadlockFreeGeneration_If(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		fmsg := <-pipeline.Out
 		if fmsg.Proto == 6 && fmsg.Bytes != 0 {
-			t.Errorf("Branch segment did not work correctly, state is Proto %d, Bytes %d, should be (6, 0).", fmsg.Proto, fmsg.Bytes)
+			t.Errorf("[error] Branch segment did not work correctly, state is Proto %d, Bytes %d, should be (6, 0).", fmsg.Proto, fmsg.Bytes)
 		} else if fmsg.Proto == 42 && fmsg.Bytes != 42 {
-			t.Errorf("Branch segment did not work correctly, state is Proto %d, Bytes %d, should be (42, 42).", fmsg.Proto, fmsg.Bytes)
+			t.Errorf("[error] Branch segment did not work correctly, state is Proto %d, Bytes %d, should be (42, 42).", fmsg.Proto, fmsg.Bytes)
 		}
 	}
 }

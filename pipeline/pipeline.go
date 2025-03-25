@@ -2,8 +2,9 @@
 package pipeline
 
 import (
-	"log"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -62,7 +63,7 @@ func (pipeline *Pipeline) AutoDrain() {
 	go func() {
 		for range pipeline.Out {
 		}
-		log.Println("[info] Pipeline closed, auto draining finished.")
+		log.Info().Msg("Pipeline closed, auto draining finished.")
 	}()
 }
 

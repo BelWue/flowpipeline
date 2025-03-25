@@ -5,10 +5,11 @@ package bpf
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 )
@@ -45,11 +46,11 @@ type FlowRecord struct {
 func NewFlowExporter(activeTimeout string, inactiveTimeout string) (*FlowExporter, error) {
 	activeTimeoutDuration, err := time.ParseDuration(activeTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("active timeout misconfigured")
+		return nil, fmt.Errorf("[error] active timeout misconfigured")
 	}
 	inactiveTimeoutDuration, err := time.ParseDuration(inactiveTimeout)
 	if err != nil {
-		return nil, fmt.Errorf("inactive timeout misconfigured")
+		return nil, fmt.Errorf("[error] inactive timeout misconfigured")
 	}
 
 	fe := &FlowExporter{activeTimeout: activeTimeoutDuration, inactiveTimeout: inactiveTimeoutDuration}
@@ -62,7 +63,7 @@ func NewFlowExporter(activeTimeout string, inactiveTimeout string) (*FlowExporte
 }
 
 func (f *FlowExporter) Start(samplerAddress net.IP) {
-	log.Println("[info] FlowExporter: Starting export goroutines.")
+	log.Info().Msg("FlowExporter: Starting export goroutines.")
 
 	f.samplerAddress = samplerAddress
 	f.stop = make(chan bool)
@@ -71,7 +72,7 @@ func (f *FlowExporter) Start(samplerAddress net.IP) {
 }
 
 func (f *FlowExporter) Stop() {
-	log.Println("[info] FlowExporter: Stopping export goroutines.")
+	log.Info().Msg("FlowExporter: Stopping export goroutines.")
 	close(f.stop)
 }
 

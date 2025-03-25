@@ -1,8 +1,6 @@
 package csv
 
 import (
-	"io"
-	"log"
 	"net"
 	"os"
 	"sync"
@@ -10,6 +8,7 @@ import (
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/rs/zerolog"
 )
 
 // Csv Segment test, passthrough test
@@ -18,13 +17,13 @@ func TestSegment_Csv_passthrough(t *testing.T) {
 		&pb.EnrichedFlow{Type: 3, SamplerAddress: net.ParseIP("192.0.2.1")})
 
 	if result.Type != 3 {
-		t.Error("Segment Csv is not working.")
+		t.Error("([error] Segment Csv is not working.")
 	}
 }
 
 // Csv Segment benchmark passthrough
 func BenchmarkCsv(b *testing.B) {
-	log.SetOutput(io.Discard)
+	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
 	segment := Csv{}.New(map[string]string{})

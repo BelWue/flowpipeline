@@ -8,12 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -44,7 +45,7 @@ func (segment Mongodb) New(configx map[string]string) segments.Segment {
 
 	newsegment, err := fillSegmentWithConfig(newsegment, configx)
 	if err != nil {
-		log.Printf("[error] '%s'", err.Error())
+		log.Error().Err(err).Msg("Failed loading mongodb segment config")
 		return nil
 	}
 
@@ -57,7 +58,7 @@ func (segment Mongodb) New(configx map[string]string) segments.Segment {
 		err = client.Ping(ctx, options.Client().ReadPreference)
 	}
 	if err != nil {
-		log.Printf("[error] mongoDB: Could not open DB connection due to '%s", err.Error())
+		log.Error().Err(err).Msgf("mongoDB: Could not open DB connection")
 		return nil
 	}
 	db := client.Database(newsegment.databaseName)
@@ -76,7 +77,7 @@ func (segment *Mongodb) Run(wg *sync.WaitGroup) {
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(segment.mongodbUri))
 	if err != nil {
-		log.Panic(err) // this has already been checked in New
+		log.Panic().Err(err) // this has already been checked in New
 	}
 	db := client.Database(segment.databaseName)
 	segment.dbCollection = db.Collection(segment.collectionName)
@@ -90,7 +91,7 @@ func (segment *Mongodb) Run(wg *sync.WaitGroup) {
 		if len(unsaved) >= segment.BatchSize {
 			err := segment.bulkInsert(unsaved, ctx)
 			if err != nil {
-				log.Printf("[error] %s", err)
+				log.Error().Err(err).Msg(" ")
 			}
 			unsaved = []*pb.EnrichedFlow{}
 		}
@@ -110,27 +111,27 @@ func fillSegmentWithConfig(newsegment *Mongodb, config map[string]string) (*Mong
 	newsegment.mongodbUri = config["mongodb_uri"]
 
 	if config["database"] == "" {
-		log.Println("[INFO] mongoDB: no database defined - using default value (flowdata)")
+		log.Info().Msg("mongoDB: no database defined - using default value (flowdata)")
 		config["database"] = "flowdata"
 	}
 	newsegment.databaseName = config["database"]
 
 	if config["collection"] == "" {
-		log.Println("[INFO] mongoDB: no collection defined - using default value (ringbuffer)")
+		log.Info().Msg("mongoDB: no collection defined - using default value (ringbuffer)")
 		config["collection"] = "ringbuffer"
 	}
 	newsegment.collectionName = config["collection"]
 
 	var ringbufferSize int64 = 10737418240
 	if config["max_disk_usage"] == "" {
-		log.Println("[INFO] mongoDB: no ring buffer size defined - using default value (10GB)")
+		log.Info().Msg("mongoDB: no ring buffer size defined - using default value (10GB)")
 	} else {
 		size, err := sizeInBytes(config["max_disk_usage"])
 		if err == nil {
-			log.Println("[INFO] mongoDB: setting ring buffer size to " + config["max_disk_usage"])
+			log.Info().Msg("mongoDB: setting ring buffer size to " + config["max_disk_usage"])
 			ringbufferSize = size
 		} else {
-			log.Println("[Warning] mongoDB: failed setting ring buffer size to " + config["max_disk_usage"] + " - using default as fallback (10GB)")
+			log.Warn().Msg("mongoDB: failed setting ring buffer size to " + config["max_disk_usage"] + " - using default as fallback (10GB)")
 		}
 	}
 	newsegment.ringbufferSize = ringbufferSize
@@ -143,10 +144,10 @@ func fillSegmentWithConfig(newsegment *Mongodb, config map[string]string) (*Mong
 			}
 			newsegment.BatchSize = int(parsedBatchSize)
 		} else {
-			log.Println("[error] MongoDO: Could not parse 'batchsize' parameter, using default 1000.")
+			log.Error().Msg("MongoDO: Could not parse 'batchsize' parameter, using default 1000.")
 		}
 	} else {
-		log.Println("[info] MongoDO: 'batchsize' set to default '1000'.")
+		log.Info().Msg("MongoDO: 'batchsize' set to default '1000'.")
 	}
 
 	// determine field set
@@ -206,7 +207,7 @@ func (segment Mongodb) bulkInsert(unsavedFlows []*pb.EnrichedFlow, ctx context.C
 	}
 	_, err := segment.dbCollection.InsertMany(ctx, unsavedFlowData)
 	if err != nil {
-		log.Println("[error] mongoDB: Failed to insert due to " + err.Error())
+		log.Error().Err(err).Msg("mongoDB: Failed to insert to mongo db")
 		return err
 	}
 	return nil
@@ -221,7 +222,7 @@ func sizeInBytes(sizeStr string) (int64, error) {
 	// Split into number and unit
 	parts := strings.Fields(sizeStr)
 	if len(parts) > 2 || len(parts) < 1 {
-		return 0, fmt.Errorf("invalid size format")
+		return 0, fmt.Errorf("[error] invalid size format")
 	}
 
 	size, err := strconv.ParseInt(parts[0], 10, 64)
@@ -247,7 +248,7 @@ func sizeInBytes(sizeStr string) (int64, error) {
 	case "TB":
 		return size * 1024 * 1024 * 1024 * 1024, nil
 	default:
-		return 0, fmt.Errorf("unknown unit: %s", unit)
+		return 0, fmt.Errorf("[error] unknown unit: %s", unit)
 	}
 }
 
@@ -269,12 +270,12 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 	}
 
 	if collStats.Err() != nil {
-		log.Printf("[Error] Failed to check Collection '%s' due to: '%s'\n", segment.collectionName, collStats.Err().Error())
+		log.Error().Msgf("Failed to check Collection '%s' due to: '%s'\n", segment.collectionName, collStats.Err().Error())
 		return collStats.Err()
 	}
 
 	if err := collStats.Decode(&collInfo); err != nil {
-		return fmt.Errorf("failed to decode collection info: %v", err)
+		return fmt.Errorf("[error] failed to decode collection info: %v", err)
 	}
 
 	if collInfo.Count == 0 {
@@ -282,15 +283,15 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 		cappedOptions := options.CreateCollection().SetCapped(true).SetSizeInBytes(segment.ringbufferSize)
 		err := db.CreateCollection(ctx, segment.collectionName, cappedOptions)
 		if err != nil {
-			return fmt.Errorf("failed to create capped collection: %v", err)
+			return fmt.Errorf("[error] failed to create capped collection: %v", err)
 		}
 
-		log.Printf("[Debug] Capped collection '%s' created successfully.\n", segment.collectionName)
+		log.Debug().Msgf("Capped collection '%s' created successfully.\n", segment.collectionName)
 		return nil
 	}
 
 	if !collInfo.Capped {
-		log.Printf("[Warning] Collection '%s' is not capped. Starting converting it...\n", segment.collectionName)
+		log.Warn().Msgf("Collection '%s' is not capped. Starting converting it...\n", segment.collectionName)
 		db.RunCommand(ctx, bson.D{
 			{Key: "convertToCapped", Value: segment.collectionName},
 			{Key: "size", Value: segment.ringbufferSize},
@@ -298,9 +299,9 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 		return nil
 	}
 
-	log.Printf("[INFO] Collection '%s' is already capped.\n", segment.collectionName)
+	log.Info().Msgf("Collection '%s' is already capped.\n", segment.collectionName)
 	if collInfo.MaxSize != int32(segment.ringbufferSize) {
-		log.Printf("[Warning] Changing max size of collection '%s' from '%d' to '%d'.\n", segment.collectionName, collInfo.MaxSize, segment.ringbufferSize)
+		log.Warn().Msgf("Changing max size of collection '%s' from '%d' to '%d'.\n", segment.collectionName, collInfo.MaxSize, segment.ringbufferSize)
 		db.RunCommand(ctx, bson.D{
 			{Key: "collMod", Value: segment.collectionName},
 			{Key: "cappedSize", Value: segment.ringbufferSize},

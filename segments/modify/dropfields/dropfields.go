@@ -2,11 +2,12 @@
 package dropfields
 
 import (
-	"log"
 	"reflect"
 	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -42,13 +43,13 @@ func (segment *DropFields) New(config map[string]string) segments.Segment {
 	case "drop":
 		policy = PolicyDrop
 	default:
-		log.Fatalln("[error] DropFields: The 'policy' parameter is required to be either 'keep' or 'drop'.")
+		log.Fatal().Msg(" DropFields: The 'policy' parameter is required to be either 'keep' or 'drop'.")
 	}
 
 	// parse fields
 	fields = FieldSplitRegex.Split(strings.TrimSpace(config["fields"]), -1)
 	if len(fields) == 0 {
-		log.Fatalln("[warning] DropFields: The 'fields' parameter can not be empty.")
+		log.Warn().Msg("DropFields: The 'fields' parameter can not be empty.")
 	}
 
 	return &DropFields{
@@ -74,7 +75,7 @@ func (segment *DropFields) Run(wg *sync.WaitGroup) {
 				if originalField.IsValid() && resultFlowDestinationField.CanSet() {
 					resultFlowDestinationField.Set(originalField)
 				} else {
-					log.Fatalf("[error] KeepFields: Field '%s' is not valid or can not be set.", fieldName)
+					log.Fatal().Msgf("KeepFields: Field '%s' is not valid or can not be set.", fieldName)
 				}
 			}
 			segment.Out <- resultFlow

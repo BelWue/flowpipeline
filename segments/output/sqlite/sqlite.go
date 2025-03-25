@@ -8,12 +8,13 @@ package sqlite
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -40,12 +41,12 @@ func (segment Sqlite) New(config map[string]string) segments.Segment {
 	newsegment := &Sqlite{}
 
 	if config["filename"] == "" {
-		log.Println("[error] Sqlite: This segment requires a 'filename' parameter.")
+		log.Error().Msg("Sqlite: This segment requires a 'filename' parameter.")
 		return nil
 	}
 	_, err := sql.Open("sqlite3", config["filename"])
 	if err != nil {
-		log.Printf("[error] Sqlite: Could not open DB file at %s.", config["filename"])
+		log.Error().Msgf("Sqlite: Could not open DB file at %s.", config["filename"])
 		return nil
 	}
 	newsegment.FileName = config["filename"]
@@ -54,15 +55,15 @@ func (segment Sqlite) New(config map[string]string) segments.Segment {
 	if config["batchsize"] != "" {
 		if parsedBatchSize, err := strconv.ParseUint(config["batchsize"], 10, 32); err == nil {
 			if parsedBatchSize == 0 {
-				log.Println("[error] Sqlite: Batch size 0 is not allowed. Set this in relation to the expected flows per second.")
+				log.Error().Msg("Sqlite: Batch size 0 is not allowed. Set this in relation to the expected flows per second.")
 				return nil
 			}
 			newsegment.BatchSize = int(parsedBatchSize)
 		} else {
-			log.Println("[error] Sqlite: Could not parse 'batchsize' parameter, using default 1000.")
+			log.Error().Msg("Sqlite: Could not parse 'batchsize' parameter, using default 1000.")
 		}
 	} else {
-		log.Println("[info] Sqlite: 'batchsize' set to default '1000'.")
+		log.Info().Msg("Sqlite: 'batchsize' set to default '1000'.")
 	}
 
 	// determine field set
@@ -72,7 +73,7 @@ func (segment Sqlite) New(config map[string]string) segments.Segment {
 		for _, field := range conffields {
 			protofield, found := protofields.FieldByName(field)
 			if !found || !protofield.IsExported() {
-				log.Printf("[error] sqlite: Field '%s' specified in 'fields' does not exist.", field)
+				log.Error().Msgf("sqlite: Field '%s' specified in 'fields' does not exist.", field)
 				return nil
 			}
 			newsegment.fieldNames = append(newsegment.fieldNames, field)
@@ -124,17 +125,17 @@ func (segment *Sqlite) Run(wg *sync.WaitGroup) {
 	var err error
 	segment.db, err = sql.Open("sqlite3", segment.FileName)
 	if err != nil {
-		log.Panic(err) // this has already been checked in New
+		log.Panic().Err(err) // this has already been checked in New
 	}
 	defer segment.db.Close()
 
 	tx, err := segment.db.Begin()
 	if err != nil {
-		log.Panicf("[error] Sqlite: Could not start initiation transaction with error: %+v", err)
+		log.Panic().Msgf("Sqlite: Could not start initiation transaction with error: %+v", err)
 	}
 	_, err = tx.Exec(segment.createStatement)
 	if err != nil {
-		log.Panicf("[error] Sqlite: Could not create database, check field configuration: %+v", err)
+		log.Panic().Msgf("Sqlite: Could not create database, check field configuration: %+v", err)
 	}
 	tx.Commit()
 
@@ -145,7 +146,7 @@ func (segment *Sqlite) Run(wg *sync.WaitGroup) {
 		if len(unsaved) >= segment.BatchSize {
 			err := segment.bulkInsert(unsaved)
 			if err != nil {
-				log.Printf("[error] %s", err)
+				log.Error().Err(err).Msg(" ")
 			}
 			unsaved = []*pb.EnrichedFlow{}
 		}
@@ -160,7 +161,7 @@ func (segment Sqlite) bulkInsert(unsavedFlows []*pb.EnrichedFlow) error {
 	}
 	tx, err := segment.db.Begin()
 	if err != nil {
-		log.Printf("[error] Sqlite: Error starting transaction for current batch of %d flows: %+v", len(unsavedFlows), err)
+		log.Error().Msgf("Sqlite: Error starting transaction for current batch of %d flows: %+v", len(unsavedFlows), err)
 	}
 	for _, msg := range unsavedFlows {
 		valueArgs := make([]interface{}, 0, len(segment.fieldNames))
@@ -182,7 +183,7 @@ func (segment Sqlite) bulkInsert(unsavedFlows []*pb.EnrichedFlow) error {
 		}
 		_, err := tx.Exec(segment.insertStatement, valueArgs...)
 		if err != nil {
-			log.Printf("[error] Sqlite: Error inserting flow into transaction: %+v", err)
+			log.Error().Msgf("Sqlite: Error inserting flow into transaction: %+v", err)
 		}
 	}
 	tx.Commit()

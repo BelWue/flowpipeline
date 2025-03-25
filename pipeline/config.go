@@ -2,9 +2,10 @@ package pipeline
 
 import (
 	"flag"
-	"log"
 	"os"
 	"strconv"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 	"github.com/BelWue/flowpipeline/segments/controlflow/branch"
@@ -56,7 +57,7 @@ func NewFromConfig(config []byte) *Pipeline {
 
 	err := yaml.Unmarshal(config, &segmentReprs)
 	if err != nil {
-		log.Fatalf("[error] Error parsing configuration YAML: %v", err)
+		log.Fatal().Err(err).Msg("Error parsing configuration YAML: ")
 	}
 
 	segments := SegmentsFromRepr(segmentReprs)
@@ -84,7 +85,7 @@ func SegmentsFromRepr(segmentReprs *[]SegmentRepr) []segments.Segment {
 		if segment != nil {
 			segmentList[i] = segment
 		} else {
-			log.Fatalf("[error] Configured segment '%s' could not be initialized properly, see previous messages.", segmentrepr.Name)
+			log.Fatal().Msgf("Configured segment '%s' could not be initialized properly, see previous messages.", segmentrepr.Name)
 		}
 	}
 	return segmentList

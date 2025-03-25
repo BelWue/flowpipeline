@@ -4,10 +4,11 @@
 package geolocation
 
 import (
-	"log"
 	"net"
 	"strconv"
 	"sync"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 	maxmind "github.com/oschwald/maxminddb-golang"
@@ -25,14 +26,14 @@ type GeoLocation struct {
 func (segment GeoLocation) New(config map[string]string) segments.Segment {
 	drop, err := strconv.ParseBool(config["dropunmatched"])
 	if err != nil {
-		log.Println("[info] GeoLocation: 'dropunmatched' set to default 'false'.")
+		log.Info().Msg("GeoLocation: 'dropunmatched' set to default 'false'.")
 	}
 	both, err := strconv.ParseBool(config["matchboth"])
 	if err != nil {
-		log.Println("[info] GeoLocation: 'matchboth' set to default 'false'.")
+		log.Info().Msg("GeoLocation: 'matchboth' set to default 'false'.")
 	}
 	if config["filename"] == "" {
-		log.Println("[error] GeoLocation: This segment requires the 'filename' parameter.")
+		log.Error().Msg("GeoLocation: This segment requires the 'filename' parameter.")
 		return nil
 	}
 	newSegment := &GeoLocation{
@@ -42,7 +43,7 @@ func (segment GeoLocation) New(config map[string]string) segments.Segment {
 	}
 	newSegment.dbHandle, err = maxmind.Open(segments.ContainerVolumePrefix + config["filename"])
 	if err != nil {
-		log.Printf("[error] GeoLocation: Could not open specified Maxmind DB file: %v", err)
+		log.Error().Err(err).Msg(" GeoLocation: Could not open specified Maxmind DB file: ")
 		return nil
 	}
 	return newSegment
@@ -83,20 +84,20 @@ func (segment *GeoLocation) Run(wg *sync.WaitGroup) {
 			if err == nil {
 				msg.RemoteCountry = dbrecord.Country.ISOCode
 			} else {
-				log.Printf("[error] GeoLocation: Lookup of remote address failed: %v", err)
+				log.Error().Err(err).Msg(" GeoLocation: Lookup of remote address failed: ")
 			}
 		} else {
 			err := segment.dbHandle.Lookup(msg.SrcAddr, &dbrecord)
 			if err == nil {
 				msg.SrcCountry = dbrecord.Country.ISOCode
 			} else {
-				log.Printf("[error] GeoLocation: Lookup of source address failed: %v", err)
+				log.Error().Err(err).Msg(" GeoLocation: Lookup of source address failed: ")
 			}
 			err = segment.dbHandle.Lookup(msg.DstAddr, &dbrecord)
 			if err == nil {
 				msg.DstCountry = dbrecord.Country.ISOCode
 			} else {
-				log.Printf("[error] GeoLocation: Lookup of destination address failed: %v", err)
+				log.Error().Err(err).Msg(" GeoLocation: Lookup of destination address failed: ")
 			}
 		}
 		segment.Out <- msg

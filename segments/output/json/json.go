@@ -4,11 +4,12 @@ package json
 import (
 	"bufio"
 	"fmt"
-	"github.com/klauspost/compress/zstd"
-	"log"
 	"os"
 	"strconv"
 	"sync"
+
+	"github.com/klauspost/compress/zstd"
+	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/segments"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -30,26 +31,26 @@ func (segment Json) New(config map[string]string) segments.Segment {
 	if config["filename"] != "" {
 		file, err = os.Create(config["filename"])
 		if err != nil {
-			log.Printf("[error] Json: File specified in 'filename' is not accessible: %s", err)
+			log.Error().Err(err).Msg(" Json: File specified in 'filename' is not accessible: ")
 		}
 		filename = config["filename"]
 	} else {
 		file = os.Stdout
-		log.Println("[info] Json: 'filename' unset, using stdout.")
+		log.Info().Msg("Json: 'filename' unset, using stdout.")
 	}
 	// configure zstd compression
 	if config["zstd"] != "" {
 		rawLevel, err := strconv.Atoi(config["zstd"])
 		var level zstd.EncoderLevel
 		if err != nil {
-			log.Printf("[warning] Json: Unable to parse zstd option, using default: %s", err)
+			log.Warn().Err(err).Msg(" Json: Unable to parse zstd option, using default: ")
 			level = zstd.SpeedDefault
 		} else {
 			level = zstd.EncoderLevelFromZstd(rawLevel)
 		}
 		encoder, err := zstd.NewWriter(file, zstd.WithEncoderLevel(level))
 		if err != nil {
-			log.Fatalf("[error] Json: error creating zstd encoder: %s", err)
+			log.Fatal().Err(err).Msg("Json: error creating zstd encoder: ")
 		}
 		newsegment.writer = bufio.NewWriter(encoder)
 	} else {
@@ -70,14 +71,14 @@ func (segment *Json) Run(wg *sync.WaitGroup) {
 	for msg := range segment.In {
 		data, err := protojson.Marshal(msg)
 		if err != nil {
-			log.Printf("[warning] Json: Skipping a flow, failed to recode protobuf as JSON: %v", err)
+			log.Warn().Err(err).Msg(" Json: Skipping a flow, failed to recode protobuf as JSON: ")
 			continue
 		}
 
 		// use Fprintln because it adds an OS specific newline
 		_, err = fmt.Fprintln(segment.writer, string(data))
 		if err != nil {
-			log.Printf("[warning] Json: Skipping a flow, failed to write to file %s: %v", segment.FileName, err)
+			log.Warn().Msgf("Json: Skipping a flow, failed to write to file %s: %v", segment.FileName, err)
 			continue
 		}
 		// we need to flush here every time because we need full lines and can not wait

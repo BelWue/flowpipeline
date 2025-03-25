@@ -4,12 +4,13 @@
 package anonymize
 
 import (
-	"log"
 	"strings"
 	"sync"
 
-	cryptopan "github.com/Yawning/cryptopan"
+	"github.com/rs/zerolog/log"
+
 	"github.com/BelWue/flowpipeline/segments"
+	cryptopan "github.com/Yawning/cryptopan"
 )
 
 type Anonymize struct {
@@ -23,7 +24,7 @@ type Anonymize struct {
 func (segments Anonymize) New(config map[string]string) segments.Segment {
 	var encryptionKey string
 	if config["key"] == "" {
-		log.Println("[error] Anonymize: Missing configuration parameter 'key'. Please set the key to use for anonymization of IP addresses.")
+		log.Error().Msg("Anonymize: Missing configuration parameter 'key'. Please set the key to use for anonymization of IP addresses.")
 		return nil
 	} else {
 		encryptionKey = config["key"]
@@ -36,11 +37,11 @@ func (segments Anonymize) New(config map[string]string) segments.Segment {
 		"SamplerAddress",
 	}
 	if config["fields"] == "" {
-		log.Printf("[info] Anonymize: Missing configuration parameter 'fields'. Using default fields '%s' to anonymize.", fields)
+		log.Info().Msgf("Anonymize: Missing configuration parameter 'fields'. Using default fields '%s' to anonymize.", fields)
 	} else {
 		fields = []string{}
 		for _, field := range strings.Split(config["fields"], ",") {
-			log.Printf("[info] Anonymize: custom field found: %s", field)
+			log.Info().Msgf("Anonymize: custom field found: %s", field)
 			fields = append(fields, field)
 		}
 	}
@@ -49,9 +50,9 @@ func (segments Anonymize) New(config map[string]string) segments.Segment {
 	anon, err := cryptopan.New(ekb)
 	if err != nil {
 		if _, ok := err.(cryptopan.KeySizeError); ok {
-			log.Printf("[error] Anonymize: Key has insufficient length %d, please specifiy one with more than 32 chars.", len(encryptionKey))
+			log.Error().Msgf("Anonymize: Key has insufficient length %d, please specifiy one with more than 32 chars.", len(encryptionKey))
 		} else {
-			log.Printf("[error] Anonymize: error creating anonymizer: %e", err)
+			log.Error().Msgf("Anonymize: error creating anonymizer: %e", err)
 		}
 		return nil
 	}
