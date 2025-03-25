@@ -140,6 +140,9 @@ branch, `then` and `else`, as well as after the flows passed from the `branch`
 segment into consecutive segments. Dropping flows behaves regularly in both
 branches, but note that flows can not be dropped within the `if` branch
 segments, as this is taken as a cue to move them into the `else` branch.
+The `bypass-messages` flag can be used to forward all incoming messages to the 
+next segment, regardles of them being droped or forwarded inside the `if` or `else` 
+branch.
 
 If any of these three lists of segments (or subpipelines) is empty, the
 `branch` segment will behave as if this subpipeline consisted of a single
