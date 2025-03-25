@@ -43,19 +43,19 @@ type Prometheus struct {
 func (segment Prometheus) New(config map[string]string) segments.Segment {
 	var endpoint string = ":8080"
 	if config["endpoint"] == "" {
-		log.Info().Msg("prometheus: Missing configuration parameter 'endpoint'. Using default port \":8080\"")
+		log.Info().Msg("prometheus: Missing configuration parameter 'endpoint'. Using default port ':8080'")
 	} else {
 		endpoint = config["endpoint"]
 	}
 	var metricsPath string = "/metrics"
 	if config["metricspath"] == "" {
-		log.Info().Msg("prometheus: Missing configuration parameter 'metricspath'. Using default path \"/metrics\"")
+		log.Info().Msg("prometheus: Missing configuration parameter 'metricspath'. Using default path '/metrics'")
 	} else {
 		metricsPath = config["metricspath"]
 	}
 	var flowdataPath string = "/flowdata"
 	if config["flowdatapath"] == "" {
-		log.Info().Msg("prometheus: Missing configuration parameter 'flowdatapath'. Using default path \"/flowdata\"")
+		log.Info().Msg("prometheus: Missing configuration parameter 'flowdatapath'. Using default path '/flowdata'")
 	} else {
 		flowdataPath = config["flowdatapath"]
 	}
@@ -63,7 +63,7 @@ func (segment Prometheus) New(config map[string]string) segments.Segment {
 	if config["vacuum_interval"] != "" {
 		vacuumIntervalDuration, err := time.ParseDuration(config["vacuum_interval"])
 		if err != nil {
-			log.Warn().Msg("prometheus: Failed to parse vacuum intervall \"" + config["vacuum_interval"] + "\" - continuing without vacuum interval")
+			log.Warn().Msg("prometheus: Failed to parse vacuum intervall '" + config["vacuum_interval"] + "' - continuing without vacuum interval")
 		} else {
 			log.Info().Msg("prometheus: Setting prometheus vacuum interval to " + config["vacuum_interval"] + " this will lead to data loss of up to one scraping intervall!")
 			vacuumInterval = &vacuumIntervalDuration

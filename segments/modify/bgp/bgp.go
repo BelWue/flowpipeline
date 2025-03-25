@@ -39,7 +39,7 @@ func (segment Bgp) New(config map[string]string) segments.Segment {
 
 	if fallback, present := config["fallbackrouter"]; present {
 		if _, ok := rs.Routers[fallback]; !ok {
-			log.Error().Msgf("Bgp: No fallback router named \"%s\" has been configured.", fallback)
+			log.Error().Msgf("Bgp: No fallback router named '%s' has been configured.", fallback)
 			return nil
 		}
 	}
