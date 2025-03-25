@@ -212,7 +212,7 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 				pipeline = utils.NewFlowPipe(cfgPipe)
 				log.Info().Msgf("Goflow: Listening for netflow legacy on port %d...", port)
 			default:
-				log.Fatal().Msgf("scheme \"%s\" does not exist", listenAddrUrl.Scheme)
+				log.Fatal().Msgf("scheme '%s' does not exist", listenAddrUrl.Scheme)
 			}
 
 			decodeFunc := pipeline.DecodeFlow

@@ -24,18 +24,18 @@ func (segment ToptalkersMetrics) New(config map[string]string) segments.Segment 
 		return nil
 	}
 	if config["endpoint"] == "" {
-		log.Info().Msg("ToptalkersMetrics Missing configuration parameter 'endpoint'. Using default port \":8080\"")
+		log.Info().Msg("ToptalkersMetrics Missing configuration parameter 'endpoint'. Using default port ':8080'")
 	} else {
 		newsegment.Endpoint = config["endpoint"]
 	}
 
 	if config["metricspath"] == "" {
-		log.Info().Msg("ToptalkersMetrics: Missing configuration parameter 'metricspath'. Using default path \"/metrics\"")
+		log.Info().Msg("ToptalkersMetrics: Missing configuration parameter 'metricspath'. Using default path 'metrics'")
 	} else {
 		newsegment.MetricsPath = config["metricspath"]
 	}
 	if config["flowdatapath"] == "" {
-		log.Info().Msg("ThresholdToptalkersMetrics: Missing configuration parameter 'flowdatapath'. Using default path \"/flowdata\"")
+		log.Info().Msg("ThresholdToptalkersMetrics: Missing configuration parameter 'flowdatapath'. Using default path 'flowdata'")
 	} else {
 		newsegment.FlowdataPath = config["flowdatapath"]
 	}
