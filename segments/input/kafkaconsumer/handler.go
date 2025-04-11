@@ -22,11 +22,11 @@ type Handler struct {
 
 // Setup is run at the beginning of a new session, before ConsumeClaim
 func (h *Handler) Setup(session sarama.ConsumerGroupSession) error {
-	log.Info().Msgf("KafkaConsumer: Received new partition set to claim: %v", session.Claims()) // TODO: print those
+	log.Info().Msgf("KafkaConsumer: Received new partition set to claim: %v", session.Claims())
 	// reopen flows channel
 	h.flows = make(chan *pb.EnrichedFlow)
 	// Mark the consumer as ready
-	close(h.ready)
+	h.ready <- true
 	return nil
 }
 

@@ -35,12 +35,14 @@ type KafkaConsumer struct {
 
 	startingOffset int64
 	saramaConfig   *sarama.Config
+	shutdown       chan bool //required for gracefull shutdown
 }
 
 func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 	var err error
 	newsegment := &KafkaConsumer{}
 	newsegment.saramaConfig = sarama.NewConfig()
+	newsegment.shutdown = make(chan bool)
 
 	if config["server"] == "" || config["topic"] == "" || config["group"] == "" {
 		log.Error().Msg("KafkaConsumer: Missing required configuration parameters.")
@@ -167,6 +169,12 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 	return newsegment
 }
 
+func (segment *KafkaConsumer) Close() {
+	log.Info().Msg("KafkaConsumer: Received connection shutdown command")
+	segment.shutdown <- true
+	close(segment.shutdown)
+}
+
 func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 	defer func() {
 		close(segment.Out)
@@ -192,29 +200,56 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 	handlerWg.Add(1)
 	go func() {
 		defer handlerWg.Done()
+		// TODO: make the retry intervall/amount configurable
+		maxRetries := 12
+		retries := 0
+		retryInterval := time.Duration(5 * time.Second)
+		log.Info().Msg("KafkaConsumer: Establishing connection")
+	connectionRetryLoop:
 		for {
+			log.Trace().Msg("KafkaConsumer: Running connectionRetryLoop")
 			// This loop ensures recreation of our consumer session when server-side rebalances happen.
 			if err := client.Consume(handlerCtx, strings.Split(segment.Topic, ","), handler); err != nil {
-				log.Error().Err(err).Msg(" KafkaConsumer: Could not create new consumer session, retry in 5s. Original error:\n  ")
-				time.Sleep(5 * time.Second) // TODO: although this never occured for me, make configurable
-				continue
+				if retries < maxRetries {
+					retries += 1
+					log.Error().Err(err).Msgf("KafkaConsumer: Could not create new consumer session (retry %d/%d in %s) due to",
+						retries, maxRetries, retryInterval)
+					select {
+					case <-time.After(retryInterval):
+						continue
+					case <-segment.shutdown:
+						log.Info().Msg("KafkaConsumer: Aborting connection attempt")
+						handler.ready <- false
+						break connectionRetryLoop
+					}
+				} else {
+					log.Fatal().Err(err).Msg("KafkaConsumer: Could not create new consumer session due to:")
+					handler.ready <- false
+					return
+				}
+			} else {
+				select {
+				case <-time.After(time.Duration(15 * time.Second)):
+					continue
+				case <-handlerCtx.Done():
+					return
+				}
 			}
-			// check if context was cancelled, signaling that the consumer should stop
-			if handlerCtx.Err() != nil {
-				return
-			}
-			handler.ready = make(chan bool) // TODO: this is from the official example, not sure it is necessary in out case
 		}
 	}()
-	<-handler.ready
-	log.Info().Msg("KafkaConsumer: Connected and operational.")
-
 	defer func() {
 		handlerWg.Wait()
 		if err = client.Close(); err != nil {
-			log.Panic().Err(err).Msg(" KafkaConsumer: Error closing Kafka client: ")
+			log.Panic().Err(err).Msg("KafkaConsumer: Error closing Kafka client:")
 		}
 	}()
+	handlerReady := <-handler.ready
+	if !handlerReady {
+		log.Error().Msg("KafkaConsumer: Failed to establish connection.")
+		handlerCancel()
+		return
+	}
+	log.Info().Msg("KafkaConsumer: Connected and operational.")
 
 	// receive flows in a loop
 	for {
@@ -232,6 +267,11 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 			} else {
 				segment.Out <- msg
 			}
+		case <-segment.shutdown:
+			log.Info().Msg("KafkaConsumer: Closing connection")
+			handlerCancel()
+			log.Trace().Msg("KafkaConsumer: finished handlerCancel")
+			return
 		}
 	}
 }

@@ -76,6 +76,9 @@ func (pipeline *Pipeline) Close() {
 		recover() // in case In is already closed
 		pipeline.wg.Wait()
 	}()
+	for _, segment := range pipeline.SegmentList {
+		segment.Close()
+	}
 	close(pipeline.In)
 }
 

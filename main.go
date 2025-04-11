@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"plugin"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -85,7 +86,7 @@ func (i *flagArray) Set(value string) error {
 func main() {
 	var pluginPaths flagArray
 	flag.Var(&pluginPaths, "p", "path to load segment plugins from, can be specified multiple times")
-	logLevel := flag.String("l", "warning", "loglevel: one of 'trace', 'debug', 'info', 'warning', 'error', 'fatal', or 'panic'")
+	logLevel := flag.String("l", "info", "loglevel: one of 'trace', 'debug', 'info', 'warning', 'error', 'fatal', or 'panic'")
 	version := flag.Bool("v", false, "print version")
 	prettyLogging := flag.Bool("j", false, "Json log")
 	configFile := flag.String("c", "config.yml", "location of the config file in yml format")
@@ -99,8 +100,8 @@ func main() {
 	if !*prettyLogging {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
 	}
-	zerolog.SetGlobalLevel(zerologLogLevel(logLevel))
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.SetGlobalLevel(zerologLogLevel(logLevel))
 
 	for _, path := range pluginPaths {
 		_, err := plugin.Open(path)
@@ -126,9 +127,10 @@ func main() {
 	pipe.AutoDrain()
 
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, os.Interrupt)
+	signal.Notify(sigs, os.Interrupt, syscall.SIGINT)
+	signal.Notify(sigs, os.Interrupt, os.Interrupt)
 	<-sigs
-
+	log.Info().Msg("Received exit signal")
 	pipe.Close()
 }
 

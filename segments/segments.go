@@ -73,6 +73,7 @@ type Segment interface {
 	Run(wg *sync.WaitGroup)                                     // goroutine, must close(segment.Out) when segment.In is closed
 	Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) // embed this using BaseSegment
 	ShutdownParentPipeline()                                    // shut down Parent Pipeline gracefully
+	Close()                                                     // close segment gracefully
 }
 
 // Serves as a basis for any Segment implementations. Segments embedding this
@@ -113,4 +114,8 @@ func (segment *BaseSegment) Rewire(in chan *pb.EnrichedFlow, out chan *pb.Enrich
 // It is used for intended termination within pipeline function, e.g. end pipeline on read from file.
 func (segment *BaseSegment) ShutdownParentPipeline() {
 	syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+}
+
+func (segment *BaseSegment) Close() {
+	//placeholder since most segments dont need to do anything
 }
