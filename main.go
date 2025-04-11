@@ -12,6 +12,7 @@ import (
 	"os/signal"
 	"plugin"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -86,6 +87,7 @@ func main() {
 	flag.Var(&pluginPaths, "p", "path to load segment plugins from, can be specified multiple times")
 	logLevel := flag.String("l", "warning", "loglevel: one of 'trace', 'debug', 'info', 'warning', 'error', 'fatal', or 'panic'")
 	version := flag.Bool("v", false, "print version")
+	prettyLogging := flag.Bool("j", false, "Json log")
 	configFile := flag.String("c", "config.yml", "location of the config file in yml format")
 	flag.Parse()
 
@@ -94,8 +96,11 @@ func main() {
 		return
 	}
 
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	if !*prettyLogging {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
+	}
 	zerolog.SetGlobalLevel(zerologLogLevel(logLevel))
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
 	for _, path := range pluginPaths {
 		_, err := plugin.Open(path)
