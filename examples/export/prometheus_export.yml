@@ -24,4 +24,4 @@
 - segment: prometheus
   config:
     endpoint: ":8080"
-    labels: "router,ipversion,application,protoname,direction,peer,remoteas,remotecountry"
+    labels: "SamplerAddress,Etype,DstPort,ProtoName,FlowDirection,SrcAddr,SrcAs,DstAs"

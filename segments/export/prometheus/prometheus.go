@@ -6,11 +6,12 @@
 // The labels to be exported can be set in the configuration.
 // Default labels are:
 //
-//	router,ipversion,application,protoname,direction,peer,remoteas,remotecountry
+//	Etype,Proto
 //
-// Additional Labels are:
+// Additional Labels can be defined as long as they match a field in flowpipeline/pb/enrichedflow.pb.go:EnrichedFlow
+// These include :
 //
-//	src_port,dst_port,src_ip,dst_ip
+// # SrcAs,DstAs,Proto,DstPort,Bytes,Packets,SamplerAddress,ForwardingStatus,TimeReceived,TimeReceivedNs,TimeFlowStart,TimeFlowStartNs
 //
 // The additional label should be used with care, because of infite quantity.
 package prometheus
