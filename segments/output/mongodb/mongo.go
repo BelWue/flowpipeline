@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"reflect"
 	"strconv"
@@ -138,13 +139,17 @@ func fillSegmentWithConfig(newsegment *Mongodb, config map[string]string) (*Mong
 
 	newsegment.BatchSize = 1000
 	if config["batchsize"] != "" {
-		if parsedBatchSize, err := strconv.ParseUint(config["batchsize"], 10, 32); err == nil {
-			if parsedBatchSize == 0 {
-				return newsegment, errors.New("MongoDO: Batch size 0 is not allowed. Set this in relation to the expected flows per second")
+		if parsedBatchSize, err := strconv.ParseInt(config["batchsize"], 10, 32); err == nil {
+			if parsedBatchSize <= 0 {
+				return newsegment, errors.New("MongoDO: Batch size <= 0 is not allowed. Set this in relation to the expected flows per second")
+			}
+			if parsedBatchSize <= 0 {
+				log.Warn().Msgf("MongoDO: Batch size over max size - setting to %d", math.MaxInt)
+				parsedBatchSize = math.MaxInt
 			}
 			newsegment.BatchSize = int(parsedBatchSize)
 		} else {
-			log.Error().Msg("MongoDO: Could not parse 'batchsize' parameter, using default 1000.")
+			log.Error().Msgf("MongoDO: Could not parse 'batchsize' parameter %s, using default 1000.", config["batchsize"])
 		}
 	} else {
 		log.Info().Msg("MongoDO: 'batchsize' set to default '1000'.")
@@ -264,7 +269,7 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 	var collInfo struct {
 		Name    string `bson:"name"`
 		Capped  bool   `bson:"capped"`
-		MaxSize int32  `bson:"maxSize"`
+		MaxSize int64  `bson:"maxSize"`
 		Count   int64  `bson:"count"`
 		Size    int64  `bson:"size"`
 	}
@@ -300,7 +305,7 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 	}
 
 	log.Info().Msgf("Collection '%s' is already capped.\n", segment.collectionName)
-	if collInfo.MaxSize != int32(segment.ringbufferSize) {
+	if collInfo.MaxSize != segment.ringbufferSize {
 		log.Warn().Msgf("Changing max size of collection '%s' from '%d' to '%d'.\n", segment.collectionName, collInfo.MaxSize, segment.ringbufferSize)
 		db.RunCommand(ctx, bson.D{
 			{Key: "collMod", Value: segment.collectionName},

@@ -4,6 +4,7 @@ package clickhouse_segment
 
 import (
 	"database/sql"
+	"math"
 	"net"
 	"strconv"
 	"strings"
@@ -48,6 +49,10 @@ func (segment Clickhouse) New(config map[string]string) segments.Segment {
 		if parsedBatchSize, err := strconv.ParseUint(config["batchsize"], 10, 32); err == nil {
 			if parsedBatchSize == 0 {
 				log.Error().Msg("Clickhouse: Batch size 0 is not allowed. Set this in relation to the expected flows per second.")
+				return nil
+			}
+			if parsedBatchSize > math.MaxInt {
+				log.Error().Msgf("Clickhouse: Batch size > %d is not allowed. Set this in relation to the expected flows per second.", math.MaxInt)
 				return nil
 			}
 			newsegment.BatchSize = int(parsedBatchSize)

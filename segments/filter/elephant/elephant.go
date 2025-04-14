@@ -2,6 +2,7 @@
 package elephant
 
 import (
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -64,11 +65,15 @@ func (segment Elephant) New(config map[string]string) segments.Segment {
 	var window = 300
 	if config["window"] != "" {
 		if parsedWindow, err := strconv.ParseInt(config["window"], 10, 64); err == nil {
-			window = int(parsedWindow)
-			if window <= 0 {
+			if parsedWindow <= 0 {
 				log.Error().Msg("Elephant: Window has to be >0.")
 				return nil
 			}
+			if parsedWindow > math.MaxInt {
+				log.Error().Msg("Elephant: Window out of range.")
+				return nil
+			}
+			window = int(parsedWindow)
 		} else {
 			log.Error().Msg("Elephant: Could not parse 'window' parameter, using default 300.")
 		}
@@ -79,11 +84,15 @@ func (segment Elephant) New(config map[string]string) segments.Segment {
 	var rampuptime = 0
 	if config["rampuptime"] != "" {
 		if ramptime, err := strconv.ParseInt(config["rampuptime"], 10, 64); err == nil {
-			rampuptime = int(ramptime)
-			if rampuptime < 0 {
+			if ramptime < 0 {
 				log.Error().Msg("Elephant: Rampuptime has to be >= 0.")
 				return nil
 			}
+			if ramptime > math.MaxInt {
+				log.Error().Msg("Elephant: Rampuptime out of range.")
+				return nil
+			}
+			rampuptime = int(ramptime)
 		} else {
 			log.Error().Msg("Elephant: Could not parse 'rampuptime' parameter, using default 0.")
 		}

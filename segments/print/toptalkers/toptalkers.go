@@ -3,6 +3,7 @@ package toptalkers
 import (
 	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"sort"
 	"strconv"
@@ -46,11 +47,15 @@ func (segment TopTalkers) New(config map[string]string) segments.Segment {
 
 	if config["window"] != "" {
 		if parsedWindow, err := strconv.ParseInt(config["window"], 10, 64); err == nil {
-			newsegment.Window = int(parsedWindow)
-			if newsegment.Window <= 0 {
+			if parsedWindow > math.MaxInt {
+				log.Error().Msgf("TopTalkers: Window has to be <= %d.", math.MaxInt)
+				return nil
+			}
+			if parsedWindow <= 0 {
 				log.Error().Msg("TopTalkers: Window has to be >0.")
 				return nil
 			}
+			newsegment.Window = int(parsedWindow)
 		} else {
 			log.Error().Msg("TopTalkers: Could not parse 'window' parameter, using default 60.")
 		}
@@ -60,6 +65,10 @@ func (segment TopTalkers) New(config map[string]string) segments.Segment {
 
 	if config["reportinterval"] != "" {
 		if parsedReportInterval, err := strconv.ParseInt(config["reportinterval"], 10, 64); err == nil {
+			if parsedReportInterval > math.MaxInt {
+				log.Error().Msgf("TopTalkers: Reportinterval has to be <= %d.", math.MaxInt)
+				return nil
+			}
 			newsegment.ReportInterval = int(parsedReportInterval)
 			if newsegment.ReportInterval <= 0 {
 				log.Error().Msg("TopTalkers: Reportinterval has to be >0.")

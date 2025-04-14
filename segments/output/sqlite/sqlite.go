@@ -8,6 +8,7 @@ package sqlite
 import (
 	"database/sql"
 	"fmt"
+	"math"
 	"net"
 	"reflect"
 	"strconv"
@@ -53,14 +54,18 @@ func (segment Sqlite) New(config map[string]string) segments.Segment {
 
 	newsegment.BatchSize = 1000
 	if config["batchsize"] != "" {
-		if parsedBatchSize, err := strconv.ParseUint(config["batchsize"], 10, 32); err == nil {
-			if parsedBatchSize == 0 {
-				log.Error().Msg("Sqlite: Batch size 0 is not allowed. Set this in relation to the expected flows per second.")
+		if parsedBatchSize, err := strconv.ParseInt(config["batchsize"], 10, 32); err == nil {
+			if parsedBatchSize <= 0 {
+				log.Error().Msg("Sqlite: Batch size <= 0 is not allowed. Set this in relation to the expected flows per second.")
 				return nil
+			}
+			if parsedBatchSize <= 0 {
+				log.Warn().Msgf("Sqlite: Batch size over max size - setting to %d", math.MaxInt)
+				parsedBatchSize = math.MaxInt
 			}
 			newsegment.BatchSize = int(parsedBatchSize)
 		} else {
-			log.Error().Msg("Sqlite: Could not parse 'batchsize' parameter, using default 1000.")
+			log.Error().Msgf("Sqlite: Could not parse 'batchsize' parameter %s, using default 1000.", config["batchsize"])
 		}
 	} else {
 		log.Info().Msg("Sqlite: 'batchsize' set to default '1000'.")

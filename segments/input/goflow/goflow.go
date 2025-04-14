@@ -7,6 +7,7 @@ package goflow
 import (
 	"bytes"
 	"context"
+	"math"
 	"net/url"
 	"os"
 	"strconv"
@@ -159,7 +160,13 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 			var err error
 
 			hostname := listenAddrUrl.Hostname()
-			port, _ := strconv.ParseUint(listenAddrUrl.Port(), 10, 64)
+			portU64, _ := strconv.ParseUint(listenAddrUrl.Port(), 10, 64)
+			if portU64 > math.MaxInt {
+				log.Fatal().Err(err).Msg("Goflow: Port out of range")
+				segment.ShutdownParentPipeline()
+				return
+			}
+			port := int(portU64)
 
 			if segment.NumSockets == 0 {
 				segment.NumSockets = 1
@@ -179,7 +186,8 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 			recv, err := utils.NewUDPReceiver(cfg)
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed creating UDP receiver")
-				os.Exit(1)
+				segment.ShutdownParentPipeline()
+				return
 			}
 
 			var cfgProducer = &protoproducer.ProducerConfig{}
@@ -222,7 +230,7 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 			decodeFunc = metrics.PromDecoderWrapper(decodeFunc, listenAddrUrl.Scheme)
 			pipes = append(pipes, pipeline)
 
-			err = recv.Start(hostname, int(port), decodeFunc)
+			err = recv.Start(hostname, port, decodeFunc)
 
 			if err != nil {
 				log.Fatal().Err(err)

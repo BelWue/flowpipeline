@@ -2,6 +2,7 @@ package toptalkers_metrics
 
 import (
 	"errors"
+	"math"
 	"net/http"
 	"strconv"
 
@@ -82,10 +83,13 @@ func (params *PrometheusMetricsParams) InitDefaultPrometheusMetricParams() {
 func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config map[string]string) error {
 	if config["buckets"] != "" {
 		if parsedBuckets, err := strconv.ParseInt(config["buckets"], 10, 64); err == nil {
-			prometheusParams.Buckets = int(parsedBuckets)
-			if prometheusParams.Buckets <= 0 {
-				return errors.New("[error] : Buckets has to be >0")
+			if parsedBuckets <= 0 {
+				return errors.New("buckets has to be >0")
 			}
+			if parsedBuckets > math.MaxInt {
+				return errors.New("buckets out of range")
+			}
+			prometheusParams.Buckets = int(parsedBuckets)
 		} else {
 			log.Error().Msg("ToptalkersMetrics: Could not parse 'buckets' parameter, using default 60.")
 		}
@@ -95,10 +99,14 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 
 	if config["thresholdbuckets"] != "" {
 		if parsedThresholdBuckets, err := strconv.ParseInt(config["thresholdbuckets"], 10, 64); err == nil {
-			prometheusParams.ThresholdBuckets = int(parsedThresholdBuckets)
-			if prometheusParams.ThresholdBuckets <= 0 {
-				return errors.New("[error] : thresholdbuckets has to be >0")
+
+			if parsedThresholdBuckets <= 0 {
+				return errors.New("thresholdbuckets has to be >0")
 			}
+			if parsedThresholdBuckets > math.MaxInt {
+				return errors.New("thresholdbuckets out of range")
+			}
+			prometheusParams.ThresholdBuckets = int(parsedThresholdBuckets)
 		} else {
 			log.Error().Msg("ToptalkersMetrics: Could not parse 'thresholdbuckets' parameter, using default (60 buckets).")
 		}
@@ -108,10 +116,13 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 
 	if config["reportbuckets"] != "" {
 		if parsedReportBuckets, err := strconv.ParseInt(config["reportbuckets"], 10, 64); err == nil {
-			prometheusParams.ReportBuckets = int(parsedReportBuckets)
-			if prometheusParams.ReportBuckets <= 0 {
-				return errors.New("[error] : reportbuckets has to be >0")
+			if parsedReportBuckets <= 0 {
+				return errors.New("reportbuckets has to be >0")
 			}
+			if parsedReportBuckets > math.MaxInt {
+				return errors.New("reportbuckets out of range")
+			}
+			prometheusParams.ReportBuckets = int(parsedReportBuckets)
 		} else {
 			log.Error().Msg("ReportPrometheus: Could not parse 'reportbuckets' parameter, using default (60 buckets).")
 		}
