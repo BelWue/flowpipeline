@@ -24,7 +24,7 @@ type ThresholdMetricDefinition struct {
 
 	Expression       *parser.Expression
 	FilterDefinition string                       `yaml:"filter,omitempty"`
-	SubDefinitions   []*ThresholdMetricDefinition `yaml:"metricdefinitions,omitempty"`
+	SubDefinitions   []*ThresholdMetricDefinition `yaml:"subfilter,omitempty"`
 	Database         *toptalkers_metrics.Database
 }
 

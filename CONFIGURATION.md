@@ -130,9 +130,9 @@ Filters with a specified `traffictyp` will be exported if they reach the configu
 - segment: traffic_specific_toptalkers
   config:
     endpoint: ":8085"
-    filter-metrics:
+    traffic_specific_toptalkers:
     - filter: "proto udp"
-      traffic_specific_toptalkers:
+      subfilter:
       - filter: "port 0"
         traffictype: "UDP Fragmented"
         thresholdbps: 100
