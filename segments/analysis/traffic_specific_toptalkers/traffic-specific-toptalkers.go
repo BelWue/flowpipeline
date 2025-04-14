@@ -101,6 +101,7 @@ func (segment *TrafficSpecificToptalkers) Run(wg *sync.WaitGroup) {
 	}
 
 	filter := &flowfilter.Filter{}
+	log.Info().Msgf("Threshold Metric Report runing on %s", segment.Endpoint)
 	for msg := range segment.In {
 		promExporter.KafkaMessageCount.Inc()
 		for _, filterDef := range segment.ThresholdMetricDefinition {
@@ -108,7 +109,6 @@ func (segment *TrafficSpecificToptalkers) Run(wg *sync.WaitGroup) {
 		}
 		segment.Out <- msg
 	}
-	log.Info().Msgf("Threshold Metric Report runing on %s", segment.Endpoint)
 }
 
 func initDatabasesAndCollector(promExporter toptalkers_metrics.PrometheusExporter, segment *TrafficSpecificToptalkers) *[]*toptalkers_metrics.Database {
