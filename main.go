@@ -131,6 +131,11 @@ func main() {
 	signal.Notify(sigs, os.Interrupt, os.Interrupt)
 	<-sigs
 	log.Info().Msg("Received exit signal")
+	go func() {
+		<-time.After(time.Duration(15 * time.Second))
+		log.Fatal().Msg("Failed to shut down gracefully - force quitting")
+		os.Exit(5)
+	}()
 	pipe.Close()
 }
 

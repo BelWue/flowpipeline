@@ -9,7 +9,6 @@ import (
 	"context"
 	"math"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -151,7 +150,7 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 	formatter, err := format.FindFormat("bin")
 	if err != nil {
 		log.Fatal().Err(err).Msg("(Failed loading formatter")
-		os.Exit(1)
+		segment.ShutdownParentPipeline()
 	}
 	var pipes []utils.FlowPipe
 
@@ -198,7 +197,7 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 			flowProducer, err := protoproducer.CreateProtoProducer(cfgm, protoproducer.CreateSamplingSystem)
 			if err != nil {
 				log.Fatal().Err(err).Msg("Failed creating proto producer")
-				os.Exit(1)
+				segment.ShutdownParentPipeline()
 			}
 
 			cfgPipe := &utils.PipeConfig{

@@ -223,7 +223,7 @@ func (segment *Packet) Run(wg *sync.WaitGroup) {
 		segment.exporter.ConsumeFrom(pktsrc.Packets())
 		if segment.Method == "file" {
 			log.Info().Msg("Packet: The pcap has ended.")
-			os.Exit(0)
+			segment.ShutdownParentPipeline()
 		} else {
 			log.Fatal().Msg("Packet: The packet stream has ended for an unknown reason.")
 		}
