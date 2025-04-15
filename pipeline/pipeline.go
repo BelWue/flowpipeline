@@ -8,6 +8,8 @@ import (
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
+	"github.com/BelWue/flowpipeline/segments/analysis/toptalkers_metrics"
+	"github.com/BelWue/flowpipeline/segments/controlflow/branch"
 	"github.com/BelWue/flowpipeline/segments/filter/drop"
 	"github.com/BelWue/flowpipeline/segments/filter/elephant"
 	"github.com/BelWue/flowpipeline/segments/filter/flowfilter"
@@ -47,6 +49,10 @@ func (pipeline *Pipeline) GetDrop() <-chan *pb.EnrichedFlow {
 		case *elephant.Elephant:
 			typedSegment.SubscribeDrops(pipeline.Drop)
 		case *flowfilter.FlowFilter:
+			typedSegment.SubscribeDrops(pipeline.Drop)
+		case *branch.Branch:
+			typedSegment.SubscribeDrops(pipeline.Drop)
+		case *toptalkers_metrics.ToptalkersMetrics:
 			typedSegment.SubscribeDrops(pipeline.Drop)
 		}
 	}

@@ -14,7 +14,7 @@ import (
 )
 
 type TrafficSpecificToptalkers struct {
-	segments.BaseFilterSegment
+	segments.BaseSegment
 	toptalkers_metrics.PrometheusParams
 	ThresholdMetricDefinition []*ThresholdMetricDefinition
 }

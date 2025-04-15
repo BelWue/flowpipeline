@@ -21,7 +21,7 @@ type Pipeline interface {
 }
 
 type Branch struct {
-	segments.BaseSegment
+	segments.BaseFilterSegment
 	condition      Pipeline
 	then_branch    Pipeline
 	else_branch    Pipeline
@@ -56,6 +56,9 @@ func (segment *Branch) Run(wg *sync.WaitGroup) {
 		segment.then_branch.Close()
 		segment.else_branch.Close()
 		close(segment.Out)
+		if segment.Drops != nil {
+			close(segment.Drops)
+		}
 		wg.Done()
 	}()
 
@@ -63,59 +66,83 @@ func (segment *Branch) Run(wg *sync.WaitGroup) {
 	go segment.then_branch.Start()
 	go segment.else_branch.Start()
 
-	if !segment.bypassMessages {
-		go func() { // drain our output
-			from_then := segment.then_branch.GetOutput()
-			from_else := segment.else_branch.GetOutput()
-			for {
-				select {
-				case msg, ok := <-from_then:
-					if !ok {
-						from_then = nil
-					} else {
-						segment.Out <- msg
-					}
-				case msg, ok := <-from_else:
-					if !ok {
-						from_else = nil
-					} else {
-						segment.Out <- msg
-					}
-				}
-				if from_then == nil && from_else == nil {
-					return
-				}
-			}
-		}()
-	}
-	go func() { // move anything from conditional to our two branches
-		from_condition_out := segment.condition.GetOutput()
-		from_condition_drop := segment.condition.GetDrop()
-		for {
-			select {
-			case msg, ok := <-from_condition_out:
-				if !ok {
-					from_condition_out = nil
-				} else {
-					segment.then_branch.GetInput() <- msg
-				}
-			case msg, ok := <-from_condition_drop:
-				if !ok {
-					from_condition_drop = nil
-				} else {
-					segment.else_branch.GetInput() <- msg
-				}
-			}
-			if from_condition_out == nil && from_condition_drop == nil {
-				return
-			}
-		}
-	}()
+	go drainOutput(segment)
+	go forwardBasedOnCondition(segment)
 
 	for msg := range segment.In { // connect our own input to conditional
 		segment.condition.GetInput() <- msg
-		if segment.bypassMessages {
-			segment.Out <- msg
+	}
+}
+
+func forwardBasedOnCondition(segment *Branch) {
+	from_condition_out := segment.condition.GetOutput()
+	from_condition_drop := segment.condition.GetDrop()
+	for {
+		select {
+		case msg, ok := <-from_condition_out:
+			if !ok {
+				from_condition_out = nil
+			} else {
+				segment.then_branch.GetInput() <- msg
+			}
+		case msg, ok := <-from_condition_drop:
+			if !ok {
+				from_condition_drop = nil
+			} else {
+				segment.else_branch.GetInput() <- msg
+			}
+		}
+		if from_condition_out == nil && from_condition_drop == nil {
+			return
+		}
+	}
+}
+
+func drainOutput(segment *Branch) {
+	from_then := segment.then_branch.GetOutput()
+	from_else := segment.else_branch.GetOutput()
+	from_then_drop := segment.then_branch.GetDrop()
+	from_else_drop := segment.else_branch.GetDrop()
+	for {
+		select {
+		case msg, ok := <-from_then:
+			if !ok {
+				from_then = nil
+			} else {
+				segment.Out <- msg
+			}
+
+		case msg, ok := <-from_else:
+			if !ok {
+				from_else = nil
+			} else {
+				segment.Out <- msg
+			}
+
+		case msg, ok := <-from_then_drop:
+			if !ok {
+				from_then_drop = nil
+			} else {
+				if segment.bypassMessages {
+					segment.Out <- msg
+				} else if segment.Drops != nil {
+					segment.Drops <- msg
+				}
+			}
+
+		case msg, ok := <-from_else_drop:
+			if !ok {
+				from_else_drop = nil
+			} else {
+				if segment.bypassMessages {
+					segment.Out <- msg
+				} else if segment.Drops != nil {
+					segment.Drops <- msg
+				}
+			}
+		}
+		if from_then == nil || from_else == nil || from_then_drop == nil || from_else_drop == nil {
+			return
 		}
 	}
 }
