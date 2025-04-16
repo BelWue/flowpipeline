@@ -2,7 +2,6 @@ package kafkaconsumer
 
 import (
 	"bytes"
-	"context"
 
 	"github.com/rs/zerolog/log"
 
@@ -17,7 +16,6 @@ type Handler struct {
 	ready  chan bool
 	flows  chan *pb.EnrichedFlow
 	legacy bool
-	cancel context.CancelFunc
 }
 
 // Setup is run at the beginning of a new session, before ConsumeClaim

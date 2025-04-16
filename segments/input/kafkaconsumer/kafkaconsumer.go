@@ -74,7 +74,8 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 
 	// set some unconfigurable defaults
 	// newsegment.saramaConfig.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
-	newsegment.saramaConfig.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.BalanceStrategySticky}
+	newsegment.saramaConfig.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategyRoundRobin()}
+	newsegment.saramaConfig.Consumer.Return.Errors = true
 
 	if config["kafka-version"] != "" {
 		newsegment.saramaConfig.Version, err = sarama.ParseKafkaVersion(config["kafka-version"])
@@ -200,6 +201,8 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 		} else {
 			log.Fatal().Err(err).Msg("KafkaConsumer: Creating Kafka consumer group failed while the connection was okay. Original error:\n  ")
 		}
+	} else {
+		log.Trace().Msg("KafkaConsumer: Sucessfully Created Kafka client")
 	}
 
 	handlerCtx, handlerCancel := context.WithCancel(context.Background())
@@ -219,8 +222,12 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 		log.Info().Msg("KafkaConsumer: Establishing connection")
 	connectionRetryLoop:
 		for {
-			log.Trace().Msg("KafkaConsumer: Running connectionRetryLoop")
 			// This loop ensures recreation of our consumer session when server-side rebalances happen.
+			log.Trace().Msg("KafkaConsumer: Running connectionRetryLoop")
+			// check if context was cancelled, signaling that the consumer should stop
+			if handlerCtx.Err() != nil {
+				return
+			}
 			if err := client.Consume(handlerCtx, strings.Split(segment.Topic, ","), handler); err != nil {
 				if retries < maxRetries {
 					retries += 1
@@ -233,6 +240,8 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 						log.Info().Msg("KafkaConsumer: Aborting connection attempt")
 						handler.ready <- false
 						break connectionRetryLoop
+					case <-handlerCtx.Done():
+						return
 					}
 				} else {
 					log.Fatal().Err(err).Msg("KafkaConsumer: Could not create new consumer session due to:")
@@ -255,6 +264,12 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 			log.Panic().Err(err).Msg("KafkaConsumer: Error closing Kafka client:")
 		}
 	}()
+	go func() {
+		kafkaErr := <-client.Errors()
+		if kafkaErr != nil {
+			log.Warn().Err(kafkaErr).Msg("KafaConsumer: kafka error")
+		}
+	}()
 	handlerReady := <-handler.ready
 	if !handlerReady {
 		log.Error().Msg("KafkaConsumer: Failed to establish connection.")
@@ -262,12 +277,6 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 		return
 	}
 	log.Info().Msg("KafkaConsumer: Connected and operational.")
-	go func() {
-		kafkaErr := <-client.Errors()
-		if kafkaErr != nil {
-			log.Warn().Err(kafkaErr).Msg("KafaConsumer: kafka error")
-		}
-	}()
 
 	// receive flows in a loop
 	for {
