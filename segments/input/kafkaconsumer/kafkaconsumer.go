@@ -261,7 +261,7 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 	defer func() {
 		handlerWg.Wait()
 		if err = client.Close(); err != nil {
-			log.Panic().Err(err).Msg("KafkaConsumer: Error closing Kafka client:")
+			log.Error().Err(err).Msg("KafkaConsumer: Error closing Kafka client:")
 		}
 	}()
 	go func() {
@@ -299,6 +299,13 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 			handlerCancel()
 			log.Info().Msg("KafkaConsumer: Connection Closed")
 			return
+		case handlerReady = <-handler.ready:
+			if !handlerReady {
+				log.Error().Msg("KafkaConsumer: Failed to establish connection.")
+				handlerCancel()
+				return
+			}
+			log.Info().Msg("KafkaConsumer: Reconnected and operational.")
 		}
 	}
 }
