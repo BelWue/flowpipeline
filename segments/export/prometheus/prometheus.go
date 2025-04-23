@@ -39,7 +39,10 @@ type Prometheus struct {
 	FlowdataPath   string         // optional, default is "/flowdata"
 	Labels         []string       // optional, list of labels to be exported
 	VacuumInterval *time.Duration // optional, intervall in which counters should be reset (can lead to dataloss)
+	ExportASPathPairs bool		  // optional, if true, as path pairs will be exported
 }
+
+
 
 func (segment Prometheus) New(config map[string]string) segments.Segment {
 	var endpoint string = ":8080"
@@ -70,12 +73,20 @@ func (segment Prometheus) New(config map[string]string) segments.Segment {
 			vacuumInterval = &vacuumIntervalDuration
 		}
 	}
+	var exportASPathPairs bool = false
+	if config["export_as_pairs"] == "" {
+		log.Info().Msg("prometheus: Missing configuration parameter 'export_as_pairs'. Using default value 'false'")
+	} else if strings.ToLower(config["export_as_pairs"]) == "true" {
+		log.Info().Msg("prometheus: Export of AS path pairs is enabled")
+		exportASPathPairs = true
+	}
 
 	newsegment := &Prometheus{
 		Endpoint:       endpoint,
 		MetricsPath:    metricsPath,
 		FlowdataPath:   flowdataPath,
 		VacuumInterval: vacuumInterval,
+		ExportASPathPairs: exportASPathPairs,
 	}
 
 	// set default labels if not configured
@@ -134,6 +145,9 @@ func (segment *Prometheus) Run(wg *sync.WaitGroup) {
 			}
 		}
 		promExporter.Increment(msg.Bytes, msg.Packets, labelset)
+		if segment.ExportASPathPairs {
+			promExporter.ExportASPathPairs(msg)
+		}
 		segment.Out <- msg
 	}
 }
@@ -157,6 +171,20 @@ func (segment *Prometheus) AddVacuumCronJob(promExporter *Exporter) {
 	}
 	// start the scheduler
 	scheduler.Start()
+}
+
+func (e *Exporter) ExportASPathPairs(flow *pb.EnrichedFlow) {
+	asPath := flow.AsPath
+	if len(asPath) < 2 {
+		return
+	}
+	startAS := fmt.Sprint(asPath[0])
+	endAS := fmt.Sprint(asPath[len(asPath)-1])
+	for i := 0; i < len(asPath)-1; i++ {
+		from := fmt.Sprint(asPath[i])
+		to := fmt.Sprint(asPath[i+1])
+		e.flowAsPairs.WithLabelValues(startAS, from, to, endAS).Add(float64(flow.Bytes))
+	}
 }
 
 func init() {
