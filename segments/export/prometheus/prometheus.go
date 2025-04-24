@@ -178,12 +178,11 @@ func (e *Exporter) ExportASPathPairs(flow *pb.EnrichedFlow) {
 	if len(asPath) < 2 {
 		return
 	}
-	startAS := fmt.Sprint(asPath[0])
 	endAS := fmt.Sprint(asPath[len(asPath)-1])
 	for i := 0; i < len(asPath)-1; i++ {
 		from := fmt.Sprint(asPath[i])
 		to := fmt.Sprint(asPath[i+1])
-		e.flowAsPairs.WithLabelValues(startAS, from, to, endAS).Add(float64(flow.Bytes))
+		e.flowAsPairs.WithLabelValues( from, to, endAS).Add(float64(flow.Bytes))
 	}
 }
 
