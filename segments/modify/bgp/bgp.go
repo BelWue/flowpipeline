@@ -2,8 +2,9 @@
 package bgp
 
 import (
-	"io/ioutil"
 	"net"
+	"os"
+	"slices"
 	"strconv"
 	"sync"
 
@@ -20,12 +21,13 @@ type Bgp struct {
 	FileName        string // required
 	FallbackRouter  string // optional, default is "" (i.e., none or disabled), this will determine the BGP session that is used when SamplerAddress has no corresponding session
 	UseFallbackOnly bool   // optional, default is false, this will disable looking for SamplerAddress BGP sessions
+	RouterASN       uint32 // ASN of the local router
 
 	routeInfoServer routeinfo.RouteInfoServer
 }
 
 func (segment Bgp) New(config map[string]string) segments.Segment {
-	rsconfig, err := ioutil.ReadFile(config["filename"])
+	rsconfig, err := os.ReadFile(config["filename"])
 	if err != nil {
 		log.Error().Err(err).Msg(" Bgp: Error reading BGP session config file: ")
 		return nil
@@ -53,10 +55,18 @@ func (segment Bgp) New(config map[string]string) segments.Segment {
 		return nil
 	}
 
+	var routerASN uint32
+	if fallback, present := config["fallbackrouter"]; present {
+		if router, ok := rs.Routers[fallback]; ok {
+			routerASN = router.Asn
+		}
+	}
+
 	newSegment := &Bgp{
 		FileName:        config["filename"],
 		FallbackRouter:  config["fallbackrouter"],
 		UseFallbackOnly: fallbackonly,
+		RouterASN:       routerASN,
 		routeInfoServer: rs,
 	}
 	return newSegment
@@ -76,24 +86,57 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 	for msg := range segment.In {
 		// The following conversions to String are stupid, but it is
 		// what gobgp requires at the end of this call hierarchy.
-		var routeInfos []routeinfo.RouteInfo
+		var dstRouteInfos []routeinfo.RouteInfo
+		var srcRouteInfos []routeinfo.RouteInfo
 		if segment.UseFallbackOnly {
-			routeInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.DstAddrObj().String())
+			dstRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.DstAddrObj().String())
+			srcRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.SrcAddrObj().String())
 		} else {
 			if router, ok := segment.routeInfoServer.Routers[msg.SamplerAddressObj().String()]; ok {
-				routeInfos = router.Lookup(msg.DstAddrObj().String())
+				dstRouteInfos = router.Lookup(msg.DstAddrObj().String())
+				srcRouteInfos = router.Lookup(msg.SrcAddrObj().String())
 			} else if segment.FallbackRouter != "" {
-				routeInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.DstAddrObj().String())
+				dstRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.DstAddrObj().String())
+				srcRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.SrcAddrObj().String())
 			} else {
 				segment.Out <- msg
 				continue
 			}
 		}
-		for _, path := range routeInfos {
-			if !path.Best {
+		
+		for _, path := range srcRouteInfos {
+			if !path.Best || len(path.AsPath) == 0 {
 				continue
 			}
+			slices.Reverse(path.AsPath)
 			msg.AsPath = path.AsPath
+			switch path.Validation {
+			case routeinfo.Valid:
+				msg.ValidationStatus = pb.EnrichedFlow_Valid
+			case routeinfo.NotFound:
+				msg.ValidationStatus = pb.EnrichedFlow_NotFound
+			case routeinfo.Invalid:
+				msg.ValidationStatus = pb.EnrichedFlow_Invalid
+			default:
+				msg.ValidationStatus = pb.EnrichedFlow_Unknown
+			}
+			// for router exported netflow, the following are likely overwriting their own annotations
+			//msg.DstAs = path.AsPath[len(path.AsPath)-1]
+			//msg.NextHopAs = path.AsPath[0]
+			//if nh := net.ParseIP(path.NextHop); nh != nil {
+			//	msg.NextHop = nh
+			//}
+			break
+		}
+		if segment.RouterASN != 0 {
+			msg.AsPath = append(msg.AsPath, uint32(segment.RouterASN))
+		}
+		
+		for _, path := range dstRouteInfos {
+			if !path.Best || len(path.AsPath) == 0{
+				continue
+			}
+			msg.AsPath =append(msg.AsPath, path.AsPath...)
 			msg.Med = path.Med
 			msg.LocalPref = path.LocalPref
 			switch path.Validation {
@@ -107,8 +150,10 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 				msg.ValidationStatus = pb.EnrichedFlow_Unknown
 			}
 			// for router exported netflow, the following are likely overwriting their own annotations
+			if len(path.AsPath) > 0 {
 			msg.DstAs = path.AsPath[len(path.AsPath)-1]
 			msg.NextHopAs = path.AsPath[0]
+		}
 			if nh := net.ParseIP(path.NextHop); nh != nil {
 				msg.NextHop = nh
 			}
