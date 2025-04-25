@@ -18,7 +18,7 @@ type Exporter struct {
 	kafkaMessageCount prometheus.Counter
 	kafkaOffsets      *prometheus.CounterVec
 	flowBits          *prometheus.CounterVec
-	flowAsPairs		  *prometheus.CounterVec
+	flowAsPairsBytes  *prometheus.CounterVec
 
 	labels []string
 }
@@ -48,14 +48,14 @@ func (e *Exporter) Initialize(labels []string) {
 			Help: "Number of Bits received across Flows.",
 		}, labels)
 
-	e.flowAsPairs = prometheus.NewCounterVec(
+	e.flowAsPairsBytes = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-		Name: "flow_as_hop_pair_bytes_total",
+		Name: "flow_as_hop_pair_bytes",
 		Help: "Traffic volume between AS hop pairs in enriched flows",
-	}, []string{"src_as", "dst_as", "end_as"})
+	}, []string{"from", "to", "end_as"})
 
 	e.FlowReg = prometheus.NewRegistry()
-	e.FlowReg.MustRegister(e.flowBits, e.flowAsPairs)
+	e.FlowReg.MustRegister(e.flowBits, e.flowAsPairsBytes)
 
 }
 

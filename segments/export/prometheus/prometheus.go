@@ -182,7 +182,7 @@ func (e *Exporter) ExportASPathPairs(flow *pb.EnrichedFlow) {
 	for i := 0; i < len(asPath)-1; i++ {
 		from := fmt.Sprint(asPath[i])
 		to := fmt.Sprint(asPath[i+1])
-		e.flowAsPairs.WithLabelValues( from, to, endAS).Add(float64(flow.Bytes))
+		e.flowAsPairsBytes.WithLabelValues( from, to, endAS).Add(float64(flow.Bytes))
 	}
 }
 
