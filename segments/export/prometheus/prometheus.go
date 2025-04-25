@@ -180,9 +180,11 @@ func (e *Exporter) ExportASPathPairs(flow *pb.EnrichedFlow) {
 	}
 	endAS := fmt.Sprint(asPath[len(asPath)-1])
 	for i := 0; i < len(asPath)-1; i++ {
-		from := fmt.Sprint(asPath[i])
-		to := fmt.Sprint(asPath[i+1])
-		e.flowAsPairsBytes.WithLabelValues( from, to, endAS).Add(float64(flow.Bytes))
+		if asPath[i] != asPath[i+1]{
+			from := fmt.Sprint(asPath[i])
+			to := fmt.Sprint(asPath[i+1])
+			e.flowAsPairsBytes.WithLabelValues( from, to, endAS).Add(float64(flow.Bytes))
+		}
 	}
 }
 
