@@ -420,6 +420,10 @@ The startat configuration sets whether to start at the newest or oldest
 available flow (i.e. Kafka offset). It only takes effect if Kafka has no stored
 state for this specific user/topic/consumergroup combination.
 
+The supported group partion assignor balancing strategies can be set using a comma separated 
+list for `strategy`. Supported values are `sticky`, `roundrobin` and `range`
+Default is `sticky`.
+
 ```yaml
 - segment: kafkaconsumer
   config:
@@ -436,6 +440,7 @@ state for this specific user/topic/consumergroup combination.
     startat: newest
     kafka-version: 3.8.0
     timeout: 15s
+    strategy: roundrobin,sticky
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/input/kafkaconsumer)

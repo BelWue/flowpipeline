@@ -72,15 +72,31 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 	}
 	newsegment.Legacy = legacy
 
-	// set some unconfigurable defaults
-	// newsegment.saramaConfig.Consumer.Group.Rebalance.Strategy = sarama.BalanceStrategySticky
-	newsegment.saramaConfig.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategyRoundRobin()}
+	if config["strategy"] != "" {
+		strategies := []sarama.BalanceStrategy{}
+		for _, strategy := range strings.Split(config["strategy"], ",") {
+			switch strategy {
+			case sarama.StickyBalanceStrategyName:
+				strategies = append(strategies, sarama.NewBalanceStrategySticky())
+			case sarama.RoundRobinBalanceStrategyName:
+				strategies = append(strategies, sarama.NewBalanceStrategyRoundRobin())
+			case sarama.RangeBalanceStrategyName:
+				strategies = append(strategies, sarama.NewBalanceStrategyRange())
+			default:
+				log.Warn().Msgf("KafkaConsumer: Unrecognized balance strategy: %s", strategy)
+			}
+		}
+		newsegment.saramaConfig.Consumer.Group.Rebalance.GroupStrategies = strategies
+	} else {
+		log.Info().Msg("KafkaConsumer:  No Balancing Strategy set - using default \"sticky\"")
+		newsegment.saramaConfig.Consumer.Group.Rebalance.GroupStrategies = []sarama.BalanceStrategy{sarama.NewBalanceStrategySticky()}
+	}
 	newsegment.saramaConfig.Consumer.Return.Errors = true
 
 	if config["kafka-version"] != "" {
 		newsegment.saramaConfig.Version, err = sarama.ParseKafkaVersion(config["kafka-version"])
 		if err != nil {
-			log.Warn().Err(err).Msgf("KafkaConsumer:Error parsing Kafka version %s - using default %s", newsegment.KafkaVersion, sarama.V3_8_0_0.String())
+			log.Warn().Err(err).Msgf("KafkaConsumer: Error parsing Kafka version %s - using default %s", newsegment.KafkaVersion, sarama.V3_8_0_0.String())
 		} else {
 			newsegment.KafkaVersion = config["kafka-version"]
 		}
@@ -223,12 +239,12 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 	connectionRetryLoop:
 		for {
 			// This loop ensures recreation of our consumer session when server-side rebalances happen.
-			log.Trace().Msg("KafkaConsumer: Running connectionRetryLoop")
 			// check if context was cancelled, signaling that the consumer should stop
 			if handlerCtx.Err() != nil {
 				return
 			}
 			if err := client.Consume(handlerCtx, strings.Split(segment.Topic, ","), handler); err != nil {
+				log.Info().Err(err).Msgf("KafkaConsumer: Failed to consume kafka topics %s", segment.Topic)
 				if retries < maxRetries {
 					retries += 1
 					log.Error().Err(err).Msgf("KafkaConsumer: Could not create new consumer session (retry %d/%d in %s) due to",
@@ -246,13 +262,6 @@ func (segment *KafkaConsumer) Run(wg *sync.WaitGroup) {
 				} else {
 					log.Fatal().Err(err).Msg("KafkaConsumer: Could not create new consumer session due to:")
 					handler.ready <- false
-					return
-				}
-			} else {
-				select {
-				case <-time.After(time.Duration(15 * time.Second)):
-					continue
-				case <-handlerCtx.Done():
 					return
 				}
 			}
