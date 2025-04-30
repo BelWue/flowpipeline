@@ -29,13 +29,13 @@ type Bgp struct {
 func (segment Bgp) New(config map[string]string) segments.Segment {
 	rsconfig, err := os.ReadFile(config["filename"])
 	if err != nil {
-		log.Error().Err(err).Msg(" Bgp: Error reading BGP session config file: ")
+		log.Error().Err(err).Msg("Bgp: Error reading BGP session config file: ")
 		return nil
 	}
 	var rs routeinfo.RouteInfoServer
 	err = yaml.Unmarshal(rsconfig, &rs)
 	if err != nil {
-		log.Error().Err(err).Msg(" Bgp: Error parsing BGP session configuration YAML: ")
+		log.Error().Err(err).Msg("Bgp: Error parsing BGP session configuration YAML: ")
 		return nil
 	}
 

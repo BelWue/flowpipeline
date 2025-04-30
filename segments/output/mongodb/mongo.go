@@ -78,7 +78,7 @@ func (segment *Mongodb) Run(wg *sync.WaitGroup) {
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(segment.mongodbUri))
 	if err != nil {
-		log.Panic().Err(err) // this has already been checked in New
+		log.Panic().Err(err).Msg("MongoDB: Failed to connect to DB") // this has already been checked in New
 	}
 	db := client.Database(segment.databaseName)
 	segment.dbCollection = db.Collection(segment.collectionName)
@@ -100,32 +100,32 @@ func fillSegmentWithConfig(newsegment *Mongodb, config map[string]string) (*Mong
 	}
 
 	if config["mongodb_uri"] == "" {
-		return newsegment, errors.New("MongoDB: mongodb_uri not defined")
+		return newsegment, errors.New("MongoDB: Mongodb_uri not defined")
 	}
 	newsegment.mongodbUri = config["mongodb_uri"]
 
 	if config["database"] == "" {
-		log.Info().Msg("MongoDB: no database defined - using default value (flowdata)")
+		log.Info().Msg("MongoDB: No database defined - using default value (flowdata)")
 		config["database"] = "flowdata"
 	}
 	newsegment.databaseName = config["database"]
 
 	if config["collection"] == "" {
-		log.Info().Msg("MongoDB: no collection defined - using default value (ringbuffer)")
+		log.Info().Msg("MongoDB: No collection defined - using default value (ringbuffer)")
 		config["collection"] = "ringbuffer"
 	}
 	newsegment.collectionName = config["collection"]
 
 	var ringbufferSize int64 = 10737418240
 	if config["max_disk_usage"] == "" {
-		log.Info().Msg("MongoDB: no ring buffer size defined - using default value (10GB)")
+		log.Info().Msg("MongoDB: No ring buffer size defined - using default value (10GB)")
 	} else {
 		size, err := sizeInBytes(config["max_disk_usage"])
 		if err == nil {
-			log.Info().Msg("MongoDB: setting ring buffer size to " + config["max_disk_usage"])
+			log.Info().Msg("MongoDB: Setting ring buffer size to " + config["max_disk_usage"])
 			ringbufferSize = size
 		} else {
-			log.Warn().Msg("MongoDB: failed setting ring buffer size to " + config["max_disk_usage"] + " - using default as fallback (10GB)")
+			log.Warn().Msg("MongoDB: Failed setting ring buffer size to " + config["max_disk_usage"] + " - using default as fallback (10GB)")
 		}
 	}
 	newsegment.ringbufferSize = ringbufferSize
@@ -258,7 +258,7 @@ func sizeInBytes(sizeStr string) (int64, error) {
 	case "TB":
 		return size * 1024 * 1024 * 1024 * 1024, nil
 	default:
-		return 0, fmt.Errorf("[error] unknown unit: %s", unit)
+		return 0, fmt.Errorf("MongoDB: unknown unit: %s", unit)
 	}
 }
 
@@ -280,12 +280,12 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 	}
 
 	if collStats.Err() != nil {
-		log.Error().Msgf("Failed to check Collection '%s' due to: '%s'\n", segment.collectionName, collStats.Err().Error())
+		log.Error().Msgf("MongoDB: Failed to check Collection '%s' due to: '%s'\n", segment.collectionName, collStats.Err().Error())
 		return collStats.Err()
 	}
 
 	if err := collStats.Decode(&collInfo); err != nil {
-		return fmt.Errorf("[error] failed to decode collection info: %v", err)
+		return fmt.Errorf("MongoDB:  failed to decode collection info: %v", err)
 	}
 
 	if collInfo.Count == 0 {
@@ -293,15 +293,15 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 		cappedOptions := options.CreateCollection().SetCapped(true).SetSizeInBytes(segment.ringbufferSize)
 		err := db.CreateCollection(ctx, segment.collectionName, cappedOptions)
 		if err != nil {
-			return fmt.Errorf("[error] failed to create capped collection: %v", err)
+			return fmt.Errorf("[MongoDB: failed to create capped collection: %v", err)
 		}
 
-		log.Debug().Msgf("Capped collection '%s' created successfully.\n", segment.collectionName)
+		log.Debug().Msgf("MongoDB: Capped collection '%s' created successfully.\n", segment.collectionName)
 		return nil
 	}
 
 	if !collInfo.Capped {
-		log.Warn().Msgf("Collection '%s' is not capped. Starting converting it...\n", segment.collectionName)
+		log.Warn().Msgf("MongoDB: Collection '%s' is not capped. Starting converting it...\n", segment.collectionName)
 		db.RunCommand(ctx, bson.D{
 			{Key: "convertToCapped", Value: segment.collectionName},
 			{Key: "size", Value: segment.ringbufferSize},
@@ -309,9 +309,9 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 		return nil
 	}
 
-	log.Info().Msgf("Collection '%s' is already capped.\n", segment.collectionName)
+	log.Info().Msgf("MongoDB: Collection '%s' is already capped.\n", segment.collectionName)
 	if collInfo.MaxSize != segment.ringbufferSize {
-		log.Warn().Msgf("Changing max size of collection '%s' from '%d' to '%d'.\n", segment.collectionName, collInfo.MaxSize, segment.ringbufferSize)
+		log.Warn().Msgf("MongoDB: Changing max size of collection '%s' from '%d' to '%d'.\n", segment.collectionName, collInfo.MaxSize, segment.ringbufferSize)
 		db.RunCommand(ctx, bson.D{
 			{Key: "collMod", Value: segment.collectionName},
 			{Key: "cappedSize", Value: segment.ringbufferSize},

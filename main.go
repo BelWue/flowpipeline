@@ -124,7 +124,7 @@ func main() {
 
 	config, err := os.ReadFile(*configFile)
 	if err != nil {
-		log.Error().Err(err).Msg(" reading config file: ")
+		log.Error().Err(err).Msg("Reading config file: ")
 		return
 	}
 

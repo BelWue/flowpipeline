@@ -56,7 +56,7 @@ func (segment Goflow) New(config map[string]string) segments.Segment {
 	for _, listenAddress := range strings.Split(listen, ",") {
 		listenAddrUrl, err := url.Parse(listenAddress)
 		if err != nil {
-			log.Error().Msgf("Goflow: error parsing listenAddresses: %e", err)
+			log.Error().Err(err).Msgf("Goflow: error parsing listenAddresses")
 			return nil
 		}
 		// Check if given Port can be parsed to int
@@ -149,7 +149,7 @@ func (d *channelDriver) Close(context.Context) error {
 func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 	formatter, err := format.FindFormat("bin")
 	if err != nil {
-		log.Fatal().Err(err).Msg("(Failed loading formatter")
+		log.Fatal().Err(err).Msg("Goflow: Failed loading formatter")
 		segment.ShutdownParentPipeline()
 	}
 	var pipes []utils.FlowPipe
@@ -184,7 +184,7 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 			}
 			recv, err := utils.NewUDPReceiver(cfg)
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed creating UDP receiver")
+				log.Fatal().Err(err).Msg("Goflow: Failed creating UDP receiver")
 				segment.ShutdownParentPipeline()
 				return
 			}
@@ -192,11 +192,11 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 			var cfgProducer = &protoproducer.ProducerConfig{}
 			cfgm, err := cfgProducer.Compile()
 			if err != nil {
-				log.Fatal().Err(err)
+				log.Fatal().Err(err).Msg("Goflow: Failed compiling ProtoProducerConfig")
 			}
 			flowProducer, err := protoproducer.CreateProtoProducer(cfgm, protoproducer.CreateSamplingSystem)
 			if err != nil {
-				log.Fatal().Err(err).Msg("Failed creating proto producer")
+				log.Fatal().Err(err).Msg("Goflow: Failed creating proto producer")
 				segment.ShutdownParentPipeline()
 			}
 
@@ -219,7 +219,7 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 				pipeline = utils.NewFlowPipe(cfgPipe)
 				log.Info().Msgf("Goflow: Listening for netflow legacy on port %d...", port)
 			default:
-				log.Fatal().Msgf("scheme '%s' does not exist", listenAddrUrl.Scheme)
+				log.Fatal().Msgf("Goflow: scheme '%s' does not exist", listenAddrUrl.Scheme)
 			}
 
 			decodeFunc := pipeline.DecodeFlow
@@ -232,7 +232,7 @@ func (segment *Goflow) startGoFlow(transport transport.TransportInterface) {
 			err = recv.Start(hostname, port, decodeFunc)
 
 			if err != nil {
-				log.Fatal().Err(err)
+				log.Fatal().Err(err).Msg("Goflow: Failed starting goflow receiver")
 			}
 
 		}(listenAddrUrl)

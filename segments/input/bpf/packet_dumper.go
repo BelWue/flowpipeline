@@ -132,7 +132,7 @@ func (b *PacketDumper) Packets() chan Packet {
 				if errors.Is(err, perf.ErrClosed) {
 					return
 				}
-				log.Error().Err(err).Msg(" BPF packet dump: Error reading from kernel perf event reader: ")
+				log.Error().Err(err).Msg("BPF packet dump: Error reading from kernel perf event reader: ")
 				continue
 			}
 
@@ -143,7 +143,7 @@ func (b *PacketDumper) Packets() chan Packet {
 
 			// Parse the perf event entry into an Event structure.
 			if err := binary.Read(bytes.NewBuffer(record.RawSample), binary.LittleEndian, &rawPacket); err != nil {
-				log.Error().Err(err).Msg(" BPF packet dump: Skipped 1 sample, error decoding raw perf event data: ")
+				log.Error().Err(err).Msg("BPF packet dump: Skipped 1 sample, error decoding raw perf event data: ")
 				continue
 			}
 			b.packets <- parseRawPacket(rawPacket)

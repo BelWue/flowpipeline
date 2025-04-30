@@ -35,7 +35,7 @@ func (segment Influx) New(config map[string]string) segments.Segment {
 		// check if a valid url has been passed
 		_, err := url.Parse(config["address"])
 		if err != nil {
-			log.Error().Msgf("Influx: error parsing given url: %e", err)
+			log.Error().Err(err).Msg("Influx: error parsing given url")
 		}
 		newsegment.Address = config["address"]
 	} else {

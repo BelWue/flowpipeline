@@ -43,7 +43,7 @@ func (segment GeoLocation) New(config map[string]string) segments.Segment {
 	}
 	newSegment.dbHandle, err = maxmind.Open(segments.ContainerVolumePrefix + config["filename"])
 	if err != nil {
-		log.Error().Err(err).Msg(" GeoLocation: Could not open specified Maxmind DB file: ")
+		log.Error().Err(err).Msg("GeoLocation: Could not open specified Maxmind DB file: ")
 		return nil
 	}
 	return newSegment
@@ -84,20 +84,20 @@ func (segment *GeoLocation) Run(wg *sync.WaitGroup) {
 			if err == nil {
 				msg.RemoteCountry = dbrecord.Country.ISOCode
 			} else {
-				log.Error().Err(err).Msg(" GeoLocation: Lookup of remote address failed: ")
+				log.Error().Err(err).Msg("GeoLocation: Lookup of remote address failed: ")
 			}
 		} else {
 			err := segment.dbHandle.Lookup(msg.SrcAddr, &dbrecord)
 			if err == nil {
 				msg.SrcCountry = dbrecord.Country.ISOCode
 			} else {
-				log.Error().Err(err).Msg(" GeoLocation: Lookup of source address failed: ")
+				log.Error().Err(err).Msg("GeoLocation: Lookup of source address failed: ")
 			}
 			err = segment.dbHandle.Lookup(msg.DstAddr, &dbrecord)
 			if err == nil {
 				msg.DstCountry = dbrecord.Country.ISOCode
 			} else {
-				log.Error().Err(err).Msg(" GeoLocation: Lookup of destination address failed: ")
+				log.Error().Err(err).Msg("GeoLocation: Lookup of destination address failed: ")
 			}
 		}
 		segment.Out <- msg

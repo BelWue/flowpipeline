@@ -42,7 +42,7 @@ func getPcapFile(source string, filter string) *pcap.Handle {
 		log.Fatal().Err(err).Msg("Packet: Could not set BPF filter")
 	}
 	if err != nil {
-		log.Fatal().Err(err)
+		log.Fatal().Err(err).Msg("Packet: Failed opening pcap file")
 	}
 	return handle
 }

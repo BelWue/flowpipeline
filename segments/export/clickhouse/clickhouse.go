@@ -133,17 +133,17 @@ func (segment *Clickhouse) Run(wg *sync.WaitGroup) {
 	var err error
 	segment.db, err = sql.Open("clickhouse", segment.DSN)
 	if err != nil {
-		log.Panic().Msgf("Clickhouse: Could not open database with error: %+v", err)
+		log.Panic().Err(err).Msg("Clickhouse: Could not open database with error")
 	}
 	defer segment.db.Close()
 
 	tx, err := segment.db.Begin()
 	if err != nil {
-		log.Panic().Msgf("Clickhouse: Could not start initiation transaction with error: %+v", err)
+		log.Panic().Err(err).Msg("Clickhouse: Could not start initiation transaction with error")
 	}
 	_, err = tx.Exec(segment.createStatement)
 	if err != nil {
-		log.Panic().Msgf("Clickhouse: Could not create database, check field configuration: %+v", err)
+		log.Panic().Err(err).Msg("Clickhouse: Could not create database, check field configuration")
 	}
 	tx.Commit()
 
@@ -154,7 +154,7 @@ func (segment *Clickhouse) Run(wg *sync.WaitGroup) {
 		if len(unsaved) >= segment.BatchSize {
 			err := segment.bulkInsert(unsaved)
 			if err != nil {
-				log.Error().Err(err).Msg(" ")
+				log.Error().Err(err).Msg("Clickhouse: Bulk insert failed")
 			}
 			unsaved = []*pb.EnrichedFlow{}
 		}
@@ -169,7 +169,7 @@ func (segment Clickhouse) bulkInsertFlowhouse(unsavedFlows []*pb.EnrichedFlow) e
 	}
 	tx, err := segment.db.Begin()
 	if err != nil {
-		log.Error().Msgf("Clickhouse: Error starting transaction for current batch of %d flows: %+v", len(unsavedFlows), err)
+		log.Error().Err(err).Msgf("Clickhouse: Error starting transaction for current batch of %d flows", len(unsavedFlows))
 	}
 	for _, msg := range unsavedFlows {
 		var srcPfx, dstPfx net.IP
@@ -204,7 +204,7 @@ func (segment Clickhouse) bulkInsertFlowhouse(unsavedFlows []*pb.EnrichedFlow) e
 		}
 		_, err := tx.Exec(segment.insertStatement, valueArgs...)
 		if err != nil {
-			log.Error().Msgf("Clickhouse: Error inserting flow into transaction: %+v", err)
+			log.Error().Err(err).Msg("Clickhouse: Error inserting flow into transaction")
 		}
 	}
 	tx.Commit()

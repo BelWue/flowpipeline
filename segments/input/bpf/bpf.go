@@ -55,7 +55,7 @@ func (segment Bpf) New(config map[string]string) segments.Segment {
 
 	err := newsegment.dumper.Setup(newsegment.Device)
 	if err != nil {
-		log.Error().Err(err).Msg(" Bpf: error setting up BPF dumping: ")
+		log.Error().Err(err).Msg("Bpf: error setting up BPF dumping: ")
 		return nil
 	}
 
@@ -88,7 +88,7 @@ func (segment Bpf) New(config map[string]string) segments.Segment {
 
 	newsegment.exporter, err = NewFlowExporter(newsegment.ActiveTimeout, newsegment.InactiveTimeout)
 	if err != nil {
-		log.Error().Err(err).Msg(" Bpf: error setting up exporter: ")
+		log.Error().Err(err).Msg("Bpf: error setting up exporter: ")
 		return nil
 	}
 	return newsegment
@@ -97,7 +97,7 @@ func (segment Bpf) New(config map[string]string) segments.Segment {
 func (segment *Bpf) Run(wg *sync.WaitGroup) {
 	err := segment.dumper.Start()
 	if err != nil {
-		log.Error().Err(err).Msg(" Bpf: error starting up BPF dumping: ")
+		log.Error().Err(err).Msg("Bpf: error starting up BPF dumping: ")
 		segment.ShutdownParentPipeline()
 		return
 	}

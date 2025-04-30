@@ -237,15 +237,15 @@ func WriteToDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan s
 	defer close(Watchdogs)
 	defer ReadWriteWG.Done()
 
-	log.Debug().Msg(" Diskbuffer: Started Writing to Disk")
-	defer log.Debug().Msg(" Diskbuffer: Ended Writing to Disk")
+	log.Debug().Msg("Diskbuffer: Started Writing to Disk")
+	defer log.Debug().Msg("Diskbuffer: Ended Writing to Disk")
 
 	// we need a new filename
 	filename := fmt.Sprintf("%s/%s.json.zst", segment.BufferDir, uuid.NewString())
 
 	file, err := os.Create(filename)
 	if err != nil {
-		log.Error().Err(err).Msg(" Diskbuffer: File specified in 'filename' is not accessible: ")
+		log.Error().Err(err).Msg("Diskbuffer: File specified in 'filename' is not accessible: ")
 	}
 	level := zstd.SpeedFastest
 	encoder, err := zstd.NewWriter(file, zstd.WithEncoderLevel(level))
@@ -268,14 +268,14 @@ func WriteToDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan s
 				case msg := <-segment.MemoryBuffer:
 					data, err := protojson.Marshal(msg)
 					if err != nil {
-						log.Warn().Err(err).Msg(" Diskbuffer: Skipping a flow, failed to recode protobuf as JSON: ")
+						log.Warn().Err(err).Msg("Diskbuffer: Skipping a flow, failed to recode protobuf as JSON")
 						continue
 					}
 
 					// use Fprintln because it adds an OS specific newline
 					_, err = fmt.Fprintln(writer, string(data))
 					if err != nil {
-						log.Warn().Msgf("Diskbuffer: Skipping a flow, failed to write to file %s: %v", filename, err)
+						log.Warn().Err(err).Msgf("Diskbuffer: Skipping a flow, failed to write to file %s", filename)
 						continue
 					}
 				default:
@@ -334,8 +334,8 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 	defer close(Watchdogs)
 	defer ReadWriteWG.Done()
 
-	log.Debug().Msg(" Diskbuffer: Started Reading from Disk")
-	defer log.Debug().Msg(" Diskbuffer: Ended Reading from Disk")
+	log.Debug().Msg("Diskbuffer: Started Reading from Disk")
+	defer log.Debug().Msg("Diskbuffer: Ended Reading from Disk")
 
 	// the ReadWriteWG ensures, that there are no Read and Write at the same time.
 	// hence we can read from every file that exists
@@ -345,7 +345,7 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 			file, err := os.Open(filename)
 
 			if err != nil {
-				log.Warn().Msgf("Diskbuffer: Could not open file: %s, with error %s", filename, err)
+				log.Warn().Err(err).Msgf("Diskbuffer: Could not open file: %s", filename)
 				continue
 			}
 
@@ -355,11 +355,11 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 				scan := scanner.Scan()
 				err := scanner.Err()
 				if errors.Is(err, io.ErrUnexpectedEOF) {
-					log.Warn().Err(err).Msg(" Diskbuffer: Unexpected EOF: ")
+					log.Warn().Err(err).Msg("Diskbuffer: Unexpected EOF")
 					break
 				}
 				if err != nil {
-					log.Warn().Err(err).Msg(" Diskbuffer: Skipping a flow, could not read line from stdin: ")
+					log.Warn().Err(err).Msg("Diskbuffer: Skipping a flow, could not read line from stdin")
 					continue
 				}
 				if !scan && scanner.Err() == nil {
@@ -374,7 +374,7 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 			file.Close()
 			err = os.Remove(filename)
 			if err != nil {
-				log.Warn().Msgf("Diskbuffer: Could not remove file %s with error %s", filename, err)
+				log.Warn().Err(err).Msgf("Diskbuffer: Could not remove file %s", filename)
 			}
 			// check signal channel, if we have a signal, do not read any new file
 			select {
@@ -398,7 +398,7 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 			filename := fmt.Sprintf("%s/rest_%s.json.zst", segment.BufferDir, uuid.NewString())
 			file, err := os.Create(filename)
 			if err != nil {
-				log.Error().Err(err).Msg(" Diskbuffer: File specified in 'filename' is not accessible: ")
+				log.Error().Err(err).Msg("Diskbuffer: File specified in 'filename' is not accessible")
 			}
 			level := zstd.SpeedDefault
 			encoder, err := zstd.NewWriter(file, zstd.WithEncoderLevel(level))
@@ -415,7 +415,7 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 				// use Fprintln because it adds an OS specific newline
 				_, err = fmt.Fprintln(writer, emerg_line)
 				if err != nil {
-					log.Warn().Msgf("Diskbuffer: Skipping a flow, failed to write to file %s: %v", filename, err)
+					log.Warn().Err(err).Msgf("Diskbuffer: Skipping a flow, failed to write to file %s", filename)
 					continue
 				}
 			}
@@ -423,7 +423,7 @@ func ReadFromDisk(segment *DiskBuffer, ReadWriteWG *sync.WaitGroup, Signal chan 
 			msg := &pb.EnrichedFlow{}
 			err := protojson.Unmarshal(line, msg)
 			if err != nil {
-				log.Warn().Err(err).Msg(" Diskbuffer: Skipping a flow, failed to recode input to protobuf: ")
+				log.Warn().Err(err).Msg("Diskbuffer: Skipping a flow, failed to recode input to protobuf")
 				continue
 			}
 			select {
@@ -526,8 +526,8 @@ func (segment *DiskBuffer) Run(wg *sync.WaitGroup) {
 	BufferWG.Add(1)
 	go func() {
 		defer BufferWG.Done()
-		defer log.Debug().Msg(" Diskbuffer: Stopping Decider")
-		log.Debug().Msg(" Diskbuffer: Starting Decider")
+		defer log.Debug().Msg("Diskbuffer: Stopping Decider")
+		log.Debug().Msg("Diskbuffer: Starting Decider")
 		for {
 			select {
 			case <-StopDecider:
@@ -553,7 +553,7 @@ func (segment *DiskBuffer) Run(wg *sync.WaitGroup) {
 					ReadWriteWG.Wait()
 				}
 				if length > segment.HighMemoryMark*segment.Capacity/100 && uint64(CacheFilesSize) < segment.MaxCacheSize {
-					log.Debug().Msg(" Diskbuffer: Try to buffer to disk")
+					log.Debug().Msg("Diskbuffer: Try to buffer to disk")
 					// start new go routine
 					ReadWriteWG.Wait()
 					ReadWriteWG.Add(2)

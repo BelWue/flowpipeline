@@ -119,7 +119,7 @@ func (segment KafkaConsumer) New(config map[string]string) segments.Segment {
 	if newsegment.Tls {
 		rootCAs, err := x509.SystemCertPool()
 		if err != nil {
-			log.Panic().Err(err).Msg("TLS Error: ")
+			log.Panic().Err(err).Msg("KafkaConsumer: TLS Error")
 		}
 		newsegment.saramaConfig.Net.TLS.Enable = true
 		newsegment.saramaConfig.Net.TLS.Config = &tls.Config{RootCAs: rootCAs}

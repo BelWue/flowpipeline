@@ -56,7 +56,7 @@ func (segment *TrafficSpecificToptalkers) AddCustomConfig(config config.Config) 
 	for _, definition := range config.ThresholdMetricDefinition {
 		metric, err := metricFromDefinition(definition)
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Msg("ThresholdToptalkersMetrics: Failed to add custom config")
 		}
 		segment.ThresholdMetricDefinition = append(segment.ThresholdMetricDefinition, metric)
 	}
@@ -71,7 +71,7 @@ func metricFromDefinition(definition *config.ThresholdMetricDefinition) (*Thresh
 
 	metric.Expression, err = parser.Parse(definition.FilterDefinition)
 	if err != nil {
-		log.Error().Err(err).Msg("FlowFilter: Syntax error in filter expression")
+		log.Error().Err(err).Msgf("ThresholdToptalkersMetrics: Syntax error in filter expression\"%s\"", definition.FilterDefinition)
 		return nil, err
 	}
 

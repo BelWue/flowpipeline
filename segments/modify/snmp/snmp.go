@@ -64,7 +64,7 @@ func (segment SNMPInterface) New(config map[string]string) segments.Segment {
 	}
 	compiledRegex, err := regexp.Compile(regex)
 	if err != nil {
-		log.Error().Err(err).Msg(" SNMPInterface: Configuration error, regex does not compile: ")
+		log.Error().Err(err).Msg("SNMPInterface: Configuration error, regex does not compile: ")
 		return nil
 	}
 	return &SNMPInterface{
@@ -129,7 +129,7 @@ func (segment *SNMPInterface) querySNMP(router string, iface uint32, key string)
 	oid := fmt.Sprintf(oidBase, oidExts[key], iface)
 	resp, err := s.Get(oid)
 	if err != nil {
-		log.Warn().Msgf("SNMPInterface: Failed getting OID '%s' from %s. Error: %s", oid, router, err)
+		log.Warn().Err(err).Msgf("SNMPInterface: Failed getting OID '%s' from %s.", oid, router)
 		segment.snmpCache.Delete(fmt.Sprintf("%s-%d-%s", router, iface, key))
 		return
 	} else {

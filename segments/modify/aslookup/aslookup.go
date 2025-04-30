@@ -42,7 +42,7 @@ func (segment AsLookup) New(config map[string]string) segments.Segment {
 	// open lookup file
 	lookupfile, err := os.OpenFile(config["filename"], os.O_RDONLY, 0)
 	if err != nil {
-		log.Error().Err(err).Msg(" AsLookup: Error opening lookup file: ")
+		log.Error().Err(err).Msg("AsLookup: Error opening lookup file: ")
 		return nil
 	}
 	defer lookupfile.Close()
@@ -53,20 +53,20 @@ func (segment AsLookup) New(config map[string]string) segments.Segment {
 		// open lookup db
 		db, err := database.NewFromDump(lookupfile)
 		if err != nil {
-			log.Error().Err(err).Msg(" AsLookup: Error parsing database file: ")
+			log.Error().Err(err).Msg("AsLookup: Error parsing database file: ")
 		}
 		newSegment.asDatabase = db
 	} else {
 		// parse with asnlookup
 		builder := database.NewBuilder()
 		if err = builder.ImportMRT(lookupfile); err != nil {
-			log.Error().Err(err).Msg(" AsLookup: Error parsing MRT file: ")
+			log.Error().Err(err).Msg("AsLookup: Error parsing MRT file: ")
 		}
 
 		// build lookup database
 		db, err := builder.Build()
 		if err != nil {
-			log.Error().Err(err).Msg(" AsLookup: Error building lookup database: ")
+			log.Error().Err(err).Msg("AsLookup: Error building lookup database: ")
 		}
 		newSegment.asDatabase = db
 	}
@@ -84,7 +84,7 @@ func (segment *AsLookup) Run(wg *sync.WaitGroup) {
 		dstIp := net.ParseIP(msg.DstAddrObj().String())
 		dstAs, err := segment.asDatabase.Lookup(dstIp)
 		if err != nil {
-			log.Warn().Msgf("AsLookup: Failed to look up ASN for %s: %s", msg.DstAddrObj().String(), err)
+			log.Warn().Err(err).Msgf("AsLookup: Failed to look up ASN for %s", msg.DstAddrObj().String())
 			segment.Out <- msg
 			continue
 		}
@@ -94,7 +94,7 @@ func (segment *AsLookup) Run(wg *sync.WaitGroup) {
 		srcIp := net.ParseIP(msg.SrcAddrObj().String())
 		srcAs, err := segment.asDatabase.Lookup(srcIp)
 		if err != nil {
-			log.Warn().Msgf("AsLookup: Failed to look up ASN for %s: %s", msg.SrcAddrObj().String(), err)
+			log.Warn().Err(err).Msgf("AsLookup: Failed to look up ASN for %s", msg.SrcAddrObj().String())
 			segment.Out <- msg
 			continue
 		}

@@ -141,7 +141,7 @@ func (segment Packet) New(config map[string]string) segments.Segment {
 
 	newsegment.exporter, err = aggregate.NewFlowExporter(newsegment.ActiveTimeout, newsegment.InactiveTimeout)
 	if err != nil {
-		log.Error().Err(err).Msg(" Packet: error setting up exporter: ")
+		log.Error().Err(err).Msg("Packet: error setting up exporter: ")
 		return nil
 	}
 	return newsegment

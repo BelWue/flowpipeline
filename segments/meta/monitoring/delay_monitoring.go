@@ -59,7 +59,7 @@ func (segment DelayMonitoring) New(config map[string]string) segments.Segment {
 	if config["samplingRate"] != "" {
 		newSegment.SamplingRate, err = strconv.Atoi(config["samplingRate"])
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Msg("Delay Monitoring: Failed parsing parameter \"samplingRate\"")
 		}
 	}
 
@@ -67,7 +67,7 @@ func (segment DelayMonitoring) New(config map[string]string) segments.Segment {
 		alpha, err := strconv.Atoi(config["alpha"])
 		newSegment.Alpha = float64(alpha)
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Msg("Delay Monitoring: Failed parsing parameter \"alpha\"")
 		}
 	}
 
@@ -175,7 +175,7 @@ func (e *PrometheusExporter) ServeEndpoints(endpoint string) {
 	go func() {
 		err := http.ListenAndServe(endpoint, mux)
 		if err != nil {
-			log.Error().Err(err).Msgf("Delay monitoring: Failed to start https endpoint on port %s", endpoint)
+			log.Error().Err(err).Msgf("Delay Monitoring: Failed to start https endpoint on port %s", endpoint)
 		}
 	}()
 	log.Info().Msgf("Delay Monitoring: Enabled delay metrics on /metrics and /delay, listening at %s.", endpoint)

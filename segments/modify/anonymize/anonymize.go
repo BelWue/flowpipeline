@@ -59,21 +59,21 @@ func (segments Anonymize) New(config map[string]string) segments.Segment {
 		maskV6 := 52
 
 		if config["maskV4"] == "" {
-			log.Info().Msg("No maskV4 provided for subnet anonymization - using default 16")
+			log.Info().Msg("Anonymize: No maskV4 provided for subnet anonymization - using default 16")
 		} else {
 			maskV4, err = strconv.Atoi(config["maskV4"])
 			if err != nil || maskV4 > 32 || maskV4 < 8 {
-				log.Error().Msgf("Bad value \"%s\" for argument maskV4 - expected int <=32 && >= 8", config["maskV4"])
+				log.Error().Msgf("Anonymize: Bad value \"%s\" for argument maskV4 - expected int <=32 && >= 8", config["maskV4"])
 				return nil
 			}
 		}
 
 		if config["maskV6"] == "" {
-			log.Info().Msg("No maskV6 provided for subnet anonymization - using default 52")
+			log.Info().Msg("Anonymize: No maskV6 provided for subnet anonymization - using default 52")
 		} else {
 			maskV6, err = strconv.Atoi(config["maskV6"])
 			if err != nil || maskV6 > 128 || maskV4 < 4 {
-				log.Error().Msgf("Bad value \"%s\" for argument maskV6 - expected int <=128 && >= 4", config["maskV6"])
+				log.Error().Msgf("Anonymize: Bad value \"%s\" for argument maskV6 - expected int <=128 && >= 4", config["maskV6"])
 				return nil
 			}
 		}
@@ -98,7 +98,7 @@ func (segments Anonymize) New(config map[string]string) segments.Segment {
 			if _, ok := err.(cryptopan.KeySizeError); ok {
 				log.Error().Msgf("Anonymize: Key has insufficient length %d, please specify one with more than 32 chars.", len(encryptionKey))
 			} else {
-				log.Error().Msgf("Anonymize: error creating anonymizer: %e", err)
+				log.Error().Err(err).Msgf("Anonymize: error creating anonymizer")
 			}
 			return nil
 		}

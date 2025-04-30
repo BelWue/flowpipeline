@@ -34,7 +34,7 @@ func (segment StdIn) New(config map[string]string) segments.Segment {
 	if config["filename"] != "" {
 		file, err = os.Open(config["filename"])
 		if err != nil {
-			log.Error().Err(err).Msg(" StdIn: File specified in 'filename' is not accessible: ")
+			log.Error().Err(err).Msg("StdIn: File specified in 'filename' is not accessible: ")
 			return nil
 		}
 		filename = config["filename"]
@@ -69,11 +69,11 @@ func (segment *StdIn) Run(wg *sync.WaitGroup) {
 		for {
 			scan := segment.scanner.Scan()
 			if err := segment.scanner.Err(); err != nil {
-				log.Warn().Err(err).Msg(" StdIn: Skipping a flow, could not read line from stdin: ")
+				log.Warn().Err(err).Msg("StdIn: Skipping a flow, could not read line from stdin: ")
 				continue
 			}
 			if segment.EofCloses && !scan && segment.scanner.Err() == nil {
-				log.Info().Msgf("Reached eof of %s, closing pipeline", segment.FileName)
+				log.Info().Msgf("StdIn: Reached eof of %s, closing pipeline", segment.FileName)
 				segment.ShutdownParentPipeline()
 				return
 			}
@@ -96,7 +96,7 @@ func (segment *StdIn) Run(wg *sync.WaitGroup) {
 			msg := &pb.EnrichedFlow{}
 			err := protojson.Unmarshal(line, msg)
 			if err != nil {
-				log.Warn().Err(err).Msg(" StdIn: Skipping a flow, failed to recode input to protobuf: ")
+				log.Warn().Err(err).Msg("StdIn: Skipping a flow, failed to recode input to protobuf: ")
 				continue
 			}
 			segment.Out <- msg

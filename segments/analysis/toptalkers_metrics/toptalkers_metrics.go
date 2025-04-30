@@ -20,11 +20,11 @@ func (segment ToptalkersMetrics) New(config map[string]string) segments.Segment 
 
 	err := newsegment.ParsePrometheusConfig(config)
 	if err != nil {
-		log.Error().Err(err)
+		log.Error().Err(err).Msg("ToptalkersMetrics: Failed parsing prometheus config")
 		return nil
 	}
 	if config["endpoint"] == "" {
-		log.Info().Msg("ToptalkersMetrics Missing configuration parameter 'endpoint'. Using default port ':8080'")
+		log.Info().Msg("ToptalkersMetrics: Missing configuration parameter 'endpoint'. Using default port ':8080'")
 	} else {
 		newsegment.Endpoint = config["endpoint"]
 	}
@@ -35,7 +35,7 @@ func (segment ToptalkersMetrics) New(config map[string]string) segments.Segment 
 		newsegment.MetricsPath = config["metricspath"]
 	}
 	if config["flowdatapath"] == "" {
-		log.Info().Msg("ThresholdToptalkersMetrics: Missing configuration parameter 'flowdatapath'. Using default path 'flowdata'")
+		log.Info().Msg("ToptalkersMetrics: Missing configuration parameter 'flowdatapath'. Using default path 'flowdata'")
 	} else {
 		newsegment.FlowdataPath = config["flowdatapath"]
 	}
