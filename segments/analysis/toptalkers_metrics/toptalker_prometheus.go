@@ -84,10 +84,10 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 	if config["buckets"] != "" {
 		if parsedBuckets, err := strconv.ParseInt(config["buckets"], 10, 64); err == nil {
 			if parsedBuckets <= 0 {
-				return errors.New("buckets has to be >0")
+				return errors.New("ToptalkersMetrics: Buckets has to be >0")
 			}
 			if parsedBuckets > math.MaxInt {
-				return errors.New("buckets out of range")
+				return errors.New("ToptalkersMetrics: Buckets out of range")
 			}
 			prometheusParams.Buckets = int(parsedBuckets)
 		} else {
@@ -101,10 +101,10 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 		if parsedThresholdBuckets, err := strconv.ParseInt(config["thresholdbuckets"], 10, 64); err == nil {
 
 			if parsedThresholdBuckets <= 0 {
-				return errors.New("thresholdbuckets has to be >0")
+				return errors.New("ToptalkersMetrics: Thresholdbuckets has to be >0")
 			}
 			if parsedThresholdBuckets > math.MaxInt {
-				return errors.New("thresholdbuckets out of range")
+				return errors.New("ToptalkersMetrics: Thresholdbuckets out of range")
 			}
 			prometheusParams.ThresholdBuckets = int(parsedThresholdBuckets)
 		} else {
@@ -117,17 +117,17 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 	if config["reportbuckets"] != "" {
 		if parsedReportBuckets, err := strconv.ParseInt(config["reportbuckets"], 10, 64); err == nil {
 			if parsedReportBuckets <= 0 {
-				return errors.New("reportbuckets has to be >0")
+				return errors.New("ToptalkersMetrics: Reportbuckets has to be >0")
 			}
 			if parsedReportBuckets > math.MaxInt {
-				return errors.New("reportbuckets out of range")
+				return errors.New("ToptalkersMetrics: Reportbuckets out of range")
 			}
 			prometheusParams.ReportBuckets = int(parsedReportBuckets)
 		} else {
-			log.Error().Msg("ReportPrometheus: Could not parse 'reportbuckets' parameter, using default (60 buckets).")
+			log.Error().Msg("ToptalkersMetrics: Could not parse 'reportbuckets' parameter, using default (60 buckets).")
 		}
 	} else {
-		log.Info().Msg("ReportPrometheus: 'reportbuckets' set to default (60 buckets).")
+		log.Info().Msg("ToptalkersMetrics: 'reportbuckets' set to default (60 buckets).")
 	}
 
 	if config["traffictype"] != "" {
@@ -258,5 +258,5 @@ func (e *PrometheusExporter) ServeEndpoints(promParams *PrometheusParams) {
 	go func() {
 		http.ListenAndServe(promParams.Endpoint, mux)
 	}()
-	log.Info().Msgf("Enabled metrics on %s and %s, listening at %s.", promParams.MetricsPath, promParams.FlowdataPath, promParams.Endpoint)
+	log.Info().Msgf("ToptalkersMetrics: Enabled metrics on %s and %s, listening at %s.", promParams.MetricsPath, promParams.FlowdataPath, promParams.Endpoint)
 }
