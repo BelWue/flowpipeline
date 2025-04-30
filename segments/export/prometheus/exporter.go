@@ -84,7 +84,7 @@ func (e *Exporter) ServeEndpoints(segment *Prometheus) {
 	go func() {
 		http.ListenAndServe(segment.Endpoint, mux)
 	}()
-	log.Info().Msgf("Enabled metrics on %s and %s, listening at %s.", segment.MetricsPath, segment.FlowdataPath, segment.Endpoint)
+	log.Info().Msgf("Prometheus: Enabled metrics on %s and %s, listening at %s.", segment.MetricsPath, segment.FlowdataPath, segment.Endpoint)
 }
 
 func (e *Exporter) Increment(bytes uint64, packets uint64, labelset prometheus.Labels) {

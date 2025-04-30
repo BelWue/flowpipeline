@@ -44,19 +44,19 @@ type Prometheus struct {
 func (segment Prometheus) New(config map[string]string) segments.Segment {
 	var endpoint string = ":8080"
 	if config["endpoint"] == "" {
-		log.Info().Msg("prometheus: Missing configuration parameter 'endpoint'. Using default port ':8080'")
+		log.Info().Msg("Prometheus: Missing configuration parameter 'endpoint'. Using default port ':8080'")
 	} else {
 		endpoint = config["endpoint"]
 	}
 	var metricsPath string = "/metrics"
 	if config["metricspath"] == "" {
-		log.Info().Msg("prometheus: Missing configuration parameter 'metricspath'. Using default path '/metrics'")
+		log.Info().Msg("Prometheus: Missing configuration parameter 'metricspath'. Using default path '/metrics'")
 	} else {
 		metricsPath = config["metricspath"]
 	}
 	var flowdataPath string = "/flowdata"
 	if config["flowdatapath"] == "" {
-		log.Info().Msg("prometheus: Missing configuration parameter 'flowdatapath'. Using default path '/flowdata'")
+		log.Info().Msg("Prometheus: Missing configuration parameter 'flowdatapath'. Using default path '/flowdata'")
 	} else {
 		flowdataPath = config["flowdatapath"]
 	}
@@ -64,9 +64,9 @@ func (segment Prometheus) New(config map[string]string) segments.Segment {
 	if config["vacuum_interval"] != "" {
 		vacuumIntervalDuration, err := time.ParseDuration(config["vacuum_interval"])
 		if err != nil {
-			log.Warn().Msg("prometheus: Failed to parse vacuum intervall '" + config["vacuum_interval"] + "' - continuing without vacuum interval")
+			log.Warn().Msg("Prometheus: Failed to parse vacuum intervall '" + config["vacuum_interval"] + "' - continuing without vacuum interval")
 		} else {
-			log.Info().Msg("prometheus: Setting prometheus vacuum interval to " + config["vacuum_interval"] + " this will lead to data loss of up to one scraping intervall!")
+			log.Info().Msg("Prometheus: Setting prometheus vacuum interval to " + config["vacuum_interval"] + " this will lead to data loss of up to one scraping intervall!")
 			vacuumInterval = &vacuumIntervalDuration
 		}
 	}
@@ -81,7 +81,7 @@ func (segment Prometheus) New(config map[string]string) segments.Segment {
 	// set default labels if not configured
 	var labels []string
 	if config["labels"] == "" {
-		log.Info().Msg("prometheus: Configuration parameter 'labels' not set. Using default labels 'Etype,Proto' to export")
+		log.Info().Msg("Prometheus: Configuration parameter 'labels' not set. Using default labels 'Etype,Proto' to export")
 		labels = strings.Split("Etype,Proto", ",")
 	} else {
 		labels = strings.Split(config["labels"], ",")
@@ -146,14 +146,14 @@ func (segment *Prometheus) initializeExporter(exporter *Exporter) {
 func (segment *Prometheus) AddVacuumCronJob(promExporter *Exporter) {
 	scheduler, err := gocron.NewScheduler()
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed initializing prometheus exporter vacuum job")
+		log.Warn().Err(err).Msg("Prometheus: Failed initializing prometheus exporter vacuum job")
 	}
 	_, err = scheduler.NewJob(
 		gocron.DurationJob(*segment.VacuumInterval),
 		gocron.NewTask(promExporter.ResetCounter),
 	)
 	if err != nil {
-		log.Warn().Err(err).Msg("Failed initializing prometheus exporter vacuum job")
+		log.Warn().Err(err).Msg("Prometheus: Failed initializing prometheus exporter vacuum job")
 	}
 	// start the scheduler
 	scheduler.Start()
