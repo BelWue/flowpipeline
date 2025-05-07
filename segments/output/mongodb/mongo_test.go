@@ -92,7 +92,7 @@ func BenchmarkMongodb_100000(b *testing.B) {
 	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
-	segment := Mongodb{}.New(map[string]string{"mongodb_uri": "mongodb://localhost:27017/", "database": "testing", "batchsize": "100000"})
+	segment := Mongodb{}.New(map[string]string{"mongodb_uri": "mongodb://localhost:27017/", "database": "testing", "batchsize": "1000"})
 	if segment == nil {
 		b.Skip()
 	}
@@ -116,7 +116,11 @@ func BenchmarkMongodb_100000_with_storage_limit(b *testing.B) {
 	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
-	segment := Mongodb{}.New(map[string]string{"mongodb_uri": "mongodb://localhost:27017/", "database": "testing", "batchsize": "100000", "max_disk_usage": "100 MB"})
+	segment := Mongodb{}.New(map[string]string{
+		"mongodb_uri":    "mongodb://localhost:27017/",
+		"database":       "testing",
+		"batchsize":      "100",
+		"max_disk_usage": "100 MB"})
 	if segment == nil {
 		b.Skip()
 	}
