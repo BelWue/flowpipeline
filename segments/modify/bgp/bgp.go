@@ -39,6 +39,26 @@ func (segment Bgp) New(config map[string]string) segments.Segment {
 		return nil
 	}
 
+	var routerASN uint32
+	var raw map[string]interface{}
+	if err := yaml.Unmarshal(rsconfig, &raw); err == nil {
+		if val, ok := raw["asn"]; ok {
+			switch v := val.(type) {
+			case int:
+				routerASN = uint32(v)
+			case float64:
+				routerASN = uint32(v)
+			case string:
+				asn, err := strconv.ParseUint(v, 10, 32)
+				if err == nil {
+					routerASN = uint32(asn)
+				} else {
+					log.Warn().Str("asn", v).Msg("Bgp: Invalid ASN format in YAML; ignoring")
+				}
+			}
+		}
+	}
+
 	if fallback, present := config["fallbackrouter"]; present {
 		if _, ok := rs.Routers[fallback]; !ok {
 			log.Error().Msgf("Bgp: No fallback router named '%s' has been configured.", fallback)
@@ -53,13 +73,6 @@ func (segment Bgp) New(config map[string]string) segments.Segment {
 	if fallbackonly && config["fallbackrouter"] == "" {
 		log.Error().Msgf("Bgp: Forcing fallback requires a fallbackrouter parameter.")
 		return nil
-	}
-
-	var routerASN uint32
-	if fallback, present := config["fallbackrouter"]; present {
-		if router, ok := rs.Routers[fallback]; ok {
-			routerASN = router.Asn
-		}
 	}
 
 	newSegment := &Bgp{
@@ -103,7 +116,7 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 				continue
 			}
 		}
-		
+
 		for _, path := range srcRouteInfos {
 			if !path.Best || len(path.AsPath) == 0 {
 				continue
@@ -131,12 +144,12 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 		if segment.RouterASN != 0 {
 			msg.AsPath = append(msg.AsPath, uint32(segment.RouterASN))
 		}
-		
+
 		for _, path := range dstRouteInfos {
-			if !path.Best || len(path.AsPath) == 0{
+			if !path.Best || len(path.AsPath) == 0 {
 				continue
 			}
-			msg.AsPath =append(msg.AsPath, path.AsPath...)
+			msg.AsPath = append(msg.AsPath, path.AsPath...)
 			msg.Med = path.Med
 			msg.LocalPref = path.LocalPref
 			switch path.Validation {
@@ -151,9 +164,9 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 			}
 			// for router exported netflow, the following are likely overwriting their own annotations
 			if len(path.AsPath) > 0 {
-			msg.DstAs = path.AsPath[len(path.AsPath)-1]
-			msg.NextHopAs = path.AsPath[0]
-		}
+				msg.DstAs = path.AsPath[len(path.AsPath)-1]
+				msg.NextHopAs = path.AsPath[0]
+			}
 			if nh := net.ParseIP(path.NextHop); nh != nil {
 				msg.NextHop = nh
 			}
