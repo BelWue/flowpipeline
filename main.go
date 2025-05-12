@@ -40,6 +40,8 @@ import (
 	_ "github.com/BelWue/flowpipeline/segments/input/packet"
 	_ "github.com/BelWue/flowpipeline/segments/input/stdin"
 
+	_ "github.com/BelWue/flowpipeline/segments/meta/monitoring"
+
 	_ "github.com/BelWue/flowpipeline/segments/modify/addcid"
 	_ "github.com/BelWue/flowpipeline/segments/modify/addrstrings"
 	_ "github.com/BelWue/flowpipeline/segments/modify/anonymize"
@@ -52,6 +54,7 @@ import (
 	_ "github.com/BelWue/flowpipeline/segments/modify/remoteaddress"
 	_ "github.com/BelWue/flowpipeline/segments/modify/reversedns"
 	_ "github.com/BelWue/flowpipeline/segments/modify/snmp"
+	_ "github.com/BelWue/flowpipeline/segments/modify/sync_timestamps"
 
 	_ "github.com/BelWue/flowpipeline/segments/pass"
 

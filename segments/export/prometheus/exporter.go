@@ -53,7 +53,7 @@ func (e *Exporter) Initialize(labels []string) {
 }
 
 func (e *Exporter) ResetCounter() {
-	log.Info().Msgf("prometheus export: resetting counter")
+	log.Info().Msgf("Prometheus Exporter: resetting counter")
 	e.kafkaOffsets.Reset()
 	e.flowBits.Reset()
 
@@ -82,9 +82,12 @@ func (e *Exporter) ServeEndpoints(segment *Prometheus) {
 		</html>`))
 	})
 	go func() {
-		http.ListenAndServe(segment.Endpoint, mux)
+		err := http.ListenAndServe(segment.Endpoint, mux)
+		if err != nil {
+			log.Error().Err(err).Msgf("Prometheus Exporter: Failed to start https endpoint on port %s", segment.Endpoint)
+		}
 	}()
-	log.Info().Msgf("Enabled metrics on %s and %s, listening at %s.", segment.MetricsPath, segment.FlowdataPath, segment.Endpoint)
+	log.Info().Msgf("Prometheus Exporter: Enabled metrics on %s and %s, listening at %s.", segment.MetricsPath, segment.FlowdataPath, segment.Endpoint)
 }
 
 func (e *Exporter) Increment(bytes uint64, packets uint64, labelset prometheus.Labels) {

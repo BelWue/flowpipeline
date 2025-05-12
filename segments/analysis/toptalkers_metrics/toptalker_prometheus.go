@@ -256,7 +256,10 @@ func (e *PrometheusExporter) ServeEndpoints(promParams *PrometheusParams) {
 		</html>`))
 	})
 	go func() {
-		http.ListenAndServe(promParams.Endpoint, mux)
+		err := http.ListenAndServe(promParams.Endpoint, mux)
+		if err != nil {
+			log.Error().Err(err).Msgf("ToptalkersMetrics: Failed to start https endpoint on port %s", promParams.Endpoint)
+		}
 	}()
-	log.Info().Msgf("Enabled metrics on %s and %s, listening at %s.", promParams.MetricsPath, promParams.FlowdataPath, promParams.Endpoint)
+	log.Info().Msgf("ToptalkersMetrics: Enabled metrics on %s and %s, listening at %s.", promParams.MetricsPath, promParams.FlowdataPath, promParams.Endpoint)
 }
