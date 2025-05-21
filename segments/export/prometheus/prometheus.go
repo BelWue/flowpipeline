@@ -185,26 +185,37 @@ func (segment *Prometheus) AddVacuumCronJob(promExporter *Exporter) {
 }
 
 func (e *Exporter) ExportASPathPairs(flow *pb.EnrichedFlow) {
-	asPath := flow.AsPath
+	asPath := DedupConsecutiveASNs(flow.AsPath)
 	if len(asPath) < 2 {
 		return
 	}
 	endAS := fmt.Sprint(asPath[len(asPath)-1])
 	for i := 0; i < len(asPath)-1; i++ {
-		if asPath[i] != asPath[i+1] {
-			from := fmt.Sprint(asPath[i])
-			to := fmt.Sprint(asPath[i+1])
-			e.flowAsPairsBytes.WithLabelValues(from, to, endAS).Add(float64(flow.Bytes))
-		}
+		from := fmt.Sprint(asPath[i])
+		to := fmt.Sprint(asPath[i+1])
+		e.flowAsPairsBytes.WithLabelValues(from, to, endAS).Add(float64(flow.Bytes))
 	}
 }
 
 func (e *Exporter) ExportASPaths(flow *pb.EnrichedFlow) {
-	asPath := flow.AsPath
+	asPath := DedupConsecutiveASNs(flow.AsPath)
 	if len(asPath) < 2 {
 		return
 	}
 	e.flowAsPathBytes.WithLabelValues(fmt.Sprint(asPath)).Add(float64(flow.Bytes))
+}
+
+func DedupConsecutiveASNs(asPath []uint32) []uint32 {
+	if len(asPath) == 0 {
+		return nil
+	}
+	deduped := []uint32{asPath[0]}
+	for _, asn := range asPath[1:] {
+		if asn != deduped[len(deduped)-1] {
+			deduped = append(deduped, asn)
+		}
+	}
+	return deduped
 }
 
 func init() {
