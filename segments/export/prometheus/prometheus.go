@@ -34,15 +34,14 @@ import (
 
 type Prometheus struct {
 	segments.BaseSegment
-	Endpoint       string         // optional, default value is ":8080"
-	MetricsPath    string         // optional, default is "/metrics"
-	FlowdataPath   string         // optional, default is "/flowdata"
-	Labels         []string       // optional, list of labels to be exported
-	VacuumInterval *time.Duration // optional, intervall in which counters should be reset (can lead to dataloss)
-	ExportASPathPairs bool		  // optional, if true, as path pairs will be exported
+	Endpoint          string         // optional, default value is ":8080"
+	MetricsPath       string         // optional, default is "/metrics"
+	FlowdataPath      string         // optional, default is "/flowdata"
+	Labels            []string       // optional, list of labels to be exported
+	VacuumInterval    *time.Duration // optional, intervall in which counters should be reset (can lead to dataloss)
+	ExportASPathPairs bool           // optional, if true, as path pairs will be exported
+	ExportASPaths     bool           // optional, if true, as paths will be exported
 }
-
-
 
 func (segment Prometheus) New(config map[string]string) segments.Segment {
 	var endpoint string = ":8080"
@@ -81,12 +80,21 @@ func (segment Prometheus) New(config map[string]string) segments.Segment {
 		exportASPathPairs = true
 	}
 
+	var exportASPaths bool = false
+	if config["export_as_paths"] == "" {
+		log.Info().Msg("prometheus: Missing configuration parameter 'export_as_paths'. Using default value 'false'")
+	} else if strings.ToLower(config["export_as_paths"]) == "true" {
+		log.Info().Msg("prometheus: Export of AS paths is enabled")
+		exportASPaths = true
+	}
+
 	newsegment := &Prometheus{
-		Endpoint:       endpoint,
-		MetricsPath:    metricsPath,
-		FlowdataPath:   flowdataPath,
-		VacuumInterval: vacuumInterval,
+		Endpoint:          endpoint,
+		MetricsPath:       metricsPath,
+		FlowdataPath:      flowdataPath,
+		VacuumInterval:    vacuumInterval,
 		ExportASPathPairs: exportASPathPairs,
+		ExportASPaths:     exportASPaths,
 	}
 
 	// set default labels if not configured
@@ -148,6 +156,9 @@ func (segment *Prometheus) Run(wg *sync.WaitGroup) {
 		if segment.ExportASPathPairs {
 			promExporter.ExportASPathPairs(msg)
 		}
+		if segment.ExportASPaths {
+			promExporter.ExportASPaths(msg)
+		}
 		segment.Out <- msg
 	}
 }
@@ -180,12 +191,20 @@ func (e *Exporter) ExportASPathPairs(flow *pb.EnrichedFlow) {
 	}
 	endAS := fmt.Sprint(asPath[len(asPath)-1])
 	for i := 0; i < len(asPath)-1; i++ {
-		if asPath[i] != asPath[i+1]{
+		if asPath[i] != asPath[i+1] {
 			from := fmt.Sprint(asPath[i])
 			to := fmt.Sprint(asPath[i+1])
-			e.flowAsPairsBytes.WithLabelValues( from, to, endAS).Add(float64(flow.Bytes))
+			e.flowAsPairsBytes.WithLabelValues(from, to, endAS).Add(float64(flow.Bytes))
 		}
 	}
+}
+
+func (e *Exporter) ExportASPaths(flow *pb.EnrichedFlow) {
+	asPath := flow.AsPath
+	if len(asPath) < 2 {
+		return
+	}
+	e.flowAsPathBytes.WithLabelValues(fmt.Sprint(asPath)).Add(float64(flow.Bytes))
 }
 
 func init() {
