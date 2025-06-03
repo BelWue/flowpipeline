@@ -17,6 +17,7 @@ import (
 type SegmentRepr struct {
 	Name   string        `yaml:"segment"`             // to be looked up with a registry
 	Config Config        `yaml:"config"`              // to be expanded by our instance
+	Jobs   int           `yaml:"jobs,omitempty"`      // parallel jobs running the pipeline
 	If     []SegmentRepr `yaml:"if,omitempty,flow"`   // only used by group segment
 	Then   []SegmentRepr `yaml:"then,omitempty,flow"` // only used by group segment
 	Else   []SegmentRepr `yaml:"else,omitempty,flow"` // only used by group segment
@@ -83,28 +84,40 @@ func SegmentReprsFromConfig(config []byte) []SegmentRepr {
 
 // Creates a list of Segments from their config representations. Handles
 // recursive definitions found in Segments.
-func SegmentsFromRepr(segmentReprs []SegmentRepr) []segments.Segment {
-	segmentList := make([]segments.Segment, len(segmentReprs))
+func SegmentsFromRepr(segmentReprs []SegmentRepr) []segments.SegmentWrapper {
+	segmentList := make([]segments.SegmentWrapper, len(segmentReprs))
 	for i, segmentrepr := range segmentReprs {
-		segmentTemplate := segments.LookupSegment(segmentrepr.Name) // a typed nil instance
-		// the Segment's New method knows how to handle our config
-		segment := segmentTemplate.New(segmentrepr.ExpandedConfig())
-		switch segment := segment.(type) { // handle special segments
-		case *branch.Branch:
-			segment.ImportBranches(
-				New(SegmentsFromRepr(segmentrepr.If)...),
-				New(SegmentsFromRepr(segmentrepr.Then)...),
-				New(SegmentsFromRepr(segmentrepr.Else)...),
-			)
-		// Insert custom config parameters into segments
-		case *traffic_specific_toptalkers.TrafficSpecificToptalkers:
-			segment.SetThresholdMetricDefinition(segmentrepr.Config.ThresholdMetricDefinition)
+		if segmentrepr.Jobs < 1 {
+			segmentrepr.Jobs = 1
 		}
-		if segment != nil {
-			segmentList[i] = segment
-		} else {
-			log.Fatal().Msgf("Configured segment '%s' could not be initialized properly, see previous messages.", segmentrepr.Name)
+		wrapper := segments.SegmentWrapper{}
+
+		ifPipeline := New(SegmentsFromRepr(segmentrepr.If)...)
+		thenPipeline := New(SegmentsFromRepr(segmentrepr.Then)...)
+		elsePipeline := New(SegmentsFromRepr(segmentrepr.Else)...)
+
+		for range segmentrepr.Jobs {
+			segmentTemplate := segments.LookupSegment(segmentrepr.Name) // a typed nil instance
+			// the Segment's New method knows how to handle our config
+			segment := segmentTemplate.New(segmentrepr.ExpandedConfig())
+			switch segment := segment.(type) { // handle special segments
+			case *branch.Branch:
+				segment.ImportBranches(
+					ifPipeline,
+					thenPipeline,
+					elsePipeline,
+				)
+			// Insert custom config parameters into segments
+			case *traffic_specific_toptalkers.TrafficSpecificToptalkers:
+				segment.SetThresholdMetricDefinition(segmentrepr.Config.ThresholdMetricDefinition)
+			}
+			if segment != nil {
+				wrapper.AddSegment(segment)
+			} else {
+				log.Fatal().Msgf("Configured segment '%s' could not be initialized properly, see previous messages.", segmentrepr.Name)
+			}
 		}
+		segmentList[i] = wrapper
 	}
 	return segmentList
 }

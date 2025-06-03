@@ -8,11 +8,6 @@ import (
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
-	"github.com/BelWue/flowpipeline/segments/analysis/toptalkers_metrics"
-	"github.com/BelWue/flowpipeline/segments/controlflow/branch"
-	"github.com/BelWue/flowpipeline/segments/filter/drop"
-	"github.com/BelWue/flowpipeline/segments/filter/elephant"
-	"github.com/BelWue/flowpipeline/segments/filter/flowfilter"
 	"github.com/BelWue/flowpipeline/segments/pass"
 )
 
@@ -24,7 +19,7 @@ type Pipeline struct {
 	Out         <-chan *pb.EnrichedFlow
 	Drop        chan *pb.EnrichedFlow
 	wg          *sync.WaitGroup
-	SegmentList []segments.Segment
+	SegmentList []segments.SegmentWrapper
 }
 
 func (pipeline *Pipeline) GetInput() chan *pb.EnrichedFlow {
@@ -43,18 +38,7 @@ func (pipeline *Pipeline) GetDrop() <-chan *pb.EnrichedFlow {
 	// Subscribe to drops from special segments, namely all based on
 	// BaseFilterSegment grouped in the filter directory.
 	for _, segment := range pipeline.SegmentList {
-		switch typedSegment := segment.(type) {
-		case *drop.Drop:
-			typedSegment.SubscribeDrops(pipeline.Drop)
-		case *elephant.Elephant:
-			typedSegment.SubscribeDrops(pipeline.Drop)
-		case *flowfilter.FlowFilter:
-			typedSegment.SubscribeDrops(pipeline.Drop)
-		case *branch.Branch:
-			typedSegment.SubscribeDrops(pipeline.Drop)
-		case *toptalkers_metrics.ToptalkersMetrics:
-			typedSegment.SubscribeDrops(pipeline.Drop)
-		}
+		segment.SubscribeDrops(pipeline.Drop)
 	}
 	// If there are no filter/* segments, this channel will never have
 	// messages available.
@@ -91,9 +75,11 @@ func (pipeline *Pipeline) Close() {
 // Initializes a new Pipeline object and then starts all segment goroutines
 // therein. Initialization includes creating any intermediate channels and
 // wiring up the segments in the segmentList with them.
-func New(segmentList ...segments.Segment) *Pipeline {
+func New(segmentList ...segments.SegmentWrapper) *Pipeline {
 	if len(segmentList) == 0 {
-		segmentList = []segments.Segment{&pass.Pass{}}
+		wrapper := segments.SegmentWrapper{}
+		wrapper.AddSegment(&pass.Pass{})
+		segmentList = []segments.SegmentWrapper{wrapper}
 	}
 	channels := make([]chan *pb.EnrichedFlow, len(segmentList)+1)
 	channels[0] = make(chan *pb.EnrichedFlow)

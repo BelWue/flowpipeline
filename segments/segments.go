@@ -8,9 +8,8 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/BelWue/flowpipeline/pb"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -65,6 +64,49 @@ func TestSegment(name string, config map[string]string, msg *pb.EnrichedFlow) *p
 	return resultMsg
 }
 
+// Wrapper allowing multiple parallel instances of a segment
+type SegmentWrapper struct {
+	segments []Segment
+	In       <-chan *pb.EnrichedFlow
+	Out      chan<- *pb.EnrichedFlow
+	Drops    chan<- *pb.EnrichedFlow
+}
+
+func (wrapper SegmentWrapper) Close() {
+	for _, segment := range wrapper.segments {
+		segment.Close()
+	}
+}
+
+func (wrapper SegmentWrapper) SubscribeDrops(drop chan *pb.EnrichedFlow) {
+	for _, segment := range wrapper.segments {
+		filterSegment, ok := segment.(FilterSegment)
+		if ok {
+			filterSegment.SubscribeDrops(drop)
+		}
+	}
+}
+
+func (wrapper SegmentWrapper) Run(wg *sync.WaitGroup) {
+	defer wg.Done()
+	segmentWg := sync.WaitGroup{}
+	for _, segment := range wrapper.segments {
+		segmentWg.Add(1)
+		go segment.Run(&segmentWg)
+	}
+	segmentWg.Wait()
+}
+
+func (wrapper *SegmentWrapper) Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) {
+	for _, segment := range wrapper.segments {
+		segment.Rewire(in, out)
+	}
+}
+
+func (wrapper *SegmentWrapper) AddSegment(segment Segment) {
+	wrapper.segments = append(wrapper.segments, segment)
+}
+
 // This interface is central to an Pipeline object, as it operates on a list of
 // them. In general, Segments should embed the BaseSegment to provide the
 // Rewire function and the associated vars.
@@ -73,7 +115,11 @@ type Segment interface {
 	Run(wg *sync.WaitGroup)                                     // goroutine, must close(segment.Out) when segment.In is closed
 	Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) // embed this using BaseSegment
 	ShutdownParentPipeline()                                    // shut down Parent Pipeline gracefully
-	Close()                                                     // close segment gracefully
+	Close()
+}
+type FilterSegment interface {
+	Segment
+	SubscribeDrops(drops chan<- *pb.EnrichedFlow) //for processing dropped packages
 }
 
 // Serves as a basis for any Segment implementations. Segments embedding this
@@ -118,4 +164,22 @@ func (segment *BaseSegment) ShutdownParentPipeline() {
 
 func (segment *BaseSegment) Close() {
 	//placeholder since most segments dont need to do anything
+}
+
+// Close implements Segment.
+// Subtle: this method shadows the method (BaseSegment).Close of BaseFilterSegment.BaseSegment.
+func (segment *BaseFilterSegment) Close() {
+	segment.BaseSegment.Close()
+}
+
+// Rewire implements Segment.
+// Subtle: this method shadows the method (BaseSegment).Rewire of BaseFilterSegment.BaseSegment.
+func (segment *BaseFilterSegment) Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) {
+	segment.BaseSegment.Rewire(in, out)
+}
+
+// ShutdownParentPipeline implements Segment.
+// Subtle: this method shadows the method (BaseSegment).ShutdownParentPipeline of BaseFilterSegment.BaseSegment.
+func (segment *BaseFilterSegment) ShutdownParentPipeline() {
+	segment.BaseSegment.ShutdownParentPipeline()
 }

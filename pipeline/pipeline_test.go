@@ -14,7 +14,10 @@ import (
 )
 
 func TestPipelineBuild(t *testing.T) {
-	segmentList := []segments.Segment{&pass.Pass{}, &pass.Pass{}}
+	segmentList := []segments.SegmentWrapper{{}, {}}
+	segmentList[0].AddSegment(&pass.Pass{})
+	segmentList[1].AddSegment(&pass.Pass{})
+
 	pipeline := New(segmentList...)
 	pipeline.Start()
 	pipeline.In <- &pb.EnrichedFlow{Type: 3}
@@ -25,7 +28,9 @@ func TestPipelineBuild(t *testing.T) {
 }
 
 func TestPipelineTeardown(t *testing.T) {
-	segmentList := []segments.Segment{&pass.Pass{}, &pass.Pass{}}
+	segmentList := []segments.SegmentWrapper{{}, {}}
+	segmentList[0].AddSegment(&pass.Pass{})
+	segmentList[1].AddSegment(&pass.Pass{})
 	pipeline := New(segmentList...)
 	pipeline.Start()
 	pipeline.AutoDrain()
