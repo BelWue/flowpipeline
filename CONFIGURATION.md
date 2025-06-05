@@ -25,23 +25,32 @@ flowpipeline was invoked with that have not been parsed by the binary itself.
 For instance:
 
 ```yaml
-segment: kafkaconsumer
-config:
-  user: myself
-  pass: $PASSWORD
+- segment: kafkaconsumer
+  config:
+    user: myself
+    pass: $PASSWORD
 ```
 
 ```yaml
-segment: flowfilter
-config:
-  filter: $0
+- segment: flowfilter
+  config:
+    filter: $0
 ```
 
 ```yaml
-segment: bpf
-config:
-  device: $0
+- segment: bpf
+  config:
+    device: $0
 ```
+
+## Parallel execution
+```yaml
+- segment: segment_name
+  jobs: 5
+```
+The `jobs` parameter allows you to configure the number of parallel instances of a segment that should be run. The application will create the specified number of parallel instances of the segment and distribute the workload across them. This can significantly reduce the overall processing time, especially for large or complex segments.
+If not set, the default value is 1.
+Note that using too many parallel instances can also lead to performance degradation, as the overhead of managing the parallel processes may outweigh the benefits. 
 
 ## Available Segments
 
@@ -126,7 +135,7 @@ allow for a more efficient filtering.
 
 Filters with a specified `traffictyp` will be exported if they reach the configured thresholds.
 
-```
+```yaml
 - segment: traffic_specific_toptalkers
   config:
     endpoint: ":8085"
@@ -480,12 +489,12 @@ The filter parameter available for some methods will filter packets before they 
 ```yaml
 - segment: packet
   config:
-	method: pcap # required, one of the available capture methods "pcapgo|pcap|pfring|file"
-	source:      # required, for example "eth0" or "./dump.pcapng"
-  # the lines below are optional and set to default
-	filter: "" # optional pflang filter (libpcap's high-level BPF syntax), provided the method is libpcap, pfring, or file.
-	activetimeout: 30m
-	inactivetimeout: 15s
+    method: pcap # required, one of the available capture methods "pcapgo|pcap|pfring|file"
+    source:      # required, for example "eth0" or "./dump.pcapng"
+    # the lines below are optional and set to default
+    filter: "" # optional pflang filter (libpcap's high-level BPF syntax), provided the method is libpcap, pfring, or file.
+    activetimeout: 30m
+    inactivetimeout: 15s
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/packet/bpf)
@@ -1084,7 +1093,7 @@ To see debug output, set the `-l debug` flag when starting `flowpipeline`.
 See [time.ParseDuration](https://pkg.go.dev/time#ParseDuration) for proper duration format
 strings and [strconv.ParseBool](https://pkg.go.dev/strconv#ParseBool) for allowed bool keywords.
 
-```
+```yaml
 - segment: lumberjack
   config:
     servers: tcp://foo.example.com:5044, tls://bar.example.com:5044?compression=3, tlsnoverify://[2001:db8::1]:5044
@@ -1172,7 +1181,6 @@ for an application.
     useprotoname: true
     verbose: false
     highlight: false
-
 ```
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/print/printflowdump)
 [examples using this segment](https://github.com/search?q=%22segment%3A+printflowdump%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
