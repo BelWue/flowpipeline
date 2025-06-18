@@ -101,6 +101,8 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 		// what gobgp requires at the end of this call hierarchy.
 		var dstRouteInfos []routeinfo.RouteInfo
 		var srcRouteInfos []routeinfo.RouteInfo
+		var srcAsPath []uint32
+		var dstAsPath []uint32
 		if segment.UseFallbackOnly {
 			dstRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.DstAddrObj().String())
 			srcRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.SrcAddrObj().String())
@@ -123,6 +125,7 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 			}
 			slices.Reverse(path.AsPath)
 			msg.AsPath = path.AsPath
+			srcAsPath = path.AsPath
 			switch path.Validation {
 			case routeinfo.Valid:
 				msg.ValidationStatus = pb.EnrichedFlow_Valid
@@ -133,23 +136,19 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 			default:
 				msg.ValidationStatus = pb.EnrichedFlow_Unknown
 			}
-			// for router exported netflow, the following are likely overwriting their own annotations
-			//msg.DstAs = path.AsPath[len(path.AsPath)-1]
-			//msg.NextHopAs = path.AsPath[0]
-			//if nh := net.ParseIP(path.NextHop); nh != nil {
-			//	msg.NextHop = nh
-			//}
 			break
 		}
 		if segment.RouterASN != 0 {
 			msg.AsPath = append(msg.AsPath, uint32(segment.RouterASN))
+			srcAsPath = append(srcAsPath, uint32(segment.RouterASN))
 		}
 
 		for _, path := range dstRouteInfos {
 			if !path.Best || len(path.AsPath) == 0 {
 				continue
 			}
-			msg.AsPath = append(msg.AsPath, path.AsPath...)
+			dstAsPath = append([]uint32{segment.RouterASN}, path.AsPath...)
+			msg.AsPath = append(msg.AsPath, dstAsPath...)
 			msg.Med = path.Med
 			msg.LocalPref = path.LocalPref
 			switch path.Validation {
@@ -172,8 +171,13 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 			}
 			break
 		}
-		// we could look at the routing for the SrcAddr here...
+
+		segments.BgpState.Store(msg, &pb.BgpEnrichedFlow{
+			SrcAsPath: srcAsPath,
+			DstAsPath: dstAsPath,
+		})
 		segment.Out <- msg
+		segments.BgpState.Delete(msg)
 	}
 }
 

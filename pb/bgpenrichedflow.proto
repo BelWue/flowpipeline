@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "github.com/BelWue/flowpipeline/pb;pb";
+
+message BgpEnrichedFlow {
+    repeated uint32 SrcAsPath = 1;
+    repeated uint32 DstAsPath = 2;
+}

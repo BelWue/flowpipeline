@@ -41,6 +41,8 @@ type Prometheus struct {
 	VacuumInterval    *time.Duration // optional, intervall in which counters should be reset (can lead to dataloss)
 	ExportASPathPairs bool           // optional, if true, as path pairs will be exported
 	ExportASPaths     bool           // optional, if true, as paths will be exported
+
+	PromExporter *Exporter
 }
 
 func (segment Prometheus) New(config map[string]string) segments.Segment {
@@ -124,10 +126,10 @@ func (segment *Prometheus) Run(wg *sync.WaitGroup) {
 		wg.Done()
 	}()
 
-	var promExporter = Exporter{}
-	segment.initializeExporter(&promExporter)
+	segment.PromExporter = &Exporter{}
+	segment.initializeExporter(segment.PromExporter)
 	if segment.VacuumInterval != nil {
-		segment.AddVacuumCronJob(&promExporter)
+		segment.AddVacuumCronJob(segment.PromExporter)
 	}
 
 	for msg := range segment.In {
@@ -152,12 +154,18 @@ func (segment *Prometheus) Run(wg *sync.WaitGroup) {
 				labelset[fieldname] = fmt.Sprint(value)
 			}
 		}
-		promExporter.Increment(msg.Bytes, msg.Packets, labelset)
-		if segment.ExportASPathPairs {
-			promExporter.ExportASPathPairs(msg)
+		segment.PromExporter.Increment(msg.Bytes, msg.Packets, labelset)
+
+		bgpExtRaw, ok := segments.BgpState.Load(msg)
+		if ok {
+			bgpExt := bgpExtRaw.(*pb.BgpEnrichedFlow)
+			if segment.ExportASPathPairs && segment.PromExporter != nil {
+				segment.PromExporter.ExportASPathPairsWithDirection(bgpExt.SrcAsPath, "Source", msg)
+				segment.PromExporter.ExportASPathPairsWithDirection(bgpExt.DstAsPath, "Destination", msg)
+			}
 		}
 		if segment.ExportASPaths {
-			promExporter.ExportASPaths(msg)
+			segment.PromExporter.ExportASPaths(msg)
 		}
 		segment.Out <- msg
 	}
@@ -203,6 +211,35 @@ func (e *Exporter) ExportASPaths(flow *pb.EnrichedFlow) {
 		return
 	}
 	e.flowAsPathBytes.WithLabelValues(fmt.Sprint(asPath)).Add(float64(flow.Bytes))
+}
+
+func (e *Exporter) ExportASPathPairsWithDirection(asPath []uint32, direction string, flow *pb.EnrichedFlow) {
+	asPath = DedupConsecutiveASNs(asPath)
+	if len(asPath) < 2 {
+		return
+	}
+
+	if direction == "Source" {
+		start := fmt.Sprint(asPath[0])
+		e.flowAsPairsBytes.WithLabelValues(start, start, direction).Add(float64(flow.Bytes))
+
+		for i := 0; i < len(asPath)-1; i++ {
+			from := fmt.Sprint(asPath[i])
+			to := fmt.Sprint(asPath[i+1])
+			e.flowAsPairsBytes.WithLabelValues(from, to, direction).Add(float64(flow.Bytes))
+		}
+	}
+
+	if direction == "Destination" {
+		for i := 0; i < len(asPath)-1; i++ {
+			from := fmt.Sprint(asPath[i])
+			to := fmt.Sprint(asPath[i+1])
+			e.flowAsPairsBytes.WithLabelValues(from, to, direction).Add(float64(flow.Bytes))
+		}
+
+		end := fmt.Sprint(asPath[len(asPath)-1])
+		e.flowAsPairsBytes.WithLabelValues(end, end, direction).Add(float64(flow.Bytes))
+	}
 }
 
 func DedupConsecutiveASNs(asPath []uint32) []uint32 {

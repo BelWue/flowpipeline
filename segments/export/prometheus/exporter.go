@@ -53,7 +53,7 @@ func (e *Exporter) Initialize(labels []string) {
 		prometheus.CounterOpts{
 			Name: "flow_as_hop_pair_bytes",
 			Help: "Traffic volume between AS hop pairs in enriched flows",
-		}, []string{"from", "to", "end_as"})
+		}, []string{"from", "to", "path_direction"})
 
 	e.flowAsPathBytes = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
