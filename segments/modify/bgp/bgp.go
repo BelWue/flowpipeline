@@ -172,12 +172,9 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 			break
 		}
 
-		segments.BgpState.Store(msg, &pb.BgpEnrichedFlow{
-			SrcAsPath: srcAsPath,
-			DstAsPath: dstAsPath,
-		})
+		msg.SrcAsPath = srcAsPath
+		msg.DstAsPath = dstAsPath
 		segment.Out <- msg
-		segments.BgpState.Delete(msg)
 	}
 }
 

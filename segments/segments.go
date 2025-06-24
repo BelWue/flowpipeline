@@ -17,8 +17,6 @@ var (
 	registeredSegments    = make(map[string]Segment)
 	lock                  = &sync.RWMutex{}
 	ContainerVolumePrefix = ""
-
-	BgpState sync.Map
 )
 
 // Used by Segments to register themselves in their init() functions. Errors

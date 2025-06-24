@@ -156,13 +156,9 @@ func (segment *Prometheus) Run(wg *sync.WaitGroup) {
 		}
 		segment.PromExporter.Increment(msg.Bytes, msg.Packets, labelset)
 
-		bgpExtRaw, ok := segments.BgpState.Load(msg)
-		if ok {
-			bgpExt := bgpExtRaw.(*pb.BgpEnrichedFlow)
-			if segment.ExportASPathPairs && segment.PromExporter != nil {
-				segment.PromExporter.ExportASPathPairsWithDirection(bgpExt.SrcAsPath, "Source", msg)
-				segment.PromExporter.ExportASPathPairsWithDirection(bgpExt.DstAsPath, "Destination", msg)
-			}
+		if segment.ExportASPathPairs && segment.PromExporter != nil {
+			segment.PromExporter.ExportASPathPairsWithDirection(msg.SrcAsPath, "Source", msg)
+			segment.PromExporter.ExportASPathPairsWithDirection(msg.DstAsPath, "Destination", msg)
 		}
 		if segment.ExportASPaths {
 			segment.PromExporter.ExportASPaths(msg)
