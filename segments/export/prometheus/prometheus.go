@@ -188,19 +188,6 @@ func (segment *Prometheus) AddVacuumCronJob(promExporter *Exporter) {
 	scheduler.Start()
 }
 
-func (e *Exporter) ExportASPathPairs(flow *pb.EnrichedFlow) {
-	asPath := DedupConsecutiveASNs(flow.AsPath)
-	if len(asPath) < 2 {
-		return
-	}
-	endAS := fmt.Sprint(asPath[len(asPath)-1])
-	for i := 0; i < len(asPath)-1; i++ {
-		from := fmt.Sprint(asPath[i])
-		to := fmt.Sprint(asPath[i+1])
-		e.flowAsPairsBytes.WithLabelValues(from, to, endAS).Add(float64(flow.Bytes))
-	}
-}
-
 func (e *Exporter) ExportASPaths(flow *pb.EnrichedFlow) {
 	asPath := DedupConsecutiveASNs(flow.AsPath)
 	if len(asPath) < 2 {

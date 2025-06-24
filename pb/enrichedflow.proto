@@ -283,6 +283,6 @@ uint64 TimeFlowStart = 2538;
 // Kept for legacy support
 
 // Used for Split in source and Destination Parts
-  repeated uint32 src_as_path = 3031;
-  repeated uint32 dst_as_path = 3032;
+  repeated uint32 src_as_path = 2301;
+  repeated uint32 dst_as_path = 2302;
 }
