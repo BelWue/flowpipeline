@@ -14,7 +14,7 @@ import (
 )
 
 func TestPipelineBuild(t *testing.T) {
-	segmentList := []segments.SegmentWrapper{{}, {}}
+	segmentList := []segments.ParallelizedSegment{{}, {}}
 	segmentList[0].AddSegment(&pass.Pass{})
 	segmentList[1].AddSegment(&pass.Pass{})
 
@@ -28,7 +28,7 @@ func TestPipelineBuild(t *testing.T) {
 }
 
 func TestPipelineTeardown(t *testing.T) {
-	segmentList := []segments.SegmentWrapper{{}, {}}
+	segmentList := []segments.ParallelizedSegment{{}, {}}
 	segmentList[0].AddSegment(&pass.Pass{})
 	segmentList[1].AddSegment(&pass.Pass{})
 	pipeline := New(segmentList...)

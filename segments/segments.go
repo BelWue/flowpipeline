@@ -64,21 +64,21 @@ func TestSegment(name string, config map[string]string, msg *pb.EnrichedFlow) *p
 	return resultMsg
 }
 
-// Wrapper allowing multiple parallel instances of a segment
-type SegmentWrapper struct {
+// Wrapper allowing multiple parallel instances of a segment by wiring in/out/drops-channels to all contained segments
+type ParallelizedSegment struct {
 	segments []Segment
 	In       <-chan *pb.EnrichedFlow
 	Out      chan<- *pb.EnrichedFlow
 	Drops    chan<- *pb.EnrichedFlow
 }
 
-func (wrapper SegmentWrapper) Close() {
+func (wrapper ParallelizedSegment) Close() {
 	for _, segment := range wrapper.segments {
 		segment.Close()
 	}
 }
 
-func (wrapper SegmentWrapper) SubscribeDrops(drop chan *pb.EnrichedFlow) {
+func (wrapper ParallelizedSegment) SubscribeDrops(drop chan *pb.EnrichedFlow) {
 	for _, segment := range wrapper.segments {
 		filterSegment, ok := segment.(FilterSegment)
 		if ok {
@@ -87,7 +87,7 @@ func (wrapper SegmentWrapper) SubscribeDrops(drop chan *pb.EnrichedFlow) {
 	}
 }
 
-func (wrapper SegmentWrapper) Run(wg *sync.WaitGroup) {
+func (wrapper ParallelizedSegment) Run(wg *sync.WaitGroup) {
 	defer wg.Done()
 	segmentWg := sync.WaitGroup{}
 	for _, segment := range wrapper.segments {
@@ -97,13 +97,13 @@ func (wrapper SegmentWrapper) Run(wg *sync.WaitGroup) {
 	segmentWg.Wait()
 }
 
-func (wrapper *SegmentWrapper) Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) {
+func (wrapper *ParallelizedSegment) Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) {
 	for _, segment := range wrapper.segments {
 		segment.Rewire(in, out)
 	}
 }
 
-func (wrapper *SegmentWrapper) AddSegment(segment Segment) {
+func (wrapper *ParallelizedSegment) AddSegment(segment Segment) {
 	wrapper.segments = append(wrapper.segments, segment)
 }
 

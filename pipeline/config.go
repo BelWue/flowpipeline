@@ -84,20 +84,21 @@ func SegmentReprsFromConfig(config []byte) []SegmentRepr {
 
 // Creates a list of Segments from their config representations. Handles
 // recursive definitions found in Segments.
-func SegmentsFromRepr(segmentReprs []SegmentRepr) []segments.SegmentWrapper {
-	segmentList := make([]segments.SegmentWrapper, len(segmentReprs))
+func SegmentsFromRepr(segmentReprs []SegmentRepr) []segments.ParallelizedSegment {
+	segmentList := make([]segments.ParallelizedSegment, len(segmentReprs))
 	for i, segmentrepr := range segmentReprs {
 		if segmentrepr.Jobs < 1 {
 			segmentrepr.Jobs = 1
 		}
-		wrapper := segments.SegmentWrapper{}
+		wrapper := segments.ParallelizedSegment{}
 
 		ifPipeline := New(SegmentsFromRepr(segmentrepr.If)...)
 		thenPipeline := New(SegmentsFromRepr(segmentrepr.Then)...)
 		elsePipeline := New(SegmentsFromRepr(segmentrepr.Else)...)
 
+		segmentTemplate := segments.LookupSegment(segmentrepr.Name) // a typed nil instance
+
 		for range segmentrepr.Jobs {
-			segmentTemplate := segments.LookupSegment(segmentrepr.Name) // a typed nil instance
 			// the Segment's New method knows how to handle our config
 			segment := segmentTemplate.New(segmentrepr.ExpandedConfig())
 			switch segment := segment.(type) { // handle special segments

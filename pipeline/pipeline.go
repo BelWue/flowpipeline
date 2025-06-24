@@ -19,7 +19,7 @@ type Pipeline struct {
 	Out         <-chan *pb.EnrichedFlow
 	Drop        chan *pb.EnrichedFlow
 	wg          *sync.WaitGroup
-	SegmentList []segments.SegmentWrapper
+	SegmentList []segments.ParallelizedSegment
 }
 
 func (pipeline *Pipeline) GetInput() chan *pb.EnrichedFlow {
@@ -75,11 +75,11 @@ func (pipeline *Pipeline) Close() {
 // Initializes a new Pipeline object and then starts all segment goroutines
 // therein. Initialization includes creating any intermediate channels and
 // wiring up the segments in the segmentList with them.
-func New(segmentList ...segments.SegmentWrapper) *Pipeline {
+func New(segmentList ...segments.ParallelizedSegment) *Pipeline {
 	if len(segmentList) == 0 {
-		wrapper := segments.SegmentWrapper{}
+		wrapper := segments.ParallelizedSegment{}
 		wrapper.AddSegment(&pass.Pass{})
-		segmentList = []segments.SegmentWrapper{wrapper}
+		segmentList = []segments.ParallelizedSegment{wrapper}
 	}
 	channels := make([]chan *pb.EnrichedFlow, len(segmentList)+1)
 	channels[0] = make(chan *pb.EnrichedFlow)
