@@ -7,8 +7,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
+	"github.com/BelWue/flowpipeline/pipeline/config"
 	"github.com/BelWue/flowpipeline/segments"
-	"github.com/BelWue/flowpipeline/segments/analysis/toptalkers_metrics"
 )
 
 func TestSegment_Branch_passthrough(t *testing.T) {
@@ -17,20 +17,22 @@ func TestSegment_Branch_passthrough(t *testing.T) {
 
 	segment := segments.LookupSegment("traffic_specific_toptalkers")
 	//normally done via config
-	segment.(*TrafficSpecificToptalkers).ThresholdMetricDefinition = []*ThresholdMetricDefinition{
-		{
-			FilterDefinition: "proto udp",
-			SubDefinitions: []*ThresholdMetricDefinition{
-				{
-					FilterDefinition: "port 123",
-					PrometheusMetricsParams: toptalkers_metrics.PrometheusMetricsParams{
-						TrafficType:  "NTP",
-						ThresholdBps: 1,
+	segment.AddCustomConfig(config.Config{
+		ThresholdMetricDefinition: []*config.ThresholdMetricDefinition{
+			{
+				FilterDefinition: "proto udp",
+				SubDefinitions: []*config.ThresholdMetricDefinition{
+					{
+						FilterDefinition: "port 123",
+						PrometheusMetricsParamsDefinition: config.PrometheusMetricsParamsDefinition{
+							TrafficType:  "NTP",
+							ThresholdBps: 1,
+						},
 					},
 				},
 			},
 		},
-	}
+	})
 
 	segment = segment.New(map[string]string{})
 

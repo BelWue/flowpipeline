@@ -7,8 +7,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/BelWue/flowpipeline/pipeline/config"
 	"github.com/BelWue/flowpipeline/segments"
-	"github.com/BelWue/flowpipeline/segments/analysis/traffic_specific_toptalkers"
 	"github.com/BelWue/flowpipeline/segments/controlflow/branch"
 	"gopkg.in/yaml.v2"
 )
@@ -16,22 +16,11 @@ import (
 // A config representation of a segment.
 type SegmentRepr struct {
 	Name   string        `yaml:"segment"`             // to be looked up with a registry
-	Config Config        `yaml:"config"`              // to be expanded by our instance
+	Config config.Config `yaml:"config"`              // to be expanded by our instance
 	Jobs   int           `yaml:"jobs,omitempty"`      // parallel jobs running the pipeline
 	If     []SegmentRepr `yaml:"if,omitempty,flow"`   // only used by group segment
 	Then   []SegmentRepr `yaml:"then,omitempty,flow"` // only used by group segment
 	Else   []SegmentRepr `yaml:"else,omitempty,flow"` // only used by group segment
-}
-
-// Allows adding Config params that arnt only a simple map
-// Needs to be expanded by every Segment using it
-type Config struct {
-	Config map[string]string `yaml:",inline"`
-
-	//Define custom segment specific structured config params here
-	//The parameter MUST contain the segement name to not conflict with other existing config parameters
-	//Make sure to also add mapping of the custom config in the SegmentsFromRepr function
-	ThresholdMetricDefinition []*traffic_specific_toptalkers.ThresholdMetricDefinition `yaml:"traffic_specific_toptalkers,omitempty"`
 }
 
 // Returns the SegmentRepr's Config with all its variables expanded. It tries
@@ -122,8 +111,7 @@ func segmentFromTemplate(ifPipeline, thenPipeline, elsePipeline *Pipeline, segme
 			thenPipeline,
 			elsePipeline,
 		)
-	case *traffic_specific_toptalkers.TrafficSpecificToptalkers:
-		segment.SetThresholdMetricDefinition(segmentrepr.Config.ThresholdMetricDefinition)
 	}
+	segment.AddCustomConfig(segmentrepr.Config)
 	return segment
 }

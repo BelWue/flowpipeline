@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	"github.com/BelWue/flowpipeline/pb"
+	"github.com/BelWue/flowpipeline/pipeline/config"
 	"github.com/rs/zerolog/log"
 )
 
@@ -72,6 +73,7 @@ type Segment interface {
 	Run(wg *sync.WaitGroup)                                     // goroutine, must close(segment.Out) when segment.In is closed
 	Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) // embed this using BaseSegment
 	ShutdownParentPipeline()                                    // shut down Parent Pipeline gracefully
+	AddCustomConfig(config config.Config)                       //Add segment specific sturctured config parameters
 	Close()
 }
 
@@ -102,4 +104,8 @@ func (segment *BaseSegment) ShutdownParentPipeline() {
 
 func (segment *BaseSegment) Close() {
 	//placeholder since most segments dont need to do anything
+}
+
+func (segment *BaseSegment) AddCustomConfig(config.Config) {
+	//placeholder since most segments dont have a custom sturctured config
 }

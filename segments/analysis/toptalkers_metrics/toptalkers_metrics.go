@@ -62,11 +62,12 @@ func (segment *ToptalkersMetrics) Run(wg *sync.WaitGroup) {
 	for msg := range segment.In {
 		promExporter.KafkaMessageCount.Inc()
 		var keys []string
-		if segment.RelevantAddress == "source" {
+		switch segment.RelevantAddress {
+		case "source":
 			keys = []string{msg.SrcAddrObj().String()}
-		} else if segment.RelevantAddress == "destination" {
+		case "destination":
 			keys = []string{msg.DstAddrObj().String()}
-		} else if segment.RelevantAddress == "both" {
+		case "both":
 			keys = []string{msg.SrcAddrObj().String(), msg.DstAddrObj().String()}
 		}
 		forward := false
