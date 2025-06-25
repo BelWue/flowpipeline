@@ -27,9 +27,3 @@ type BaseFilterSegment struct {
 func (segment *BaseFilterSegment) SubscribeDrops(drops chan<- *pb.EnrichedFlow) {
 	segment.Drops = drops
 }
-
-// Close implements Segment.
-// Subtle: this method shadows the method (BaseSegment).Close of BaseFilterSegment.BaseSegment.
-func (segment *BaseFilterSegment) Close() {
-	segment.BaseSegment.Close()
-}
