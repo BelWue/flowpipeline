@@ -64,49 +64,6 @@ func TestSegment(name string, config map[string]string, msg *pb.EnrichedFlow) *p
 	return resultMsg
 }
 
-// Wrapper allowing multiple parallel instances of a segment by wiring in/out/drops-channels to all contained segments
-type ParallelizedSegment struct {
-	segments []Segment
-	In       <-chan *pb.EnrichedFlow
-	Out      chan<- *pb.EnrichedFlow
-	Drops    chan<- *pb.EnrichedFlow
-}
-
-func (wrapper ParallelizedSegment) Close() {
-	for _, segment := range wrapper.segments {
-		segment.Close()
-	}
-}
-
-func (wrapper ParallelizedSegment) SubscribeDrops(drop chan *pb.EnrichedFlow) {
-	for _, segment := range wrapper.segments {
-		filterSegment, ok := segment.(FilterSegment)
-		if ok {
-			filterSegment.SubscribeDrops(drop)
-		}
-	}
-}
-
-func (wrapper ParallelizedSegment) Run(wg *sync.WaitGroup) {
-	defer wg.Done()
-	segmentWg := sync.WaitGroup{}
-	for _, segment := range wrapper.segments {
-		segmentWg.Add(1)
-		go segment.Run(&segmentWg)
-	}
-	segmentWg.Wait()
-}
-
-func (wrapper *ParallelizedSegment) Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) {
-	for _, segment := range wrapper.segments {
-		segment.Rewire(in, out)
-	}
-}
-
-func (wrapper *ParallelizedSegment) AddSegment(segment Segment) {
-	wrapper.segments = append(wrapper.segments, segment)
-}
-
 // This interface is central to an Pipeline object, as it operates on a list of
 // them. In general, Segments should embed the BaseSegment to provide the
 // Rewire function and the associated vars.
@@ -117,10 +74,6 @@ type Segment interface {
 	ShutdownParentPipeline()                                    // shut down Parent Pipeline gracefully
 	Close()
 }
-type FilterSegment interface {
-	Segment
-	SubscribeDrops(drops chan<- *pb.EnrichedFlow) //for processing dropped packages
-}
 
 // Serves as a basis for any Segment implementations. Segments embedding this
 // type only need the New and the Run methods to be compliant to the Segment
@@ -128,21 +81,6 @@ type FilterSegment interface {
 type BaseSegment struct {
 	In  <-chan *pb.EnrichedFlow
 	Out chan<- *pb.EnrichedFlow
-}
-
-// An extended basis for Segment implementations in the filter group. It
-// contains the necessities to process filtered (dropped) flows.
-type BaseFilterSegment struct {
-	BaseSegment
-	Drops chan<- *pb.EnrichedFlow
-}
-
-// Set a return channel for dropped flow messages. Segments need to be wary of
-// this channel closing when producing messages to this channel. This method is
-// only called by the flowpipeline tool from the controlflow/branch segment to
-// implement the then/else branches, otherwise this functionality is unused.
-func (segment *BaseFilterSegment) SubscribeDrops(drops chan<- *pb.EnrichedFlow) {
-	segment.Drops = drops
 }
 
 // This function rewires this Segment with the provided channels. This is
@@ -164,22 +102,4 @@ func (segment *BaseSegment) ShutdownParentPipeline() {
 
 func (segment *BaseSegment) Close() {
 	//placeholder since most segments dont need to do anything
-}
-
-// Close implements Segment.
-// Subtle: this method shadows the method (BaseSegment).Close of BaseFilterSegment.BaseSegment.
-func (segment *BaseFilterSegment) Close() {
-	segment.BaseSegment.Close()
-}
-
-// Rewire implements Segment.
-// Subtle: this method shadows the method (BaseSegment).Rewire of BaseFilterSegment.BaseSegment.
-func (segment *BaseFilterSegment) Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) {
-	segment.BaseSegment.Rewire(in, out)
-}
-
-// ShutdownParentPipeline implements Segment.
-// Subtle: this method shadows the method (BaseSegment).ShutdownParentPipeline of BaseFilterSegment.BaseSegment.
-func (segment *BaseFilterSegment) ShutdownParentPipeline() {
-	segment.BaseSegment.ShutdownParentPipeline()
 }

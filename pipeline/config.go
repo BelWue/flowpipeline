@@ -84,13 +84,9 @@ func SegmentReprsFromConfig(config []byte) []SegmentRepr {
 
 // Creates a list of Segments from their config representations. Handles
 // recursive definitions found in Segments.
-func SegmentsFromRepr(segmentReprs []SegmentRepr) []segments.ParallelizedSegment {
-	segmentList := make([]segments.ParallelizedSegment, len(segmentReprs))
+func SegmentsFromRepr(segmentReprs []SegmentRepr) []segments.Segment {
+	segmentList := make([]segments.Segment, len(segmentReprs))
 	for i, segmentrepr := range segmentReprs {
-		if segmentrepr.Jobs < 1 {
-			segmentrepr.Jobs = 1
-		}
-		wrapper := segments.ParallelizedSegment{}
 
 		ifPipeline := New(SegmentsFromRepr(segmentrepr.If)...)
 		thenPipeline := New(SegmentsFromRepr(segmentrepr.Then)...)
@@ -98,27 +94,36 @@ func SegmentsFromRepr(segmentReprs []SegmentRepr) []segments.ParallelizedSegment
 
 		segmentTemplate := segments.LookupSegment(segmentrepr.Name) // a typed nil instance
 
-		for range segmentrepr.Jobs {
-			// the Segment's New method knows how to handle our config
-			segment := segmentTemplate.New(segmentrepr.ExpandedConfig())
-			switch segment := segment.(type) { // handle special segments
-			case *branch.Branch:
-				segment.ImportBranches(
-					ifPipeline,
-					thenPipeline,
-					elsePipeline,
-				)
-			// Insert custom config parameters into segments
-			case *traffic_specific_toptalkers.TrafficSpecificToptalkers:
-				segment.SetThresholdMetricDefinition(segmentrepr.Config.ThresholdMetricDefinition)
+		if segmentrepr.Jobs <= 1 {
+			segmentList[i] = segmentFromTemplate(ifPipeline, thenPipeline, elsePipeline, segmentTemplate, segmentrepr)
+		} else {
+			wrapper := &segments.ParallelizedSegment{}
+			for range segmentrepr.Jobs {
+				segment := segmentFromTemplate(ifPipeline, thenPipeline, elsePipeline, segmentTemplate, segmentrepr)
+				if segment != nil {
+					wrapper.AddSegment(segment)
+				} else {
+					log.Fatal().Msgf("Configured segment '%s' could not be initialized properly, see previous messages.", segmentrepr.Name)
+				}
 			}
-			if segment != nil {
-				wrapper.AddSegment(segment)
-			} else {
-				log.Fatal().Msgf("Configured segment '%s' could not be initialized properly, see previous messages.", segmentrepr.Name)
-			}
+			segmentList[i] = wrapper
 		}
-		segmentList[i] = wrapper
 	}
 	return segmentList
+}
+
+func segmentFromTemplate(ifPipeline, thenPipeline, elsePipeline *Pipeline, segmentTemplate segments.Segment, segmentrepr SegmentRepr) segments.Segment {
+	// the Segment's New method knows how to handle our config
+	segment := segmentTemplate.New(segmentrepr.ExpandedConfig())
+	switch segment := segment.(type) { // handle special segments
+	case *branch.Branch:
+		segment.ImportBranches(
+			ifPipeline,
+			thenPipeline,
+			elsePipeline,
+		)
+	case *traffic_specific_toptalkers.TrafficSpecificToptalkers:
+		segment.SetThresholdMetricDefinition(segmentrepr.Config.ThresholdMetricDefinition)
+	}
+	return segment
 }

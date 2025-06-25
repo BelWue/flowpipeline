@@ -19,7 +19,7 @@ type Pipeline struct {
 	Out         <-chan *pb.EnrichedFlow
 	Drop        chan *pb.EnrichedFlow
 	wg          *sync.WaitGroup
-	SegmentList []segments.ParallelizedSegment
+	SegmentList []segments.Segment
 }
 
 func (pipeline *Pipeline) GetInput() chan *pb.EnrichedFlow {
@@ -38,7 +38,10 @@ func (pipeline *Pipeline) GetDrop() <-chan *pb.EnrichedFlow {
 	// Subscribe to drops from special segments, namely all based on
 	// BaseFilterSegment grouped in the filter directory.
 	for _, segment := range pipeline.SegmentList {
-		segment.SubscribeDrops(pipeline.Drop)
+		value, implementsFilter := segment.(segments.FilterSegment)
+		if implementsFilter {
+			value.SubscribeDrops(pipeline.Drop)
+		}
 	}
 	// If there are no filter/* segments, this channel will never have
 	// messages available.
@@ -75,11 +78,9 @@ func (pipeline *Pipeline) Close() {
 // Initializes a new Pipeline object and then starts all segment goroutines
 // therein. Initialization includes creating any intermediate channels and
 // wiring up the segments in the segmentList with them.
-func New(segmentList ...segments.ParallelizedSegment) *Pipeline {
+func New(segmentList ...segments.Segment) *Pipeline {
 	if len(segmentList) == 0 {
-		wrapper := segments.ParallelizedSegment{}
-		wrapper.AddSegment(&pass.Pass{})
-		segmentList = []segments.ParallelizedSegment{wrapper}
+		segmentList = []segments.Segment{&pass.Pass{}}
 	}
 	channels := make([]chan *pb.EnrichedFlow, len(segmentList)+1)
 	channels[0] = make(chan *pb.EnrichedFlow)
