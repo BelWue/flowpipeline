@@ -491,6 +491,16 @@ The filter parameter available for some methods will filter packets before they 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/packet/bpf)
 [examples using this segment](https://github.com/search?q=%22segment%3A+packet%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
+#### replay
+The `replay` segment reads a sqlite database previously created by the `sqlite` segment and emits the flows contained in it.
+The location of the database is specified with the `filename` parameter.
+
+```yaml
+- segment: replay
+  config:
+    filename: dump.sqlite
+```
+
 #### stdin
 The `stdin` segment reads JSON encoded flows from stdin or a given file and introduces this
 into the pipeline. This is intended to be used in conjunction with the `json`
