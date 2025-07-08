@@ -91,7 +91,8 @@ Traffic is counted in bits per second and packets per second, categorized into
 forwarded and dropped traffic. By default, only the destination IP addresses
 are accounted, but the configuration allows using the source IP address or
 both addresses. For the latter, a flows number of bytes and packets are
-ccounted for both addresses.
+counted for both addresses. `connection` is used to look a specific combinations
+of "source -> target".
 
 Thresholds for bits per second or packets per second can be configured. Only
 metrics for addresses that exceeded this threshold during the last window size

@@ -14,5 +14,5 @@ type PrometheusMetricsParamsDefinition struct {
 	BucketDuration   int    `yaml:"bucketduration,omitempty"`   // optional, duration of a bucket, default is 1 second
 	ThresholdBps     uint64 `yaml:"thresholdbps,omitempty"`     // optional, default is 0, only log talkers with an average bits per second rate higher than this value
 	ThresholdPps     uint64 `yaml:"thresholdpps,omitempty"`     // optional, default is 0, only log talkers with an average packets per second rate higher than this value
-	RelevantAddress  string `yaml:"relevantaddress,omitempty"`  // optional, default is "destination", options are "destination", "source", "both"
+	RelevantAddress  string `yaml:"relevantaddress,omitempty"`  // optional, default is "destination", options are "destination", "source", "both", "connection"
 }

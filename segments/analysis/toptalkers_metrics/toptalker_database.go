@@ -1,6 +1,7 @@
 package toptalkers_metrics
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -14,6 +15,7 @@ type Record struct {
 	capacity       int
 	pointer        int
 	aboveThreshold atomic.Bool
+	Address        string
 	sync.RWMutex
 }
 
@@ -52,18 +54,23 @@ func NewDatabase(params PrometheusMetricsParams, promExporter *PrometheusExporte
 	}
 }
 
-func (db *Database) GetRecord(key string) *Record {
+func (db *Database) GetRecord(address string) *Record {
+	return db.GetTypedRecord("", address)
+}
+
+func (db *Database) GetTypedRecord(typeLabel string, address string) *Record {
+	key := fmt.Sprintf("%s: %s", typeLabel, address)
 	db.Lock()
 	defer db.Unlock()
 	record, found := (*db.database)[key]
 	if !found || record == nil {
-		record = NewRecord(db.ReportBuckets)
+		record = NewRecord(db.ReportBuckets, address)
 		(*db.database)[key] = record
 	}
 	return record
 }
 
-func NewRecord(windowSize int) *Record {
+func NewRecord(windowSize int, address string) *Record {
 	record := &Record{
 		FwdBytes:    make([]uint64, windowSize),
 		FwdPackets:  make([]uint64, windowSize),
@@ -71,6 +78,7 @@ func NewRecord(windowSize int) *Record {
 		DropPackets: make([]uint64, windowSize),
 		capacity:    windowSize,
 		pointer:     0,
+		Address:     address,
 	}
 	return record
 }
@@ -98,7 +106,7 @@ func (record *Record) isEmpty() bool {
 	return true
 }
 
-func (record *Record) GetMetrics(buckets int, bucketDuration int) (float64, float64, float64, float64) {
+func (record *Record) GetMetrics(buckets int, bucketDuration int) (float64, float64, float64, float64, string) {
 	// buckets == 0 means "look at the whole window"
 	if buckets == 0 {
 		buckets = record.capacity
@@ -125,7 +133,7 @@ func (record *Record) GetMetrics(buckets int, bucketDuration int) (float64, floa
 	sumFwdPps := float64(sumFwdPackets) / float64(buckets*bucketDuration)
 	sumDropBps := float64(sumDropBytes*8) / float64(buckets*bucketDuration)
 	sumDropPps := float64(sumDropPackets) / float64(buckets*bucketDuration)
-	return sumFwdBps, sumFwdPps, sumDropBps, sumDropPps
+	return sumFwdBps, sumFwdPps, sumDropBps, sumDropPps, record.Address
 }
 
 func (record *Record) tick(thresholdBuckets int, bucketDuration int, thresholdBps uint64, thresholdPps uint64) {

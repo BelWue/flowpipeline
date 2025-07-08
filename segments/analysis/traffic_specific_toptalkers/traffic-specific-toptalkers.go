@@ -2,6 +2,7 @@
 package traffic_specific_toptalkers
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -18,6 +19,7 @@ type TrafficSpecificToptalkers struct {
 	segments.BaseSegment
 	toptalkers_metrics.PrometheusParams
 	ThresholdMetricDefinition []*ThresholdMetric
+	RelevantAddress           string // optional, default is "destination", options are "destination", "source", "both", "connection"
 }
 
 type ThresholdMetric struct {
@@ -48,13 +50,18 @@ func (segment TrafficSpecificToptalkers) New(config map[string]string) segments.
 	} else {
 		newSegment.FlowdataPath = config["flowdatapath"]
 	}
+	if config["relevantaddress"] != "" {
+		newSegment.RelevantAddress = config["relevantaddress"]
+	} else {
+		newSegment.RelevantAddress = ""
+	}
 
 	return newSegment
 }
 
 func (segment *TrafficSpecificToptalkers) AddCustomConfig(config config.Config) {
 	for _, definition := range config.ThresholdMetricDefinition {
-		metric, err := metricFromDefinition(definition)
+		metric, err := segment.metricFromDefinition(definition)
 		if err != nil {
 			log.Error().Err(err).Msg("ThresholdToptalkersMetrics: Failed to add custom config")
 		}
@@ -62,12 +69,16 @@ func (segment *TrafficSpecificToptalkers) AddCustomConfig(config config.Config) 
 	}
 }
 
-func metricFromDefinition(definition *config.ThresholdMetricDefinition) (*ThresholdMetric, error) {
+func (segment *TrafficSpecificToptalkers) metricFromDefinition(definition *config.ThresholdMetricDefinition) (*ThresholdMetric, error) {
 	var err error
 	metric := ThresholdMetric{}
 	metric.PrometheusMetricsParamsDefinition = definition.PrometheusMetricsParamsDefinition
 	metric.FilterDefinition = definition.FilterDefinition
 	metric.InitDefaultPrometheusMetricParams()
+
+	if segment.RelevantAddress != "" {
+		metric.RelevantAddress = segment.RelevantAddress
+	}
 
 	metric.Expression, err = parser.Parse(definition.FilterDefinition)
 	if err != nil {
@@ -76,7 +87,7 @@ func metricFromDefinition(definition *config.ThresholdMetricDefinition) (*Thresh
 	}
 
 	for _, subDefinition := range definition.SubDefinitions {
-		subMetric, err := metricFromDefinition(subDefinition)
+		subMetric, err := segment.metricFromDefinition(subDefinition)
 		if err != nil {
 			return nil, err
 		}
@@ -157,9 +168,11 @@ func addMessageToMatchingToptalkers(msg *pb.EnrichedFlow, definition *ThresholdM
 				keys = []string{msg.DstAddrObj().String()}
 			case "both":
 				keys = []string{msg.SrcAddrObj().String(), msg.DstAddrObj().String()}
+			case "connection":
+				keys = []string{fmt.Sprintf("%s -> %s", msg.SrcAddrObj().String(), msg.DstAddrObj().String())}
 			}
 			for _, key := range keys {
-				record := definition.Database.GetRecord(key)
+				record := definition.Database.GetTypedRecord(definition.PrometheusMetricsParams.TrafficType, key)
 				record.Append(msg.Bytes, msg.Packets, msg.IsForwarded())
 			}
 		}

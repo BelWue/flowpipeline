@@ -154,7 +154,8 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 	case
 		"destination",
 		"source",
-		"both":
+		"both",
+		"connection":
 		prometheusParams.RelevantAddress = config["relevantaddress"]
 	case "":
 		log.Info().Msg("ToptalkersMetrics: 'relevantaddress' set to default 'destination'.")
@@ -171,36 +172,35 @@ func (c *PrometheusCollector) Describe(ch chan<- *prometheus.Desc) {
 func (collector *PrometheusCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, db := range collector.Databases {
 		for entry := range db.GetAllRecords() {
-			key := entry.key
 			record := entry.record
 			// check if thresholds are exceeded
 			buckets := db.ReportBuckets
 			bucketDuration := db.BucketDuration
 			if record.aboveThreshold.Load() {
-				sumFwdBps, sumFwdPps, sumDropBps, sumDropPps := record.GetMetrics(buckets, bucketDuration)
+				sumFwdBps, sumFwdPps, sumDropBps, sumDropPps, address := record.GetMetrics(buckets, bucketDuration)
 				ch <- prometheus.MustNewConstMetric(
 					collector.trafficBpsDesc,
 					prometheus.GaugeValue,
 					sumFwdBps,
-					db.TrafficType, key, "forwarded",
+					db.TrafficType, address, "forwarded",
 				)
 				ch <- prometheus.MustNewConstMetric(
 					collector.trafficBpsDesc,
 					prometheus.GaugeValue,
 					sumDropBps,
-					db.TrafficType, key, "dropped",
+					db.TrafficType, address, "dropped",
 				)
 				ch <- prometheus.MustNewConstMetric(
 					collector.trafficPpsDesc,
 					prometheus.GaugeValue,
 					sumFwdPps,
-					db.TrafficType, key, "forwarded",
+					db.TrafficType, address, "forwarded",
 				)
 				ch <- prometheus.MustNewConstMetric(
 					collector.trafficPpsDesc,
 					prometheus.GaugeValue,
 					sumDropPps,
-					db.TrafficType, key, "dropped",
+					db.TrafficType, address, "dropped",
 				)
 			}
 		}

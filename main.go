@@ -72,6 +72,7 @@ import (
 	_ "github.com/BelWue/flowpipeline/segments/print/toptalkers"
 
 	_ "github.com/BelWue/flowpipeline/segments/analysis/toptalkers_metrics"
+	_ "github.com/BelWue/flowpipeline/segments/analysis/traffic_specific_toptalkers"
 )
 
 var Version string
