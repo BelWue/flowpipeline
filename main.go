@@ -39,6 +39,7 @@ import (
 	_ "github.com/BelWue/flowpipeline/segments/input/goflow"
 	_ "github.com/BelWue/flowpipeline/segments/input/kafkaconsumer"
 	_ "github.com/BelWue/flowpipeline/segments/input/packet"
+	_ "github.com/BelWue/flowpipeline/segments/input/replay"
 	_ "github.com/BelWue/flowpipeline/segments/input/stdin"
 
 	_ "github.com/BelWue/flowpipeline/segments/meta/monitoring"
