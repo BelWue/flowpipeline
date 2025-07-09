@@ -55,19 +55,21 @@ func (segment DelayMonitoring) New(config map[string]string) segments.Segment {
 		newSegment.Endpoint = config["endpoint"]
 	}
 
-	var err error
 	if config["samplingRate"] != "" {
-		newSegment.SamplingRate, err = strconv.Atoi(config["samplingRate"])
+		samplingRate, err := strconv.Atoi(config["samplingRate"])
 		if err != nil {
 			log.Error().Err(err).Msg("Delay Monitoring: Failed parsing parameter \"samplingRate\"")
+		} else {
+			newSegment.SamplingRate = samplingRate
 		}
 	}
 
 	if config["alpha"] != "" {
-		alpha, err := strconv.Atoi(config["alpha"])
-		newSegment.Alpha = float64(alpha)
+		alpha, err := strconv.ParseFloat(config["alpha"], 64)
 		if err != nil {
 			log.Error().Err(err).Msg("Delay Monitoring: Failed parsing parameter \"alpha\"")
+		} else {
+			newSegment.Alpha = alpha
 		}
 	}
 
