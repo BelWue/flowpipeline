@@ -20,6 +20,7 @@ type Json struct {
 	writer *bufio.Writer
 
 	FileName string // optional, default is empty which means stdout
+	Pretty   bool   // optional, default is false
 }
 
 func (segment Json) New(config map[string]string) segments.Segment {
@@ -57,7 +58,20 @@ func (segment Json) New(config map[string]string) segments.Segment {
 		// no compression
 		newsegment.writer = bufio.NewWriter(file)
 	}
+	var pretty bool
+	if config["pretty"] != "" {
+		pretty, err = strconv.ParseBool(config["pretty"])
+		if err != nil {
+			log.Warn().Err(err).Msg("Json: Unable to parse 'pretty' option, using 'false'")
+			pretty = false
+		}
+	} else {
+		log.Info().Msg("Json: 'pretty' unset, using default 'false'.")
+		pretty = false
+	}
+
 	newsegment.FileName = filename
+	newsegment.Pretty = pretty
 
 	return newsegment
 }
@@ -68,8 +82,10 @@ func (segment *Json) Run(wg *sync.WaitGroup) {
 		close(segment.Out)
 		wg.Done()
 	}()
+
+	marshalOptions := protojson.MarshalOptions{Multiline: segment.Pretty}
 	for msg := range segment.In {
-		data, err := protojson.Marshal(msg)
+		data, err := marshalOptions.Marshal(msg)
 		if err != nil {
 			log.Warn().Err(err).Msg("Json: Skipping a flow, failed to recode protobuf as JSON: ")
 			continue

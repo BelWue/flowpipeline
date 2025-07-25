@@ -1030,12 +1030,16 @@ If the option `zstd` is set to a positive integer, the compression level will be
 When `flowpipeline` is stopped abruptly (e.g by pressing Ctrl+C), the end of the archive will get corrupted.
 Simply use `zstdcat` to decompress the archive and remove the last line (`| head -n -1`).
 
+If the option `pretty` is set to true, the every flow will be formatted in a human-readable way (indented and with line breaks).
+When omitted, the output will be a single line per flow.
+
 ```yaml
 - segment: json
   # the lines below are optional and set to default
   config:
     filename: ""
     zstd: 0
+    pretty: false
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/json)
