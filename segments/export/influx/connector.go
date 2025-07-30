@@ -43,7 +43,7 @@ func (c *Connector) checkBucket() {
 	bucket, err := c.influxClient.BucketsAPI().FindBucketByName(context.Background(), c.Bucket)
 	if err != nil {
 		// The bucket should be created by the Influxdb admin.
-		log.Warn().Msgf("Influx: Given bucket %s not found.", c.Bucket)
+		log.Warn().Err(err).Msgf("Influx: Given bucket %s not found.", c.Bucket)
 	} else {
 		log.Info().Msgf("Influx: Bucket found with result: %s", bucket.Name)
 	}
@@ -55,19 +55,19 @@ func (c *Connector) CreatePoint(msg *pb.EnrichedFlow) *write.Point {
 	values := reflect.ValueOf(msg).Elem()
 	for _, tagname := range c.Tags {
 		value := values.FieldByName(tagname).Interface()
-		switch value.(type) {
+		switch value := value.(type) {
 		case []uint8: // this is necessary for proper formatting
-			ipstring := net.IP(value.([]uint8)).String()
+			ipstring := net.IP(value).String()
 			if ipstring == "<nil>" {
 				ipstring = ""
 			}
 			tags[tagname] = ipstring
 		case uint32: // this is because FormatUint is much faster than Sprint
-			tags[tagname] = strconv.FormatUint(uint64(value.(uint32)), 10)
+			tags[tagname] = strconv.FormatUint(uint64(value), 10)
 		case uint64: // this is because FormatUint is much faster than Sprint
-			tags[tagname] = strconv.FormatUint(uint64(value.(uint64)), 10)
+			tags[tagname] = strconv.FormatUint(uint64(value), 10)
 		case string: // this is because doing nothing is also much faster than Sprint
-			tags[tagname] = value.(string)
+			tags[tagname] = value
 		default:
 			tags[tagname] = fmt.Sprint(value)
 		}

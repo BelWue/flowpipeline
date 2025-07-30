@@ -204,3 +204,55 @@ func TestBoth(t *testing.T) {
 	}
 	close(in)
 }
+
+func BenchmarkSubnet_1000(b *testing.B) {
+	zerolog.SetGlobalLevel(zerolog.Disabled)
+	os.Stdout, _ = os.Open(os.DevNull)
+
+	segment := Anonymize{}.New(map[string]string{
+		"fields": "SrcAddr,DstAddr,NextHop",
+		"mode":   "subnet",
+		"maskV4": "24",
+		"maskV6": "112",
+	})
+	if segment == nil {
+		b.Error("Failed to init Anonymize segment")
+	}
+
+	in, out := make(chan *pb.EnrichedFlow), make(chan *pb.EnrichedFlow)
+	segment.Rewire(in, out)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go segment.Run(wg)
+
+	for n := 0; n < b.N; n++ {
+		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, NextHop: []byte{192, 168, 88, 143}, Proto: 45}
+		<-out
+	}
+	close(in)
+}
+
+func BenchmarkCryptopan_1000(b *testing.B) {
+	zerolog.SetGlobalLevel(zerolog.Disabled)
+	os.Stdout, _ = os.Open(os.DevNull)
+
+	segment := Anonymize{}.New(map[string]string{
+		"key":    "ExampleKeyWithExactly32Character",
+		"fields": "SrcAddr,DstAddr,NextHop",
+		"mode":   "cryptopan",
+	})
+
+	in, out := make(chan *pb.EnrichedFlow), make(chan *pb.EnrichedFlow)
+	segment.Rewire(in, out)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go segment.Run(wg)
+
+	for n := 0; n < b.N; n++ {
+		in <- &pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}, DstAddr: []byte{192, 168, 88, 143}, NextHop: []byte{192, 168, 88, 143}, Proto: 45}
+		<-out
+	}
+	close(in)
+}

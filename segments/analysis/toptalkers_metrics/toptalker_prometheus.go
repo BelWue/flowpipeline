@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/BelWue/flowpipeline/pipeline/config"
 	"github.com/rs/zerolog/log"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,22 +19,15 @@ type PrometheusCollector struct {
 	trafficPpsDesc *prometheus.Desc
 }
 
-type PrometheusMetricsParams struct {
-	TrafficType        string `yaml:"traffictype,omitempty"`      // optional, default is "", name for the traffic type (included as label)
-	Buckets            int    `yaml:"buckets,omitempty"`          // optional, default is 60, sets the number of seconds used as a sliding window size
-	ThresholdBuckets   int    `yaml:"thresholdbuckets,omitempty"` // optional, use the last N buckets for calculation of averages, default: $Buckets
-	ReportBuckets      int    `yaml:"reportbuckets,omitempty"`    // optional, use the last N buckets to calculate averages that are reported as result, default: $Buckets
-	BucketDuration     int    `yaml:"bucketduration,omitempty"`   // optional, duration of a bucket, default is 1 second
-	ThresholdBps       uint64 `yaml:"thresholdbps,omitempty"`     // optional, default is 0, only log talkers with an average bits per second rate higher than this value
-	ThresholdPps       uint64 `yaml:"thresholdpps,omitempty"`     // optional, default is 0, only log talkers with an average packets per second rate higher than this value
-	RelevantAddress    string `yaml:"relevantaddress,omitempty"`  // optional, default is "destination", options are "destination", "source", "both"
-	CleanupWindowSizes int
-}
-
 type PrometheusParams struct {
 	Endpoint     string // optional, default value is ":8080"
 	MetricsPath  string // optional, default is "/metrics"
 	FlowdataPath string // optional, default is "/flowdata"
+}
+
+type PrometheusMetricsParams struct {
+	config.PrometheusMetricsParamsDefinition
+	CleanupWindowSizes int
 }
 
 func NewPrometheusCollector(databases []*Database) *PrometheusCollector {
@@ -84,10 +78,10 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 	if config["buckets"] != "" {
 		if parsedBuckets, err := strconv.ParseInt(config["buckets"], 10, 64); err == nil {
 			if parsedBuckets <= 0 {
-				return errors.New("buckets has to be >0")
+				return errors.New("ToptalkersMetrics: Buckets has to be >0")
 			}
 			if parsedBuckets > math.MaxInt {
-				return errors.New("buckets out of range")
+				return errors.New("ToptalkersMetrics: Buckets out of range")
 			}
 			prometheusParams.Buckets = int(parsedBuckets)
 		} else {
@@ -101,10 +95,10 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 		if parsedThresholdBuckets, err := strconv.ParseInt(config["thresholdbuckets"], 10, 64); err == nil {
 
 			if parsedThresholdBuckets <= 0 {
-				return errors.New("thresholdbuckets has to be >0")
+				return errors.New("ToptalkersMetrics: Thresholdbuckets has to be >0")
 			}
 			if parsedThresholdBuckets > math.MaxInt {
-				return errors.New("thresholdbuckets out of range")
+				return errors.New("ToptalkersMetrics: Thresholdbuckets out of range")
 			}
 			prometheusParams.ThresholdBuckets = int(parsedThresholdBuckets)
 		} else {
@@ -117,17 +111,17 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 	if config["reportbuckets"] != "" {
 		if parsedReportBuckets, err := strconv.ParseInt(config["reportbuckets"], 10, 64); err == nil {
 			if parsedReportBuckets <= 0 {
-				return errors.New("reportbuckets has to be >0")
+				return errors.New("ToptalkersMetrics: Reportbuckets has to be >0")
 			}
 			if parsedReportBuckets > math.MaxInt {
-				return errors.New("reportbuckets out of range")
+				return errors.New("ToptalkersMetrics: Reportbuckets out of range")
 			}
 			prometheusParams.ReportBuckets = int(parsedReportBuckets)
 		} else {
-			log.Error().Msg("ReportPrometheus: Could not parse 'reportbuckets' parameter, using default (60 buckets).")
+			log.Error().Msg("ToptalkersMetrics: Could not parse 'reportbuckets' parameter, using default (60 buckets).")
 		}
 	} else {
-		log.Info().Msg("ReportPrometheus: 'reportbuckets' set to default (60 buckets).")
+		log.Info().Msg("ToptalkersMetrics: 'reportbuckets' set to default (60 buckets).")
 	}
 
 	if config["traffictype"] != "" {
@@ -160,7 +154,8 @@ func (prometheusParams *PrometheusMetricsParams) ParsePrometheusConfig(config ma
 	case
 		"destination",
 		"source",
-		"both":
+		"both",
+		"connection":
 		prometheusParams.RelevantAddress = config["relevantaddress"]
 	case "":
 		log.Info().Msg("ToptalkersMetrics: 'relevantaddress' set to default 'destination'.")
@@ -177,36 +172,35 @@ func (c *PrometheusCollector) Describe(ch chan<- *prometheus.Desc) {
 func (collector *PrometheusCollector) Collect(ch chan<- prometheus.Metric) {
 	for _, db := range collector.Databases {
 		for entry := range db.GetAllRecords() {
-			key := entry.key
 			record := entry.record
 			// check if thresholds are exceeded
 			buckets := db.ReportBuckets
 			bucketDuration := db.BucketDuration
 			if record.aboveThreshold.Load() {
-				sumFwdBps, sumFwdPps, sumDropBps, sumDropPps := record.GetMetrics(buckets, bucketDuration)
+				sumFwdBps, sumFwdPps, sumDropBps, sumDropPps, address := record.GetMetrics(buckets, bucketDuration)
 				ch <- prometheus.MustNewConstMetric(
 					collector.trafficBpsDesc,
 					prometheus.GaugeValue,
 					sumFwdBps,
-					db.TrafficType, key, "forwarded",
+					db.TrafficType, address, "forwarded",
 				)
 				ch <- prometheus.MustNewConstMetric(
 					collector.trafficBpsDesc,
 					prometheus.GaugeValue,
 					sumDropBps,
-					db.TrafficType, key, "dropped",
+					db.TrafficType, address, "dropped",
 				)
 				ch <- prometheus.MustNewConstMetric(
 					collector.trafficPpsDesc,
 					prometheus.GaugeValue,
 					sumFwdPps,
-					db.TrafficType, key, "forwarded",
+					db.TrafficType, address, "forwarded",
 				)
 				ch <- prometheus.MustNewConstMetric(
 					collector.trafficPpsDesc,
 					prometheus.GaugeValue,
 					sumDropPps,
-					db.TrafficType, key, "dropped",
+					db.TrafficType, address, "dropped",
 				)
 			}
 		}
@@ -256,7 +250,10 @@ func (e *PrometheusExporter) ServeEndpoints(promParams *PrometheusParams) {
 		</html>`))
 	})
 	go func() {
-		http.ListenAndServe(promParams.Endpoint, mux)
+		err := http.ListenAndServe(promParams.Endpoint, mux)
+		if err != nil {
+			log.Error().Err(err).Msgf("ToptalkersMetrics: Failed to start https endpoint on port %s", promParams.Endpoint)
+		}
 	}()
-	log.Info().Msgf("Enabled metrics on %s and %s, listening at %s.", promParams.MetricsPath, promParams.FlowdataPath, promParams.Endpoint)
+	log.Info().Msgf("ToptalkersMetrics: Enabled metrics on %s and %s, listening at %s.", promParams.MetricsPath, promParams.FlowdataPath, promParams.Endpoint)
 }

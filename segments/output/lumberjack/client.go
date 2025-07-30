@@ -58,7 +58,7 @@ func (c *resilientClient) connect() {
 		if err == nil {
 			return
 		}
-		log.Error().Msgf("Lumberjack: Failed to connect to server %s: %s", c.ServerName, err)
+		log.Error().Err(err).Msgf("Lumberjack: Failed to connect to server %s", c.ServerName)
 		time.Sleep(c.ReconnectWait)
 	}
 }
@@ -80,7 +80,7 @@ func (c *resilientClient) Send(events []interface{}) {
 
 		// connection is closed. Reopen connection and retry
 		if err == io.EOF {
-			log.Error().Msgf("Lumberjack: Connection to server %s closed by peer", c.ServerName)
+			log.Error().Err(err).Msgf("Lumberjack: Connection to server %s closed by peer", c.ServerName)
 			_ = c.sc.Close()
 			c.connect()
 			goto sendEvents
@@ -91,7 +91,7 @@ func (c *resilientClient) Send(events []interface{}) {
 			goto sendEvents
 		}
 
-		log.Error().Msgf("Lumberjack: Error sending flows to server %s: %s", c.ServerName, err)
+		log.Error().Err(err).Msgf("Lumberjack: Error sending flows to server %s", c.ServerName)
 		time.Sleep(500 * time.Millisecond) // TODO: implement a better retry strategy
 
 		// unexpected error. Close connection and retry.
@@ -114,6 +114,6 @@ func (c *resilientClient) SendNoRetry(events []interface{}) (int, error) {
 func (c *resilientClient) Close() {
 	err := c.sc.Close()
 	if err != nil {
-		log.Error().Msgf("Lumberjack: Error closing connection to server %s: %s", c.ServerName, err)
+		log.Error().Err(err).Msgf("Lumberjack: Error closing connection to server %s", c.ServerName)
 	}
 }

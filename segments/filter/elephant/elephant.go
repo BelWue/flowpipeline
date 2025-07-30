@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/BelWue/flowpipeline/segments"
 	"github.com/rs/zerolog/log"
 
-	"github.com/BelWue/flowpipeline/segments"
 	"github.com/asecurityteam/rolling"
 )
 

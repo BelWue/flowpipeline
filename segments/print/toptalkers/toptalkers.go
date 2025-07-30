@@ -84,7 +84,7 @@ func (segment TopTalkers) New(config map[string]string) segments.Segment {
 	if config["filename"] != "" {
 		file, err := os.Create(config["filename"])
 		if err != nil {
-			log.Error().Err(err).Msg(" Json: File specified in 'filename' is not accessible: ")
+			log.Error().Err(err).Msg("TopTalkers: File specified in 'filename' is not accessible: ")
 		}
 		newsegment.FileName = config["filename"]
 		newsegment.writer = bufio.NewWriter(file)

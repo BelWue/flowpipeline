@@ -46,7 +46,7 @@ func (segment Mongodb) New(configx map[string]string) segments.Segment {
 
 	newsegment, err := fillSegmentWithConfig(newsegment, configx)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed loading mongodb segment config")
+		log.Error().Err(err).Msg("MongoDB: Failed loading mongodb segment config")
 		return nil
 	}
 
@@ -59,7 +59,7 @@ func (segment Mongodb) New(configx map[string]string) segments.Segment {
 		err = client.Ping(ctx, options.Client().ReadPreference)
 	}
 	if err != nil {
-		log.Error().Err(err).Msgf("mongoDB: Could not open DB connection")
+		log.Error().Err(err).Msgf("MongoDB: Could not open DB connection")
 		return nil
 	}
 	db := client.Database(newsegment.databaseName)
@@ -78,61 +78,54 @@ func (segment *Mongodb) Run(wg *sync.WaitGroup) {
 
 	client, err := mongo.Connect(ctx, options.Client().ApplyURI(segment.mongodbUri))
 	if err != nil {
-		log.Panic().Err(err) // this has already been checked in New
+		log.Panic().Err(err).Msg("MongoDB: Failed to connect to DB") // this has already been checked in New
 	}
 	db := client.Database(segment.databaseName)
 	segment.dbCollection = db.Collection(segment.collectionName)
 
 	defer client.Disconnect(ctx)
-
-	var unsaved []*pb.EnrichedFlow
-
+	unsavedJson := make(chan []interface{})
+	messagesToSave := make(chan *pb.EnrichedFlow)
+	go segment.bulkInsert(ctx, unsavedJson)
+	go segment.prepareDataForBulkInsert(messagesToSave, unsavedJson)
 	for msg := range segment.In {
-		unsaved = append(unsaved, msg)
-		if len(unsaved) >= segment.BatchSize {
-			err := segment.bulkInsert(unsaved, ctx)
-			if err != nil {
-				log.Error().Err(err).Msg(" ")
-			}
-			unsaved = []*pb.EnrichedFlow{}
-		}
+		messagesToSave <- msg
 		segment.Out <- msg
 	}
-	segment.bulkInsert(unsaved, ctx)
 }
 
 func fillSegmentWithConfig(newsegment *Mongodb, config map[string]string) (*Mongodb, error) {
 	if config == nil {
-		return newsegment, errors.New("missing configuration for segment mongodb")
+		return newsegment, errors.New("MongoDB: missing configuration for segment mongodb")
 	}
 
 	if config["mongodb_uri"] == "" {
-		return newsegment, errors.New("mongoDB: mongodb_uri not defined")
+		return newsegment, errors.New("MongoDB: Mongodb_uri not defined")
 	}
 	newsegment.mongodbUri = config["mongodb_uri"]
 
 	if config["database"] == "" {
-		log.Info().Msg("mongoDB: no database defined - using default value (flowdata)")
+		log.Info().Msg("MongoDB: No database defined - using default value (flowdata)")
 		config["database"] = "flowdata"
 	}
 	newsegment.databaseName = config["database"]
 
 	if config["collection"] == "" {
-		log.Info().Msg("mongoDB: no collection defined - using default value (ringbuffer)")
+		log.Info().Msg("MongoDB: No collection defined - using default value (ringbuffer)")
 		config["collection"] = "ringbuffer"
 	}
 	newsegment.collectionName = config["collection"]
 
 	var ringbufferSize int64 = 10737418240
 	if config["max_disk_usage"] == "" {
-		log.Info().Msg("mongoDB: no ring buffer size defined - using default value (10GB)")
+		log.Info().Msg("MongoDB: No ring buffer size defined - using default value (10GB)")
 	} else {
 		size, err := sizeInBytes(config["max_disk_usage"])
 		if err == nil {
-			log.Info().Msg("mongoDB: setting ring buffer size to " + config["max_disk_usage"])
+			log.Info().Msg("MongoDB: Setting ring buffer size to " + config["max_disk_usage"])
 			ringbufferSize = size
 		} else {
-			log.Warn().Msg("mongoDB: failed setting ring buffer size to " + config["max_disk_usage"] + " - using default as fallback (10GB)")
+			log.Warn().Msg("MongoDB: Failed setting ring buffer size to " + config["max_disk_usage"] + " - using default as fallback (10GB)")
 		}
 	}
 	newsegment.ringbufferSize = ringbufferSize
@@ -141,18 +134,18 @@ func fillSegmentWithConfig(newsegment *Mongodb, config map[string]string) (*Mong
 	if config["batchsize"] != "" {
 		if parsedBatchSize, err := strconv.ParseInt(config["batchsize"], 10, 32); err == nil {
 			if parsedBatchSize <= 0 {
-				return newsegment, errors.New("MongoDO: Batch size <= 0 is not allowed. Set this in relation to the expected flows per second")
+				return newsegment, errors.New("MongoDB: Batch size <= 0 is not allowed. Set this in relation to the expected flows per second")
 			}
 			if parsedBatchSize <= 0 {
-				log.Warn().Msgf("MongoDO: Batch size over max size - setting to %d", math.MaxInt)
+				log.Warn().Msgf("MongoDB: Batch size over max size - setting to %d", math.MaxInt)
 				parsedBatchSize = math.MaxInt
 			}
 			newsegment.BatchSize = int(parsedBatchSize)
 		} else {
-			log.Error().Msgf("MongoDO: Could not parse 'batchsize' parameter %s, using default 1000.", config["batchsize"])
+			log.Error().Msgf("MongoDB: Could not parse 'batchsize' parameter %s, using default 1000.", config["batchsize"])
 		}
 	} else {
-		log.Info().Msg("MongoDO: 'batchsize' set to default '1000'.")
+		log.Info().Msg("MongoDB: 'batchsize' set to default '1000'.")
 	}
 
 	// determine field set
@@ -162,7 +155,7 @@ func fillSegmentWithConfig(newsegment *Mongodb, config map[string]string) (*Mong
 		for _, field := range conffields {
 			protofield, found := protofields.FieldByName(field)
 			if !found || !protofield.IsExported() {
-				return newsegment, errors.New("csv: Field specified in 'fields' does not exist")
+				return newsegment, errors.New("MongoDB: Field specified in 'fields' does not exist")
 			}
 			newsegment.fieldNames = append(newsegment.fieldNames, field)
 			newsegment.fieldTypes = append(newsegment.fieldTypes, protofield.Type.String())
@@ -182,40 +175,52 @@ func fillSegmentWithConfig(newsegment *Mongodb, config map[string]string) (*Mong
 	return newsegment, nil
 }
 
-func (segment Mongodb) bulkInsert(unsavedFlows []*pb.EnrichedFlow, ctx context.Context) error {
+func (segment Mongodb) prepareDataForBulkInsert(msgChan chan *pb.EnrichedFlow, unsavedJsonFlows chan []interface{}) {
+	unsavedFlowData := make([]interface{}, segment.BatchSize)
+	nrOfFlows := 0
+	for msg := range msgChan {
+		flowData := formatFlowToMongoDbJson(msg, segment)
+		unsavedFlowData[nrOfFlows] = flowData
+		nrOfFlows += 1
+		if nrOfFlows >= segment.BatchSize {
+			unsavedJsonFlows <- unsavedFlowData
+			nrOfFlows = 0
+		}
+	}
+
+}
+
+func (segment Mongodb) bulkInsert(ctx context.Context, unsavedJsonFlows chan []interface{}) {
 	// not using transactions due to limitations of capped collectiction
 	// ("You cannot write to capped collections in transactions."
 	// https://www.mongodb.com/docs/manual/core/capped-collections/)
-	if len(unsavedFlows) == 0 {
-		return nil
-	}
-	unsavedFlowData := bson.A{}
-	for _, msg := range unsavedFlows {
-		singleFlowData := bson.M{}
-		values := reflect.ValueOf(msg).Elem()
-		for i, fieldname := range segment.fieldNames {
-			protofield := values.FieldByName(fieldname)
-			switch segment.fieldTypes[i] {
-			case "[]uint8": // this is neccessary for proper formatting
-				ipstring := net.IP(protofield.Interface().([]uint8)).String()
-				if ipstring == "<nil>" {
-					ipstring = ""
-				}
-				singleFlowData[fieldname] = ipstring
-			case "string": // this is because doing nothing is also much faster than Sprint
-				singleFlowData[fieldname] = protofield.Interface().(string)
-			default:
-				singleFlowData[fieldname] = fmt.Sprint(protofield)
-			}
+	for unsavedFlows := range unsavedJsonFlows {
+		_, err := segment.dbCollection.InsertMany(ctx, unsavedFlows)
+		if err != nil {
+			log.Error().Err(err).Msg("MongoDB: Failed to insert to mongo db")
 		}
-		unsavedFlowData = append(unsavedFlowData, singleFlowData)
 	}
-	_, err := segment.dbCollection.InsertMany(ctx, unsavedFlowData)
-	if err != nil {
-		log.Error().Err(err).Msg("mongoDB: Failed to insert to mongo db")
-		return err
+}
+
+func formatFlowToMongoDbJson(msg *pb.EnrichedFlow, segment Mongodb) bson.M {
+	singleFlowData := bson.M{}
+	values := reflect.ValueOf(msg).Elem()
+	for i, fieldname := range segment.fieldNames {
+		protofield := values.FieldByName(fieldname)
+		switch segment.fieldTypes[i] {
+		case "[]uint8": // this is neccessary for proper formatting
+			ipstring := net.IP(protofield.Interface().([]uint8)).String()
+			if ipstring == "<nil>" {
+				ipstring = ""
+			}
+			singleFlowData[fieldname] = ipstring
+		case "string": // this is because doing nothing is also much faster than Sprint
+			singleFlowData[fieldname] = protofield.Interface().(string)
+		default:
+			singleFlowData[fieldname] = fmt.Sprint(protofield)
+		}
 	}
-	return nil
+	return singleFlowData
 }
 
 func init() {
@@ -227,7 +232,7 @@ func sizeInBytes(sizeStr string) (int64, error) {
 	// Split into number and unit
 	parts := strings.Fields(sizeStr)
 	if len(parts) > 2 || len(parts) < 1 {
-		return 0, fmt.Errorf("[error] invalid size format")
+		return 0, fmt.Errorf("MongoDB: invalid size format")
 	}
 
 	size, err := strconv.ParseInt(parts[0], 10, 64)
@@ -253,7 +258,7 @@ func sizeInBytes(sizeStr string) (int64, error) {
 	case "TB":
 		return size * 1024 * 1024 * 1024 * 1024, nil
 	default:
-		return 0, fmt.Errorf("[error] unknown unit: %s", unit)
+		return 0, fmt.Errorf("MongoDB: unknown unit: %s", unit)
 	}
 }
 
@@ -275,12 +280,12 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 	}
 
 	if collStats.Err() != nil {
-		log.Error().Msgf("Failed to check Collection '%s' due to: '%s'\n", segment.collectionName, collStats.Err().Error())
+		log.Error().Msgf("MongoDB: Failed to check Collection '%s' due to: '%s'\n", segment.collectionName, collStats.Err().Error())
 		return collStats.Err()
 	}
 
 	if err := collStats.Decode(&collInfo); err != nil {
-		return fmt.Errorf("[error] failed to decode collection info: %v", err)
+		return fmt.Errorf("MongoDB:  failed to decode collection info: %v", err)
 	}
 
 	if collInfo.Count == 0 {
@@ -288,15 +293,15 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 		cappedOptions := options.CreateCollection().SetCapped(true).SetSizeInBytes(segment.ringbufferSize)
 		err := db.CreateCollection(ctx, segment.collectionName, cappedOptions)
 		if err != nil {
-			return fmt.Errorf("[error] failed to create capped collection: %v", err)
+			return fmt.Errorf("[MongoDB: failed to create capped collection: %v", err)
 		}
 
-		log.Debug().Msgf("Capped collection '%s' created successfully.\n", segment.collectionName)
+		log.Debug().Msgf("MongoDB: Capped collection '%s' created successfully.\n", segment.collectionName)
 		return nil
 	}
 
 	if !collInfo.Capped {
-		log.Warn().Msgf("Collection '%s' is not capped. Starting converting it...\n", segment.collectionName)
+		log.Warn().Msgf("MongoDB: Collection '%s' is not capped. Starting converting it...\n", segment.collectionName)
 		db.RunCommand(ctx, bson.D{
 			{Key: "convertToCapped", Value: segment.collectionName},
 			{Key: "size", Value: segment.ringbufferSize},
@@ -304,9 +309,9 @@ func convertToCappedCollection(db *mongo.Database, segment *Mongodb) error {
 		return nil
 	}
 
-	log.Info().Msgf("Collection '%s' is already capped.\n", segment.collectionName)
+	log.Info().Msgf("MongoDB: Collection '%s' is already capped.\n", segment.collectionName)
 	if collInfo.MaxSize != segment.ringbufferSize {
-		log.Warn().Msgf("Changing max size of collection '%s' from '%d' to '%d'.\n", segment.collectionName, collInfo.MaxSize, segment.ringbufferSize)
+		log.Warn().Msgf("MongoDB: Changing max size of collection '%s' from '%d' to '%d'.\n", segment.collectionName, collInfo.MaxSize, segment.ringbufferSize)
 		db.RunCommand(ctx, bson.D{
 			{Key: "collMod", Value: segment.collectionName},
 			{Key: "cappedSize", Value: segment.ringbufferSize},

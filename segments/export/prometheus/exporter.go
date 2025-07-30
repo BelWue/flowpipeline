@@ -18,6 +18,8 @@ type Exporter struct {
 	kafkaMessageCount prometheus.Counter
 	kafkaOffsets      *prometheus.CounterVec
 	flowBits          *prometheus.CounterVec
+	flowAsPairsBytes  *prometheus.CounterVec
+	flowAsPathBytes   *prometheus.CounterVec
 
 	labels []string
 }
@@ -47,13 +49,25 @@ func (e *Exporter) Initialize(labels []string) {
 			Help: "Number of Bits received across Flows.",
 		}, labels)
 
+	e.flowAsPairsBytes = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "flow_as_hop_pair_bytes",
+			Help: "Traffic volume between AS hop pairs in enriched flows",
+		}, []string{"from", "to", "path_direction"})
+
+	e.flowAsPathBytes = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "flow_as_path_bytes",
+			Help: "Traffic volume of AS path in enriched flows",
+		}, []string{"as_path"})
+
 	e.FlowReg = prometheus.NewRegistry()
-	e.FlowReg.MustRegister(e.flowBits)
+	e.FlowReg.MustRegister(e.flowBits, e.flowAsPairsBytes, e.flowAsPathBytes)
 
 }
 
 func (e *Exporter) ResetCounter() {
-	log.Info().Msgf("prometheus export: resetting counter")
+	log.Info().Msgf("Prometheus Exporter: resetting counter")
 	e.kafkaOffsets.Reset()
 	e.flowBits.Reset()
 
@@ -82,9 +96,12 @@ func (e *Exporter) ServeEndpoints(segment *Prometheus) {
 		</html>`))
 	})
 	go func() {
-		http.ListenAndServe(segment.Endpoint, mux)
+		err := http.ListenAndServe(segment.Endpoint, mux)
+		if err != nil {
+			log.Error().Err(err).Msgf("Prometheus Exporter: Failed to start https endpoint on port %s", segment.Endpoint)
+		}
 	}()
-	log.Info().Msgf("Enabled metrics on %s and %s, listening at %s.", segment.MetricsPath, segment.FlowdataPath, segment.Endpoint)
+	log.Info().Msgf("Prometheus Exporter: Enabled metrics on %s and %s, listening at %s.", segment.MetricsPath, segment.FlowdataPath, segment.Endpoint)
 }
 
 func (e *Exporter) Increment(bytes uint64, packets uint64, labelset prometheus.Labels) {

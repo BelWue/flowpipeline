@@ -8,9 +8,9 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/BelWue/flowpipeline/pb"
+	"github.com/BelWue/flowpipeline/pipeline/config"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -73,7 +73,8 @@ type Segment interface {
 	Run(wg *sync.WaitGroup)                                     // goroutine, must close(segment.Out) when segment.In is closed
 	Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) // embed this using BaseSegment
 	ShutdownParentPipeline()                                    // shut down Parent Pipeline gracefully
-	Close()                                                     // close segment gracefully
+	AddCustomConfig(config config.Config)                       //Add segment specific sturctured config parameters
+	Close()
 }
 
 // Serves as a basis for any Segment implementations. Segments embedding this
@@ -82,21 +83,6 @@ type Segment interface {
 type BaseSegment struct {
 	In  <-chan *pb.EnrichedFlow
 	Out chan<- *pb.EnrichedFlow
-}
-
-// An extended basis for Segment implementations in the filter group. It
-// contains the necessities to process filtered (dropped) flows.
-type BaseFilterSegment struct {
-	BaseSegment
-	Drops chan<- *pb.EnrichedFlow
-}
-
-// Set a return channel for dropped flow messages. Segments need to be wary of
-// this channel closing when producing messages to this channel. This method is
-// only called by the flowpipeline tool from the controlflow/branch segment to
-// implement the then/else branches, otherwise this functionality is unused.
-func (segment *BaseFilterSegment) SubscribeDrops(drops chan<- *pb.EnrichedFlow) {
-	segment.Drops = drops
 }
 
 // This function rewires this Segment with the provided channels. This is
@@ -118,4 +104,8 @@ func (segment *BaseSegment) ShutdownParentPipeline() {
 
 func (segment *BaseSegment) Close() {
 	//placeholder since most segments dont need to do anything
+}
+
+func (segment *BaseSegment) AddCustomConfig(config.Config) {
+	//placeholder since most segments dont have a custom sturctured config
 }

@@ -25,23 +25,32 @@ flowpipeline was invoked with that have not been parsed by the binary itself.
 For instance:
 
 ```yaml
-segment: kafkaconsumer
-config:
-  user: myself
-  pass: $PASSWORD
+- segment: kafkaconsumer
+  config:
+    user: myself
+    pass: $PASSWORD
 ```
 
 ```yaml
-segment: flowfilter
-config:
-  filter: $0
+- segment: flowfilter
+  config:
+    filter: $0
 ```
 
 ```yaml
-segment: bpf
-config:
-  device: $0
+- segment: bpf
+  config:
+    device: $0
 ```
+
+## Parallel execution
+```yaml
+- segment: segment_name
+  jobs: 5
+```
+The `jobs` parameter allows you to configure the number of parallel instances of a segment that should be run. The application will create the specified number of parallel instances of the segment and distribute the workload across them. This can significantly reduce the overall processing time, especially for large or complex segments.
+If not set, the default value is 1.
+Note that using too many parallel instances can also lead to performance degradation, as the overhead of managing the parallel processes may outweigh the benefits. 
 
 ## Available Segments
 
@@ -82,7 +91,8 @@ Traffic is counted in bits per second and packets per second, categorized into
 forwarded and dropped traffic. By default, only the destination IP addresses
 are accounted, but the configuration allows using the source IP address or
 both addresses. For the latter, a flows number of bytes and packets are
-ccounted for both addresses.
+counted for both addresses. `connection` is used to look a specific combinations
+of "source -> target".
 
 Thresholds for bits per second or packets per second can be configured. Only
 metrics for addresses that exceeded this threshold during the last window size
@@ -126,7 +136,7 @@ allow for a more efficient filtering.
 
 Filters with a specified `traffictyp` will be exported if they reach the configured thresholds.
 
-```
+```yaml
 - segment: traffic_specific_toptalkers
   config:
     endpoint: ":8085"
@@ -480,12 +490,12 @@ The filter parameter available for some methods will filter packets before they 
 ```yaml
 - segment: packet
   config:
-	method: pcap # required, one of the available capture methods "pcapgo|pcap|pfring|file"
-	source:      # required, for example "eth0" or "./dump.pcapng"
-  # the lines below are optional and set to default
-	filter: "" # optional pflang filter (libpcap's high-level BPF syntax), provided the method is libpcap, pfring, or file.
-	activetimeout: 30m
-	inactivetimeout: 15s
+    method: pcap # required, one of the available capture methods "pcapgo|pcap|pfring|file"
+    source:      # required, for example "eth0" or "./dump.pcapng"
+    # the lines below are optional and set to default
+    filter: "" # optional pflang filter (libpcap's high-level BPF syntax), provided the method is libpcap, pfring, or file.
+    activetimeout: 30m
+    inactivetimeout: 15s
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/packet/bpf)
@@ -873,6 +883,38 @@ Roadmap:
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/modify/snmp)
 [examples using this segment](https://github.com/search?q=%22segment%3A+snmp%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
+#### Sync Timestamps
+The segment `sync_timestamps` tries to fill empty time fields using existing ones.
+It works on the following fields:
+ - TimeFlowStart:
+  - TimeFlowStart
+  - TimeFlowStartMs
+  - TimeFlowStartNs
+ - TimeFlowEnd:
+  - TimeFlowEnd
+  - TimeFlowEndMs
+  - TimeFlowEndNs
+ - TimeReceived:
+  - TimeReceived
+  - TimeReceivedNs
+  
+### Meta Group
+Segments in this group are used for exporting meta data about the flowpipeline itself
+
+#### Delay Monitoring
+The `delay_monitoring` segment measures how old the processed flows are and publishs the delay using a prometheus server.
+The the delay is calculated using a exponential window moving average. The alpha value can be set using `alpha`.
+To reduce load, a sampling intervall can be set using `samplingRate`.
+
+```yaml
+- segment: delay_monitoring
+  # the lines below are optional and set to default
+  config:
+    endpoint: ":8080"
+    samplingRate: 1000
+    alpha: 0.2
+```
+
 ### Output Group
 Segments in this group export flows, usually while keeping all information
 unless instructed otherwise. As all other segments do, these still forward
@@ -1001,12 +1043,16 @@ If the option `zstd` is set to a positive integer, the compression level will be
 When `flowpipeline` is stopped abruptly (e.g by pressing Ctrl+C), the end of the archive will get corrupted.
 Simply use `zstdcat` to decompress the archive and remove the last line (`| head -n -1`).
 
+If the option `pretty` is set to true, the every flow will be formatted in a human-readable way (indented and with line breaks).
+When omitted, the output will be a single line per flow.
+
 ```yaml
 - segment: json
   # the lines below are optional and set to default
   config:
     filename: ""
     zstd: 0
+    pretty: false
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/json)
@@ -1065,7 +1111,7 @@ To see debug output, set the `-l debug` flag when starting `flowpipeline`.
 See [time.ParseDuration](https://pkg.go.dev/time#ParseDuration) for proper duration format
 strings and [strconv.ParseBool](https://pkg.go.dev/strconv#ParseBool) for allowed bool keywords.
 
-```
+```yaml
 - segment: lumberjack
   config:
     servers: tcp://foo.example.com:5044, tls://bar.example.com:5044?compression=3, tlsnoverify://[2001:db8::1]:5044
@@ -1153,7 +1199,6 @@ for an application.
     useprotoname: true
     verbose: false
     highlight: false
-
 ```
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/print/printflowdump)
 [examples using this segment](https://github.com/search?q=%22segment%3A+printflowdump%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)

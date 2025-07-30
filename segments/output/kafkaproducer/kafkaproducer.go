@@ -82,7 +82,7 @@ func (segment KafkaProducer) New(config map[string]string) segments.Segment {
 	if config["kafka-version"] != "" {
 		newsegment.saramaConfig.Version, err = sarama.ParseKafkaVersion(config["kafka-version"])
 		if err != nil {
-			log.Warn().Err(err).Msgf("KafkaProducer:Error parsing Kafka version %s - using default %s", newsegment.KafkaVersion, sarama.V3_8_0_0.String())
+			log.Warn().Err(err).Msgf("KafkaProducer: Error parsing Kafka version %s - using default %s", newsegment.KafkaVersion, sarama.V3_8_0_0.String())
 		} else {
 			newsegment.KafkaVersion = config["kafka-version"]
 		}
@@ -105,7 +105,7 @@ func (segment KafkaProducer) New(config map[string]string) segments.Segment {
 	if newsegment.Tls {
 		rootCAs, err := x509.SystemCertPool()
 		if err != nil {
-			log.Panic().Err(err).Msg("TLS Error: ")
+			log.Panic().Err(err).Msg("KafkaProducer: TLS Error")
 		}
 		newsegment.saramaConfig.Net.TLS.Enable = true
 		newsegment.saramaConfig.Net.TLS.Config = &tls.Config{RootCAs: rootCAs}
@@ -186,7 +186,7 @@ func (segment *KafkaProducer) Run(wg *sync.WaitGroup) {
 		if segment.Legacy {
 			legacyFlow := msg.ConvertToLegacyEnrichedFlow()
 			if binary, err = proto.Marshal(legacyFlow); err != nil {
-				log.Error().Err(err).Msg(" KafkaProducer: Error encoding protobuf. ")
+				log.Error().Err(err).Msg("KafkaProducer: Error encoding protobuf. ")
 				continue
 			}
 		} else {
@@ -195,7 +195,7 @@ func (segment *KafkaProducer) Run(wg *sync.WaitGroup) {
 				msg.SyncMissingTimeStamps()
 				protoProducerMessage.EnrichedFlow = *msg
 				if binary, err = protoProducerMessage.MarshalBinary(); err != nil {
-					log.Error().Err(err).Msg(" KafkaProducer: Error encoding protobuf. ")
+					log.Error().Err(err).Msg("KafkaProducer: Error encoding protobuf. ")
 					continue
 				}
 			} else {

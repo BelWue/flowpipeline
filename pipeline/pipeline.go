@@ -8,11 +8,6 @@ import (
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
-	"github.com/BelWue/flowpipeline/segments/analysis/toptalkers_metrics"
-	"github.com/BelWue/flowpipeline/segments/controlflow/branch"
-	"github.com/BelWue/flowpipeline/segments/filter/drop"
-	"github.com/BelWue/flowpipeline/segments/filter/elephant"
-	"github.com/BelWue/flowpipeline/segments/filter/flowfilter"
 	"github.com/BelWue/flowpipeline/segments/pass"
 )
 
@@ -43,17 +38,9 @@ func (pipeline *Pipeline) GetDrop() <-chan *pb.EnrichedFlow {
 	// Subscribe to drops from special segments, namely all based on
 	// BaseFilterSegment grouped in the filter directory.
 	for _, segment := range pipeline.SegmentList {
-		switch typedSegment := segment.(type) {
-		case *drop.Drop:
-			typedSegment.SubscribeDrops(pipeline.Drop)
-		case *elephant.Elephant:
-			typedSegment.SubscribeDrops(pipeline.Drop)
-		case *flowfilter.FlowFilter:
-			typedSegment.SubscribeDrops(pipeline.Drop)
-		case *branch.Branch:
-			typedSegment.SubscribeDrops(pipeline.Drop)
-		case *toptalkers_metrics.ToptalkersMetrics:
-			typedSegment.SubscribeDrops(pipeline.Drop)
+		value, implementsFilter := segment.(segments.FilterSegment)
+		if implementsFilter {
+			value.SubscribeDrops(pipeline.Drop)
 		}
 	}
 	// If there are no filter/* segments, this channel will never have

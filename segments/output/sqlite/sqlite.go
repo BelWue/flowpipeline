@@ -78,7 +78,7 @@ func (segment Sqlite) New(config map[string]string) segments.Segment {
 		for _, field := range conffields {
 			protofield, found := protofields.FieldByName(field)
 			if !found || !protofield.IsExported() {
-				log.Error().Msgf("sqlite: Field '%s' specified in 'fields' does not exist.", field)
+				log.Error().Msgf("Sqlite: Field '%s' specified in 'fields' does not exist.", field)
 				return nil
 			}
 			newsegment.fieldNames = append(newsegment.fieldNames, field)
@@ -130,17 +130,17 @@ func (segment *Sqlite) Run(wg *sync.WaitGroup) {
 	var err error
 	segment.db, err = sql.Open("sqlite3", segment.FileName)
 	if err != nil {
-		log.Panic().Err(err) // this has already been checked in New
+		log.Panic().Err(err).Msgf("Sqlite: Failed opening DB \"%s\"", segment.FileName) // this has already been checked in New
 	}
 	defer segment.db.Close()
 
 	tx, err := segment.db.Begin()
 	if err != nil {
-		log.Panic().Msgf("Sqlite: Could not start initiation transaction with error: %+v", err)
+		log.Panic().Err(err).Msgf("Sqlite: Could not start initiation transaction")
 	}
 	_, err = tx.Exec(segment.createStatement)
 	if err != nil {
-		log.Panic().Msgf("Sqlite: Could not create database, check field configuration: %+v", err)
+		log.Panic().Err(err).Msgf("Sqlite: Could not create database, check field configuration")
 	}
 	tx.Commit()
 
@@ -151,7 +151,7 @@ func (segment *Sqlite) Run(wg *sync.WaitGroup) {
 		if len(unsaved) >= segment.BatchSize {
 			err := segment.bulkInsert(unsaved)
 			if err != nil {
-				log.Error().Err(err).Msg(" ")
+				log.Error().Err(err).Msg("Sqlite: Failed bluk insert")
 			}
 			unsaved = []*pb.EnrichedFlow{}
 		}
@@ -166,7 +166,7 @@ func (segment Sqlite) bulkInsert(unsavedFlows []*pb.EnrichedFlow) error {
 	}
 	tx, err := segment.db.Begin()
 	if err != nil {
-		log.Error().Msgf("Sqlite: Error starting transaction for current batch of %d flows: %+v", len(unsavedFlows), err)
+		log.Error().Err(err).Msgf("Sqlite: Error starting transaction for current batch of %d flows", len(unsavedFlows))
 	}
 	for _, msg := range unsavedFlows {
 		valueArgs := make([]interface{}, 0, len(segment.fieldNames))
@@ -188,7 +188,7 @@ func (segment Sqlite) bulkInsert(unsavedFlows []*pb.EnrichedFlow) error {
 		}
 		_, err := tx.Exec(segment.insertStatement, valueArgs...)
 		if err != nil {
-			log.Error().Msgf("Sqlite: Error inserting flow into transaction: %+v", err)
+			log.Error().Err(err).Msgf("Sqlite: Error inserting flow into transaction")
 		}
 	}
 	tx.Commit()

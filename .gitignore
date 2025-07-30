@@ -1,5 +1,5 @@
 config.yml
-config
+/config/
 *.so
 
 .idea

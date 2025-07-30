@@ -61,7 +61,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 	} else {
 		defaultCompression, err = strconv.Atoi(defaultCompressionString)
 		if err != nil {
-			log.Fatal().Msgf("Lumberjack: Failed to parse default compression level %s: %s", defaultCompressionString, err)
+			log.Fatal().Err(err).Msgf("Lumberjack: Failed to parse default compression level %s", defaultCompressionString)
 		}
 		if defaultCompression < 0 || defaultCompression > 9 {
 			log.Fatal().Msgf("Lumberjack: Default compression level %d is out of range", defaultCompression)
@@ -80,7 +80,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 		for _, rawServerString := range rawServerStrings {
 			serverURL, err := url.Parse(rawServerString)
 			if err != nil {
-				log.Fatal().Msgf("Lumberjack: Failed to parse server URL %s: %s", rawServerString, err)
+				log.Fatal().Err(err).Msgf("Lumberjack: Failed to parse server URL %s", rawServerString)
 			}
 			urlQueryParams := serverURL.Query()
 
@@ -110,7 +110,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 			} else {
 				compressionLevel, err = strconv.Atoi(compressionString)
 				if err != nil {
-					log.Fatal().Msgf("Lumberjack: Failed to parse compression level %s for host %s: %s", compressionString, serverURL.Host, err)
+					log.Fatal().Err(err).Msgf("Lumberjack: Failed to parse compression level %s for host %s", compressionString, serverURL.Host)
 				}
 				if compressionLevel < 0 || compressionLevel > 9 {
 					log.Fatal().Msgf("Lumberjack: Compression level %d out of range for host %s", compressionLevel, serverURL.Host)
@@ -126,7 +126,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 				numRoutines, err = strconv.Atoi(numRoutinesString)
 				switch {
 				case err != nil:
-					log.Fatal().Msgf("Lumberjack: Failed to parse count %s for host %s: %s", numRoutinesString, serverURL.Host, err)
+					log.Fatal().Err(err).Msgf("Lumberjack: Failed to parse count %s for host %s", numRoutinesString, serverURL.Host)
 				case numRoutines < 1:
 					log.Warn().Msgf("Lumberjack: count is smaller than 1, setting to 1")
 					numRoutines = 1
@@ -273,7 +273,7 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 							// send local buffer
 							count, err := client.SendNoRetry(flowInterface[:idx])
 							if err != nil {
-								log.Error().Msgf("Lumberjack: Failed to send final flow batch upon exit to %s: %s", server, err)
+								log.Error().Err(err).Msgf("Lumberjack: Failed to send final flow batch upon exit to %s", server)
 							} else {
 								segment.BatchDebugPrintf("Lumberjack: %s Sent final batch (%d)", server, count)
 							}

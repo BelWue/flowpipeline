@@ -28,12 +28,12 @@ func (segment FlowFilter) New(config map[string]string) segments.Segment {
 
 	newSegment.expression, err = parser.Parse(config["filter"])
 	if err != nil {
-		log.Error().Err(err).Msg(" FlowFilter: Syntax error in filter expression: ")
+		log.Error().Err(err).Msg("FlowFilter: Syntax error in filter expression: ")
 		return nil
 	}
 	filter := &Filter{}
 	if _, err := filter.CheckFlow(newSegment.expression, &pb.EnrichedFlow{}); err != nil {
-		log.Error().Err(err).Msg(" FlowFilter: Semantic error in filter expression: ")
+		log.Error().Err(err).Msg("FlowFilter: Semantic error in filter expression: ")
 		return nil
 	}
 	return newSegment

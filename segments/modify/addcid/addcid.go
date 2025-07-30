@@ -113,7 +113,7 @@ func (segment *AddCid) Run(wg *sync.WaitGroup) {
 func (segment *AddCid) readPrefixList() {
 	f, err := os.Open(segments.ContainerVolumePrefix + segment.FileName)
 	if err != nil {
-		log.Error().Err(err).Msg(" AddCid: Could not open prefix list: ")
+		log.Error().Err(err).Msg("AddCid: Could not open prefix list: ")
 		return
 	}
 	defer f.Close()
@@ -126,14 +126,14 @@ func (segment *AddCid) readPrefixList() {
 			if err == io.EOF {
 				break
 			} else {
-				log.Warn().Err(err).Msg(" AddCid: Encountered non-CSV line in prefix list: ")
+				log.Warn().Err(err).Msg("AddCid: Encountered non-CSV line in prefix list: ")
 				continue
 			}
 		}
 
 		cid, err := strconv.ParseInt(row[1], 10, 32)
 		if err != nil {
-			log.Warn().Err(err).Msg(" AddCid: Encountered non-integer customer id: ")
+			log.Warn().Err(err).Msg("AddCid: Encountered non-integer customer id: ")
 			continue
 		}
 

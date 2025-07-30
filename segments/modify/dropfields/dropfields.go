@@ -43,7 +43,7 @@ func (segment *DropFields) New(config map[string]string) segments.Segment {
 	case "drop":
 		policy = PolicyDrop
 	default:
-		log.Fatal().Msg(" DropFields: The 'policy' parameter is required to be either 'keep' or 'drop'.")
+		log.Fatal().Msg("DropFields: The 'policy' parameter is required to be either 'keep' or 'drop'.")
 	}
 
 	// parse fields
@@ -75,7 +75,7 @@ func (segment *DropFields) Run(wg *sync.WaitGroup) {
 				if originalField.IsValid() && resultFlowDestinationField.CanSet() {
 					resultFlowDestinationField.Set(originalField)
 				} else {
-					log.Fatal().Msgf("KeepFields: Field '%s' is not valid or can not be set.", fieldName)
+					log.Fatal().Msgf("DropFields: Field '%s' is not valid or can not be set.", fieldName)
 				}
 			}
 			segment.Out <- resultFlow

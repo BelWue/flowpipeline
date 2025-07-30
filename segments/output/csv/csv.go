@@ -37,7 +37,7 @@ func (segment Csv) New(config map[string]string) segments.Segment {
 	if config["filename"] != "" {
 		file, err = os.Create(config["filename"])
 		if err != nil {
-			log.Error().Err(err).Msg(" Csv: File specified in 'filename' is not accessible: ")
+			log.Error().Err(err).Msg("Csv: File specified in 'filename' is not accessible: ")
 		}
 		filename = config["filename"]
 	} else {

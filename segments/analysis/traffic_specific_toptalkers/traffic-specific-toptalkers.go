@@ -2,12 +2,14 @@
 package traffic_specific_toptalkers
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowfilter/parser"
 	"github.com/BelWue/flowpipeline/pb"
+	"github.com/BelWue/flowpipeline/pipeline/config"
 	"github.com/BelWue/flowpipeline/segments"
 	"github.com/BelWue/flowpipeline/segments/analysis/toptalkers_metrics"
 	"github.com/BelWue/flowpipeline/segments/filter/flowfilter"
@@ -16,23 +18,24 @@ import (
 type TrafficSpecificToptalkers struct {
 	segments.BaseSegment
 	toptalkers_metrics.PrometheusParams
-	ThresholdMetricDefinition []*ThresholdMetricDefinition
+	ThresholdMetricDefinition []*ThresholdMetric
+	RelevantAddress           string // optional, default is "destination", options are "destination", "source", "both", "connection"
 }
 
-type ThresholdMetricDefinition struct {
-	toptalkers_metrics.PrometheusMetricsParams `yaml:",inline"`
+type ThresholdMetric struct {
+	toptalkers_metrics.PrometheusMetricsParams
 
-	Expression       *parser.Expression
-	FilterDefinition string                       `yaml:"filter,omitempty"`
-	SubDefinitions   []*ThresholdMetricDefinition `yaml:"subfilter,omitempty"`
 	Database         *toptalkers_metrics.Database
+	SubDefinitions   []*ThresholdMetric
+	Expression       *parser.Expression
+	FilterDefinition string
 }
 
 func (segment TrafficSpecificToptalkers) New(config map[string]string) segments.Segment {
 	newSegment := &TrafficSpecificToptalkers{}
 	newSegment.InitDefaultPrometheusParams()
 	if config["endpoint"] == "" {
-		log.Info().Msg("ToptalkersMetrics Missing configuration parameter 'endpoint'. Using default port \":8080\"")
+		log.Info().Msg("ToptalkersMetrics: Missing configuration parameter 'endpoint'. Using default port \":8080\"")
 	} else {
 		newSegment.Endpoint = config["endpoint"]
 	}
@@ -47,35 +50,51 @@ func (segment TrafficSpecificToptalkers) New(config map[string]string) segments.
 	} else {
 		newSegment.FlowdataPath = config["flowdatapath"]
 	}
+	if config["relevantaddress"] != "" {
+		newSegment.RelevantAddress = config["relevantaddress"]
+	} else {
+		newSegment.RelevantAddress = ""
+	}
 
 	return newSegment
 }
 
-func (segment *TrafficSpecificToptalkers) SetThresholdMetricDefinition(definition []*ThresholdMetricDefinition) {
-	segment.ThresholdMetricDefinition = definition
-	for _, definition := range segment.ThresholdMetricDefinition {
-		err := initThresholdMetrics(definition)
+func (segment *TrafficSpecificToptalkers) AddCustomConfig(config config.Config) {
+	for _, definition := range config.ThresholdMetricDefinition {
+		metric, err := segment.metricFromDefinition(definition)
 		if err != nil {
-			log.Error().Err(err)
+			log.Error().Err(err).Msg("ThresholdToptalkersMetrics: Failed to add custom config")
 		}
+		segment.ThresholdMetricDefinition = append(segment.ThresholdMetricDefinition, metric)
 	}
 }
 
-func initThresholdMetrics(definition *ThresholdMetricDefinition) error {
-	definition.InitDefaultPrometheusMetricParams()
+func (segment *TrafficSpecificToptalkers) metricFromDefinition(definition *config.ThresholdMetricDefinition) (*ThresholdMetric, error) {
 	var err error
-	definition.Expression, err = parser.Parse(definition.FilterDefinition)
+	metric := ThresholdMetric{}
+	metric.PrometheusMetricsParamsDefinition = definition.PrometheusMetricsParamsDefinition
+	metric.FilterDefinition = definition.FilterDefinition
+	metric.InitDefaultPrometheusMetricParams()
+
+	if segment.RelevantAddress != "" {
+		metric.RelevantAddress = segment.RelevantAddress
+	}
+
+	metric.Expression, err = parser.Parse(definition.FilterDefinition)
 	if err != nil {
-		log.Error().Err(err).Msg("FlowFilter: Syntax error in filter expression")
-		return nil
+		log.Error().Err(err).Msgf("ThresholdToptalkersMetrics: Syntax error in filter expression\"%s\"", definition.FilterDefinition)
+		return nil, err
 	}
+
 	for _, subDefinition := range definition.SubDefinitions {
-		err := initThresholdMetrics(subDefinition)
+		subMetric, err := segment.metricFromDefinition(subDefinition)
 		if err != nil {
-			return err
+			return nil, err
 		}
+		metric.SubDefinitions = append(metric.SubDefinitions, subMetric)
 	}
-	return nil
+
+	return &metric, nil
 }
 
 func (segment *TrafficSpecificToptalkers) Run(wg *sync.WaitGroup) {
@@ -123,9 +142,9 @@ func initDatabasesAndCollector(promExporter toptalkers_metrics.PrometheusExporte
 	return &allDatabases
 }
 
-func initDatabasesForFilter(filterDef *ThresholdMetricDefinition, promExporter *toptalkers_metrics.PrometheusExporter) []*toptalkers_metrics.Database {
+func initDatabasesForFilter(filterDef *ThresholdMetric, promExporter *toptalkers_metrics.PrometheusExporter) []*toptalkers_metrics.Database {
 	databases := []*toptalkers_metrics.Database{}
-	if filterDef.TrafficType != "" { //defined a metric that should be in prometheus
+	if filterDef.PrometheusMetricsParams.TrafficType != "" { //defined a metric that should be in prometheus
 		database := toptalkers_metrics.NewDatabase(filterDef.PrometheusMetricsParams, promExporter)
 
 		filterDef.Database = &database
@@ -137,20 +156,23 @@ func initDatabasesForFilter(filterDef *ThresholdMetricDefinition, promExporter *
 	return databases
 }
 
-func addMessageToMatchingToptalkers(msg *pb.EnrichedFlow, definition *ThresholdMetricDefinition, filter *flowfilter.Filter) {
+func addMessageToMatchingToptalkers(msg *pb.EnrichedFlow, definition *ThresholdMetric, filter *flowfilter.Filter) {
 	if match, _ := filter.CheckFlow(definition.Expression, msg); match {
 		// Update Counters if definition has a prometheus label defined
-		if definition.TrafficType != "" {
+		if definition.PrometheusMetricsParams.TrafficType != "" {
 			var keys []string
-			if definition.RelevantAddress == "source" {
+			switch definition.PrometheusMetricsParams.RelevantAddress {
+			case "source":
 				keys = []string{msg.SrcAddrObj().String()}
-			} else if definition.RelevantAddress == "destination" {
+			case "destination":
 				keys = []string{msg.DstAddrObj().String()}
-			} else if definition.RelevantAddress == "both" {
+			case "both":
 				keys = []string{msg.SrcAddrObj().String(), msg.DstAddrObj().String()}
+			case "connection":
+				keys = []string{fmt.Sprintf("%s -> %s", msg.SrcAddrObj().String(), msg.DstAddrObj().String())}
 			}
 			for _, key := range keys {
-				record := definition.Database.GetRecord(key)
+				record := definition.Database.GetTypedRecord(definition.PrometheusMetricsParams.TrafficType, key)
 				record.Append(msg.Bytes, msg.Packets, msg.IsForwarded())
 			}
 		}

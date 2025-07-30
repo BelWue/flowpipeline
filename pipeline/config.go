@@ -7,36 +7,20 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/BelWue/flowpipeline/pipeline/config"
 	"github.com/BelWue/flowpipeline/segments"
-	"github.com/BelWue/flowpipeline/segments/analysis/traffic_specific_toptalkers"
 	"github.com/BelWue/flowpipeline/segments/controlflow/branch"
 	"gopkg.in/yaml.v2"
 )
 
-// A config representation of a segment. It is intended to look like this:
-//   - segment: pass
-//     config:
-//     key: value
-//     foo: bar
-//
-// This struct has the appropriate yaml tags inline.
+// A config representation of a segment.
 type SegmentRepr struct {
 	Name   string        `yaml:"segment"`             // to be looked up with a registry
-	Config Config        `yaml:"config"`              // to be expanded by our instance
+	Config config.Config `yaml:"config"`              // to be expanded by our instance
+	Jobs   int           `yaml:"jobs,omitempty"`      // parallel jobs running the pipeline
 	If     []SegmentRepr `yaml:"if,omitempty,flow"`   // only used by group segment
 	Then   []SegmentRepr `yaml:"then,omitempty,flow"` // only used by group segment
 	Else   []SegmentRepr `yaml:"else,omitempty,flow"` // only used by group segment
-}
-
-// Allows adding Config params that arnt only a simple map
-// Needs to be expanded by every Segment using it
-type Config struct {
-	Config map[string]string `yaml:",inline"`
-
-	//Define custom segment specific structured config params here
-	//The parameter MUST contain the segement name to not conflict with other existing config parameters
-	//Make sure to also add mapping of the custom config in the SegmentsFromRepr function
-	ThresholdMetricDefinition []*traffic_specific_toptalkers.ThresholdMetricDefinition `yaml:"traffic_specific_toptalkers,omitempty"`
 }
 
 // Returns the SegmentRepr's Config with all its variables expanded. It tries
@@ -65,43 +49,69 @@ func (s *SegmentRepr) ExpandedConfig() map[string]string {
 // initializes a Pipeline with them.
 func NewFromConfig(config []byte) *Pipeline {
 	// parse a list of SegmentReprs from yaml
-	segmentReprs := new([]SegmentRepr)
+	segmentReprs := SegmentReprsFromConfig(config)
+
+	// build segments from it
+	segments := SegmentsFromRepr(segmentReprs)
+
+	// we have Segments parsed and ready, instantiate them as actual pipeline
+	return New(segments...)
+}
+
+// SegmentReprsFromConfig returns a list of segment representation objects from a config.
+func SegmentReprsFromConfig(config []byte) []SegmentRepr {
+	// parse a list of SegmentReprs from yaml
+	segmentReprs := []SegmentRepr{}
 
 	err := yaml.Unmarshal(config, &segmentReprs)
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error parsing configuration YAML: ")
 	}
 
-	segments := SegmentsFromRepr(segmentReprs)
-
-	// we have SegmentReprs parsed, instanciate them as actual Segments
-	return New(segments...)
+	return segmentReprs
 }
 
 // Creates a list of Segments from their config representations. Handles
 // recursive definitions found in Segments.
-func SegmentsFromRepr(segmentReprs *[]SegmentRepr) []segments.Segment {
-	segmentList := make([]segments.Segment, len(*segmentReprs))
-	for i, segmentrepr := range *segmentReprs {
+func SegmentsFromRepr(segmentReprs []SegmentRepr) []segments.Segment {
+	segmentList := make([]segments.Segment, len(segmentReprs))
+	for i, segmentrepr := range segmentReprs {
+
+		ifPipeline := New(SegmentsFromRepr(segmentrepr.If)...)
+		thenPipeline := New(SegmentsFromRepr(segmentrepr.Then)...)
+		elsePipeline := New(SegmentsFromRepr(segmentrepr.Else)...)
+
 		segmentTemplate := segments.LookupSegment(segmentrepr.Name) // a typed nil instance
-		// the Segment's New method knows how to handle our config
-		segment := segmentTemplate.New(segmentrepr.ExpandedConfig())
-		switch segment := segment.(type) { // handle special segments
-		case *branch.Branch:
-			segment.ImportBranches(
-				New(SegmentsFromRepr(&segmentrepr.If)...),
-				New(SegmentsFromRepr(&segmentrepr.Then)...),
-				New(SegmentsFromRepr(&segmentrepr.Else)...),
-			)
-		// Insert custom config parameters into segments
-		case *traffic_specific_toptalkers.TrafficSpecificToptalkers:
-			segment.SetThresholdMetricDefinition(segmentrepr.Config.ThresholdMetricDefinition)
-		}
-		if segment != nil {
-			segmentList[i] = segment
+
+		if segmentrepr.Jobs <= 1 {
+			segmentList[i] = segmentFromTemplate(ifPipeline, thenPipeline, elsePipeline, segmentTemplate, segmentrepr)
 		} else {
-			log.Fatal().Msgf("Configured segment '%s' could not be initialized properly, see previous messages.", segmentrepr.Name)
+			wrapper := &segments.ParallelizedSegment{}
+			for range segmentrepr.Jobs {
+				segment := segmentFromTemplate(ifPipeline, thenPipeline, elsePipeline, segmentTemplate, segmentrepr)
+				if segment != nil {
+					wrapper.AddSegment(segment)
+				} else {
+					log.Fatal().Msgf("Configured segment '%s' could not be initialized properly, see previous messages.", segmentrepr.Name)
+				}
+			}
+			segmentList[i] = wrapper
 		}
 	}
 	return segmentList
+}
+
+func segmentFromTemplate(ifPipeline, thenPipeline, elsePipeline *Pipeline, segmentTemplate segments.Segment, segmentrepr SegmentRepr) segments.Segment {
+	// the Segment's New method knows how to handle our config
+	segment := segmentTemplate.New(segmentrepr.ExpandedConfig())
+	switch segment := segment.(type) { // handle special segments
+	case *branch.Branch:
+		segment.ImportBranches(
+			ifPipeline,
+			thenPipeline,
+			elsePipeline,
+		)
+	}
+	segment.AddCustomConfig(segmentrepr.Config)
+	return segment
 }

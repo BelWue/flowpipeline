@@ -281,4 +281,8 @@ uint32 EgressVrfIDBW = 2540;
 uint64 TimeFlowStart = 2538;
 //  uint64 TimeFlowEnd = 2505;
 // Kept for legacy support
+
+// Used for Split in source and Destination Parts
+  repeated uint32 src_as_path = 2301;
+  repeated uint32 dst_as_path = 2302;
 }

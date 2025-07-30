@@ -62,7 +62,7 @@ func (segment RemoteAddress) New(config map[string]string) segments.Segment {
 		log.Info().Msg("RemoteAddress: 'dropunmatched' set to default 'false'.")
 	}
 	if config["policy"] == "cidr" && config["filename"] == "" {
-		log.Error().Msg("AddCid: This segment requires a 'filename' parameter.")
+		log.Error().Msg("RemoteAddress: This segment requires a 'filename' parameter.")
 		return nil
 	}
 	return &RemoteAddress{
@@ -129,7 +129,7 @@ func (segment *RemoteAddress) Run(wg *sync.WaitGroup) {
 func (segment *RemoteAddress) readPrefixList() {
 	f, err := os.Open(segments.ContainerVolumePrefix + segment.FileName)
 	if err != nil {
-		log.Error().Err(err).Msg(" RemoteAddress: Could not open prefix list: ")
+		log.Error().Err(err).Msg("RemoteAddress: Could not open prefix list: ")
 		return
 	}
 	defer f.Close()
@@ -142,14 +142,14 @@ func (segment *RemoteAddress) readPrefixList() {
 			if err == io.EOF {
 				break
 			} else {
-				log.Warn().Err(err).Msg(" RemoteAddress: Encountered non-CSV line in prefix list: ")
+				log.Warn().Err(err).Msg("RemoteAddress: Encountered non-CSV line in prefix list: ")
 				continue
 			}
 		}
 
 		cid, err := strconv.ParseInt(row[1], 10, 32)
 		if err != nil {
-			log.Warn().Err(err).Msg(" RemoteAddress: Encountered non-integer customer id: ")
+			log.Warn().Err(err).Msg("RemoteAddress: Encountered non-integer customer id: ")
 			continue
 		}
 
