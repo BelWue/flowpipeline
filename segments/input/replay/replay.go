@@ -107,7 +107,7 @@ func ReadFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
 		}
 
 		fieldPointers := make([]any, len(exportedFields))
-		var typ, bgpCommunities, asPath, mplsTtl, mplsLabel, mplsIp, layerStack, layerSize, ipv6RoutingHeaderAddresses, srcAddrAnon, dstAddrAnon, samplerAddrAnon, nextHopAnon, validationStatus, normalized, remoteAddr string
+		var typ, bgpCommunities, asPath, mplsTtl, mplsLabel, mplsIp, layerStack, layerSize, ipv6RoutingHeaderAddresses, srcAddrAnon, dstAddrAnon, samplerAddrAnon, nextHopAnon, validationStatus, normalized, remoteAddr, srcAsPath, dstAsPath string
 		for i, fieldName := range exportedFields {
 			switch fieldName {
 			case "Type":
@@ -142,6 +142,10 @@ func ReadFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
 				fieldPointers[i] = &normalized
 			case "RemoteAddr":
 				fieldPointers[i] = &remoteAddr
+			case "SrcAsPath":
+				fieldPointers[i] = &srcAsPath
+			case "DstAsPath":
+				fieldPointers[i] = &dstAsPath
 			default:
 				fieldPointers[i] = v.FieldByName(fieldName).Addr().Interface()
 			}
@@ -169,6 +173,8 @@ func ReadFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
 		flow.ValidationStatus = pb.EnrichedFlow_ValidationStatusType(pb.EnrichedFlow_ValidationStatusType_value[validationStatus])
 		flow.Normalized = pb.EnrichedFlow_NormalizedType(pb.EnrichedFlow_NormalizedType_value[normalized])
 		flow.RemoteAddr = pb.EnrichedFlow_RemoteAddrType(pb.EnrichedFlow_RemoteAddrType_value[remoteAddr])
+		flow.SrcAsPath, err = ParseUint32Slice(srcAsPath)
+		flow.DstAsPath, err = ParseUint32Slice(dstAsPath)
 
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to parse row data from database.")
