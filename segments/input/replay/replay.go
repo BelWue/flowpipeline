@@ -16,6 +16,7 @@ import (
 
 type Replay struct {
 	segments.BaseSegment
+	db *sql.DB
 
 	FileName      string
 	RespectTiming bool // optional, default is true
@@ -55,7 +56,32 @@ func (segment Replay) New(config map[string]string) segments.Segment {
 }
 
 func (segment *Replay) Run(wg *sync.WaitGroup) {
-	panic("unimplemented")
+	defer func() {
+		close(segment.Out)
+		wg.Done()
+	}()
+
+	var err error
+	segment.db, err = sql.Open("sqlite3", segment.FileName)
+	if err != nil {
+		log.Panic().Err(err) // Already verified in New()
+	}
+	defer segment.db.Close()
+
+	fromDB := make(chan *pb.EnrichedFlow)
+	go ReadFromDB(segment.db, fromDB)
+
+	for {
+		select {
+		case msg, ok := <-segment.In:
+			if !ok {
+				return
+			}
+			segment.Out <- msg
+		case row := <-fromDB:
+			segment.Out <- row
+		}
+	}
 }
 
 func ReadFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
@@ -156,4 +182,52 @@ func ReadFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
 func init() {
 	segment := &Replay{}
 	segments.RegisterSegment("replay", segment)
+}
+
+func ParseSlice[T any](s string, elementHandler func(string) (T, error)) ([]T, error) {
+	if !strings.HasPrefix(s, "[") || !strings.HasSuffix(s, "]") {
+		return nil, fmt.Errorf("invalid format: string does not have surrounding brackets")
+	}
+
+	content := s[1 : len(s)-1]           // Get the content inside the brackets.
+	entries := strings.Fields(content)   // Split the string by whitespace to get individual number strings.
+	result := make([]T, 0, len(entries)) // Create a slice to hold the results
+
+	for _, entry := range entries {
+		val, err := elementHandler(entry)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, val)
+	}
+
+	return result, nil
+}
+
+func ParseUint32Slice(s string) ([]uint32, error) {
+	return ParseSlice(s, func(elem string) (uint32, error) {
+		val, err := strconv.ParseUint(elem, 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse number '%s': %w", elem, err)
+		}
+		return uint32(val), nil
+	})
+}
+
+func ParseByteSlices(s string) ([][]byte, error) {
+	return ParseSlice(s, func(elemOuter string) ([]byte, error) {
+		return ParseSlice(elemOuter, func(elemInner string) (byte, error) {
+			val, err := strconv.ParseUint(elemInner, 10, 8)
+			if err != nil {
+				return 0, fmt.Errorf("failed to parse byte value '%s': %w", elemInner, err)
+			}
+			return byte(val), nil
+		})
+	})
+}
+
+func ParseLayerStackSlice(s string) ([]pb.EnrichedFlow_LayerStack, error) {
+	return ParseSlice(s, func(elem string) (pb.EnrichedFlow_LayerStack, error) {
+		return pb.EnrichedFlow_LayerStack(pb.EnrichedFlow_LayerStack_value[elem]), nil
+	})
 }
