@@ -494,11 +494,14 @@ The filter parameter available for some methods will filter packets before they 
 #### replay
 The `replay` segment reads a sqlite database previously created by the `sqlite` segment and emits the flows contained in it.
 The location of the database is specified with the `filename` parameter.
+If `respecttiming` is set to `true`, the segment will respect the timing of the original flows and will replay them accordingly.
+Otherwise, the segment will emit all flows instantly after each other.
 
 ```yaml
 - segment: replay
   config:
     filename: dump.sqlite
+    respecttiming: true # optional
 ```
 
 #### stdin
