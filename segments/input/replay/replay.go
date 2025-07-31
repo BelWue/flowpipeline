@@ -69,7 +69,7 @@ func (segment *Replay) Run(wg *sync.WaitGroup) {
 	defer segment.db.Close()
 
 	fromDB := make(chan *pb.EnrichedFlow)
-	go ReadFromDB(segment.db, fromDB)
+	go readFromDB(segment.db, fromDB)
 
 	for {
 		select {
@@ -84,7 +84,7 @@ func (segment *Replay) Run(wg *sync.WaitGroup) {
 	}
 }
 
-func ReadFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
+func readFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
 	rows, err := db.Query("SELECT * FROM flows")
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to query flows from database.")
@@ -158,14 +158,14 @@ func ReadFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
 
 		var err error
 		flow.Type = pb.EnrichedFlow_FlowType(pb.EnrichedFlow_FlowType_value[typ])
-		flow.BgpCommunities, err = ParseUint32Slice(bgpCommunities)
-		flow.AsPath, err = ParseUint32Slice(asPath)
-		flow.MplsTtl, err = ParseUint32Slice(mplsTtl)
-		flow.MplsLabel, err = ParseUint32Slice(mplsLabel)
-		flow.MplsIp, err = ParseByteSlices(mplsIp)
-		flow.LayerStack, err = ParseLayerStackSlice(layerStack)
-		flow.LayerSize, err = ParseUint32Slice(layerSize)
-		flow.Ipv6RoutingHeaderAddresses, err = ParseByteSlices(ipv6RoutingHeaderAddresses)
+		flow.BgpCommunities, err = parseUint32Slice(bgpCommunities)
+		flow.AsPath, err = parseUint32Slice(asPath)
+		flow.MplsTtl, err = parseUint32Slice(mplsTtl)
+		flow.MplsLabel, err = parseUint32Slice(mplsLabel)
+		flow.MplsIp, err = parseByteSlices(mplsIp)
+		flow.LayerStack, err = parseLayerStackSlice(layerStack)
+		flow.LayerSize, err = parseUint32Slice(layerSize)
+		flow.Ipv6RoutingHeaderAddresses, err = parseByteSlices(ipv6RoutingHeaderAddresses)
 		flow.SrcAddrAnon = pb.EnrichedFlow_AnonymizedType(pb.EnrichedFlow_AnonymizedType_value[srcAddrAnon])
 		flow.DstAddrAnon = pb.EnrichedFlow_AnonymizedType(pb.EnrichedFlow_AnonymizedType_value[dstAddrAnon])
 		flow.SamplerAddrAnon = pb.EnrichedFlow_AnonymizedType(pb.EnrichedFlow_AnonymizedType_value[samplerAddrAnon])
@@ -173,8 +173,8 @@ func ReadFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
 		flow.ValidationStatus = pb.EnrichedFlow_ValidationStatusType(pb.EnrichedFlow_ValidationStatusType_value[validationStatus])
 		flow.Normalized = pb.EnrichedFlow_NormalizedType(pb.EnrichedFlow_NormalizedType_value[normalized])
 		flow.RemoteAddr = pb.EnrichedFlow_RemoteAddrType(pb.EnrichedFlow_RemoteAddrType_value[remoteAddr])
-		flow.SrcAsPath, err = ParseUint32Slice(srcAsPath)
-		flow.DstAsPath, err = ParseUint32Slice(dstAsPath)
+		flow.SrcAsPath, err = parseUint32Slice(srcAsPath)
+		flow.DstAsPath, err = parseUint32Slice(dstAsPath)
 
 		if err != nil {
 			log.Error().Err(err).Msg("Failed to parse row data from database.")
@@ -190,7 +190,7 @@ func init() {
 	segments.RegisterSegment("replay", segment)
 }
 
-func ParseSlice[T any](s string, elementHandler func(string) (T, error)) ([]T, error) {
+func parseSlice[T any](s string, elementHandler func(string) (T, error)) ([]T, error) {
 	if !strings.HasPrefix(s, "[") || !strings.HasSuffix(s, "]") {
 		return nil, fmt.Errorf("invalid format: string does not have surrounding brackets")
 	}
@@ -210,8 +210,8 @@ func ParseSlice[T any](s string, elementHandler func(string) (T, error)) ([]T, e
 	return result, nil
 }
 
-func ParseUint32Slice(s string) ([]uint32, error) {
-	return ParseSlice(s, func(elem string) (uint32, error) {
+func parseUint32Slice(s string) ([]uint32, error) {
+	return parseSlice(s, func(elem string) (uint32, error) {
 		val, err := strconv.ParseUint(elem, 10, 32)
 		if err != nil {
 			return 0, fmt.Errorf("failed to parse number '%s': %w", elem, err)
@@ -220,9 +220,9 @@ func ParseUint32Slice(s string) ([]uint32, error) {
 	})
 }
 
-func ParseByteSlices(s string) ([][]byte, error) {
-	return ParseSlice(s, func(elemOuter string) ([]byte, error) {
-		return ParseSlice(elemOuter, func(elemInner string) (byte, error) {
+func parseByteSlices(s string) ([][]byte, error) {
+	return parseSlice(s, func(elemOuter string) ([]byte, error) {
+		return parseSlice(elemOuter, func(elemInner string) (byte, error) {
 			val, err := strconv.ParseUint(elemInner, 10, 8)
 			if err != nil {
 				return 0, fmt.Errorf("failed to parse byte value '%s': %w", elemInner, err)
@@ -232,8 +232,8 @@ func ParseByteSlices(s string) ([][]byte, error) {
 	})
 }
 
-func ParseLayerStackSlice(s string) ([]pb.EnrichedFlow_LayerStack, error) {
-	return ParseSlice(s, func(elem string) (pb.EnrichedFlow_LayerStack, error) {
+func parseLayerStackSlice(s string) ([]pb.EnrichedFlow_LayerStack, error) {
+	return parseSlice(s, func(elem string) (pb.EnrichedFlow_LayerStack, error) {
 		return pb.EnrichedFlow_LayerStack(pb.EnrichedFlow_LayerStack_value[elem]), nil
 	})
 }
