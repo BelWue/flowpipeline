@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -68,8 +69,14 @@ func (segment *Replay) Run(wg *sync.WaitGroup) {
 	}
 	defer segment.db.Close()
 
-	fromDB := make(chan *pb.EnrichedFlow)
-	go readFromDB(segment.db, fromDB)
+	flows, err := readFromDB(segment.db)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to read flows from database.")
+		return
+	}
+
+	flowStream := make(chan *pb.EnrichedFlow)
+	go replay(flows, segment.RespectTiming, flowStream)
 
 	for {
 		select {
@@ -78,20 +85,20 @@ func (segment *Replay) Run(wg *sync.WaitGroup) {
 				return
 			}
 			segment.Out <- msg
-		case row := <-fromDB:
+		case row := <-flowStream:
 			segment.Out <- row
 		}
 	}
 }
 
-func readFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
+func readFromDB(db *sql.DB) ([]*pb.EnrichedFlow, error) {
 	rows, err := db.Query("SELECT * FROM flows")
 	if err != nil {
-		log.Panic().Err(err).Msg("Failed to query flows from database.")
-		return
+		return nil, err
 	}
 	defer rows.Close()
 
+	flows := make([]*pb.EnrichedFlow, 0)
 	for rows.Next() {
 		flow := &pb.EnrichedFlow{}
 
@@ -181,7 +188,28 @@ func readFromDB(db *sql.DB, channel chan *pb.EnrichedFlow) {
 			continue
 		}
 
-		channel <- flow
+		flows = append(flows, flow)
+	}
+
+	return flows, nil
+}
+
+func replay(flows []*pb.EnrichedFlow, respectTiming bool, out chan *pb.EnrichedFlow) {
+	if len(flows) == 0 {
+		log.Info().Msg("Replay: No flows to replay.")
+		return
+	}
+
+	for i, flow := range flows {
+		if respectTiming && i > 0 {
+			previousFlow := flows[i-1]
+			prevEndNs := int64(previousFlow.GetTimeFlowEnd())
+			currEndNs := int64(flow.GetTimeFlowEnd())
+			prevEnd := time.Unix(prevEndNs/1e9, prevEndNs%1e9)
+			currEnd := time.Unix(currEndNs/1e9, currEndNs%1e9)
+			time.Sleep(currEnd.Sub(prevEnd))
+		}
+		out <- flow
 	}
 }
 
