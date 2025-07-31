@@ -159,7 +159,7 @@ func readFromDB(db *sql.DB) ([]*pb.EnrichedFlow, error) {
 		}
 
 		if err := rows.Scan(fieldPointers...); err != nil {
-			log.Error().Err(err).Msg("Failed to scan row from database.")
+			log.Error().Err(err).Msg("Failed to scan row from database. Probably because the database does only contain a subset of all columns.")
 			continue
 		}
 
