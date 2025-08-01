@@ -106,11 +106,11 @@ func readFromDB(db *sql.DB) ([]*pb.EnrichedFlow, error) {
 		t := reflect.TypeOf(pb.EnrichedFlow{})
 
 		exportedFields := make([]string, 0, v.NumField())
-		for i := 0; i < v.NumField(); i++ {
-			if !t.Field(i).IsExported() {
+		for _, field := range reflect.VisibleFields(t) {
+			if !field.IsExported() {
 				continue
 			}
-			exportedFields = append(exportedFields, t.Field(i).Name)
+			exportedFields = append(exportedFields, field.Name)
 		}
 
 		fieldPointers := make([]any, len(exportedFields))
