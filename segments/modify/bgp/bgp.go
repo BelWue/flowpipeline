@@ -10,6 +10,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	routeinfoLog "github.com/BelWue/bgp_routeinfo/log"
 	"github.com/BelWue/bgp_routeinfo/routeinfo"
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
@@ -24,6 +25,7 @@ type Bgp struct {
 	RouterASN       uint32 // ASN of the local router
 
 	routeInfoServer routeinfo.RouteInfoServer
+	routeInfoLogger routeinfoLog.RouteinfoLogger
 }
 
 func (segment Bgp) New(config map[string]string) segments.Segment {
@@ -75,12 +77,17 @@ func (segment Bgp) New(config map[string]string) segments.Segment {
 		return nil
 	}
 
+	logger := &routeinfoLog.DefaultRouteInfoLogger{}
+	appLogger := routeinfoLog.ApplicationLoggerFromZerolog(&log.Logger)
+	logger.SetApplicationLogger(appLogger)
+
 	newSegment := &Bgp{
 		FileName:        config["filename"],
 		FallbackRouter:  config["fallbackrouter"],
 		UseFallbackOnly: fallbackonly,
 		RouterASN:       routerASN,
 		routeInfoServer: rs,
+		routeInfoLogger: logger,
 	}
 	return newSegment
 }
@@ -90,8 +97,7 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 		close(segment.Out)
 		wg.Done()
 	}()
-
-	segment.routeInfoServer.Init()
+	segment.routeInfoServer.Logger = segment.routeInfoLogger
 	defer func() {
 		segment.routeInfoServer.Stop()
 	}()
@@ -104,15 +110,15 @@ func (segment *Bgp) Run(wg *sync.WaitGroup) {
 		var srcAsPath []uint32
 		var dstAsPath []uint32
 		if segment.UseFallbackOnly {
-			dstRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.DstAddrObj().String())
-			srcRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.SrcAddrObj().String())
+			dstRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.DstAddrObj().String(), segment.routeInfoLogger.GetApplicationLogger())
+			srcRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.SrcAddrObj().String(), segment.routeInfoLogger.GetApplicationLogger())
 		} else {
 			if router, ok := segment.routeInfoServer.Routers[msg.SamplerAddressObj().String()]; ok {
-				dstRouteInfos = router.Lookup(msg.DstAddrObj().String())
-				srcRouteInfos = router.Lookup(msg.SrcAddrObj().String())
+				dstRouteInfos = router.Lookup(msg.DstAddrObj().String(), segment.routeInfoLogger.GetApplicationLogger())
+				srcRouteInfos = router.Lookup(msg.SrcAddrObj().String(), segment.routeInfoLogger.GetApplicationLogger())
 			} else if segment.FallbackRouter != "" {
-				dstRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.DstAddrObj().String())
-				srcRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.SrcAddrObj().String())
+				dstRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.DstAddrObj().String(), segment.routeInfoLogger.GetApplicationLogger())
+				srcRouteInfos = segment.routeInfoServer.Routers[segment.FallbackRouter].Lookup(msg.SrcAddrObj().String(), segment.routeInfoLogger.GetApplicationLogger())
 			} else {
 				segment.Out <- msg
 				continue

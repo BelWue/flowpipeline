@@ -5,7 +5,7 @@ go 1.23.2
 replace github.com/BelWue/flowpipeline => .
 
 require (
-	github.com/BelWue/bgp_routeinfo v0.0.0-20221004100427-d8095fc566dd
+	github.com/BelWue/bgp_routeinfo v0.3.0
 	github.com/BelWue/flowfilter v1.0.0
 	github.com/ClickHouse/clickhouse-go/v2 v2.37.2
 	github.com/IBM/sarama v1.45.2
@@ -41,9 +41,12 @@ require (
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/oapi-codegen/runtime v1.1.1 // indirect
+	github.com/orcaman/concurrent-map/v2 v2.0.1 // indirect
+	github.com/osrg/gobgp/v4 v4.0.0-20250713044257-e168c66818bd // indirect
 	github.com/robfig/cron/v3 v3.0.1 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
 	github.com/sagikazarmark/locafero v0.9.0 // indirect
+	github.com/segmentio/fasthash v1.0.3 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
@@ -105,11 +108,11 @@ require (
 	github.com/vishvananda/netns v0.0.5 // indirect
 	go.opentelemetry.io/otel v1.37.0 // indirect
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
-	golang.org/x/crypto v0.39.0 // indirect
-	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sync v0.15.0 // indirect
-	golang.org/x/sys v0.33.0
-	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/crypto v0.40.0 // indirect
+	golang.org/x/net v0.42.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sys v0.34.0
+	golang.org/x/text v0.27.0 // indirect
 	google.golang.org/grpc v1.73.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
