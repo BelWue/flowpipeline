@@ -17,16 +17,18 @@ func TestSegment_Branch_passthrough(t *testing.T) {
 
 	segment := segments.LookupSegment("traffic_specific_toptalkers")
 	//normally done via config
-	segment.AddCustomConfig(config.Config{
-		ThresholdMetricDefinition: []*config.ThresholdMetricDefinition{
-			{
-				FilterDefinition: "proto udp",
-				SubDefinitions: []*config.ThresholdMetricDefinition{
-					{
-						FilterDefinition: "port 123",
-						PrometheusMetricsParamsDefinition: config.PrometheusMetricsParamsDefinition{
-							TrafficType:  "NTP",
-							ThresholdBps: 1,
+	segment.AddCustomConfig(config.SegmentRepr{
+		Config: config.Config{
+			ThresholdMetricDefinition: []*config.ThresholdMetricDefinition{
+				{
+					FilterDefinition: "proto udp",
+					SubDefinitions: []*config.ThresholdMetricDefinition{
+						{
+							FilterDefinition: "port 123",
+							PrometheusMetricsParamsDefinition: config.PrometheusMetricsParamsDefinition{
+								TrafficType:  "NTP",
+								ThresholdBps: 1,
+							},
 						},
 					},
 				},

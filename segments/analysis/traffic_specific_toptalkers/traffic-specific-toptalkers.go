@@ -59,8 +59,8 @@ func (segment TrafficSpecificToptalkers) New(config map[string]string) segments.
 	return newSegment
 }
 
-func (segment *TrafficSpecificToptalkers) AddCustomConfig(config config.Config) {
-	for _, definition := range config.ThresholdMetricDefinition {
+func (segment *TrafficSpecificToptalkers) AddCustomConfig(segmentReprs config.SegmentRepr) {
+	for _, definition := range segmentReprs.Config.ThresholdMetricDefinition {
 		metric, err := segment.metricFromDefinition(definition)
 		if err != nil {
 			log.Error().Err(err).Msg("ThresholdToptalkersMetrics: Failed to add custom config")

@@ -7,6 +7,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
+	"github.com/BelWue/flowpipeline/pipeline"
+	"github.com/BelWue/flowpipeline/pipeline/config"
 	"github.com/BelWue/flowpipeline/segments"
 )
 
@@ -40,10 +42,11 @@ func (segment Branch) New(config map[string]string) segments.Segment {
 	return &Branch{bypassMessages: bypassMessages}
 }
 
-func (segment *Branch) ImportBranches(condition interface{}, then_branch interface{}, else_branch interface{}) {
-	segment.condition = condition.(Pipeline)
-	segment.then_branch = then_branch.(Pipeline)
-	segment.else_branch = else_branch.(Pipeline)
+func (segment *Branch) AddCustomConfig(segmentReprs config.SegmentRepr) {
+	segment.condition = pipeline.New(pipeline.SegmentsFromRepr(segmentReprs.If)...)
+	segment.then_branch = pipeline.New(pipeline.SegmentsFromRepr(segmentReprs.Then)...)
+	segment.else_branch = pipeline.New(pipeline.SegmentsFromRepr(segmentReprs.Else)...)
+
 }
 
 func (segment *Branch) Run(wg *sync.WaitGroup) {
