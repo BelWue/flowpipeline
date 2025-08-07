@@ -73,7 +73,7 @@ type Segment interface {
 	Run(wg *sync.WaitGroup)                                     // goroutine, must close(segment.Out) when segment.In is closed
 	Rewire(in chan *pb.EnrichedFlow, out chan *pb.EnrichedFlow) // embed this using BaseSegment
 	ShutdownParentPipeline()                                    // shut down Parent Pipeline gracefully
-	AddCustomConfig(config config.Config)                       //Add segment specific sturctured config parameters
+	AddCustomConfig(segmentReprs config.SegmentRepr)            //Add segment specific sturctured config parameters
 	Close()
 }
 
@@ -106,6 +106,6 @@ func (segment *BaseSegment) Close() {
 	//placeholder since most segments dont need to do anything
 }
 
-func (segment *BaseSegment) AddCustomConfig(config.Config) {
+func (segment *BaseSegment) AddCustomConfig(config.SegmentRepr) {
 	//placeholder since most segments dont have a custom sturctured config
 }
