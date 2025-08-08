@@ -1,9 +1,13 @@
 package config
 
 type ThresholdMetricDefinition struct {
+	MatchingPipeline []SegmentRepr `yaml:"matching_pipline,omitempty"`
+}
+
+type ThresholdMetricConfig struct {
 	PrometheusMetricsParamsDefinition `yaml:",inline"`
-	FilterDefinition                  string                       `yaml:"filter,omitempty"`
-	SubDefinitions                    []*ThresholdMetricDefinition `yaml:"subfilter,omitempty"`
+	FilterDefinition                  string                   `yaml:"filter,omitempty"`
+	SubDefinitions                    []*ThresholdMetricConfig `yaml:"subfilter,omitempty"`
 }
 
 type PrometheusMetricsParamsDefinition struct {

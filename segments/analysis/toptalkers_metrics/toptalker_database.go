@@ -14,7 +14,7 @@ type Record struct {
 	DropPackets    []uint64
 	capacity       int
 	pointer        int
-	aboveThreshold atomic.Bool
+	AboveThreshold atomic.Bool
 	Address        string
 	sync.RWMutex
 }
@@ -164,9 +164,9 @@ func (record *Record) tick(thresholdBuckets int, bucketDuration int, thresholdBp
 	bps := uint64(float64(sumBytes*8) / float64(bucketDuration*thresholdBuckets))
 	pps := uint64(float64(sumPackets) / float64(bucketDuration*thresholdBuckets))
 	if (bps > thresholdBps) && (pps > thresholdPps) {
-		record.aboveThreshold.Store(true)
+		record.AboveThreshold.Store(true)
 	} else {
-		record.aboveThreshold.Store(false)
+		record.AboveThreshold.Store(false)
 	}
 	// clear the current bucket
 	record.FwdBytes[record.pointer] = 0

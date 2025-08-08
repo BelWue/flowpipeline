@@ -176,7 +176,7 @@ func (collector *PrometheusCollector) Collect(ch chan<- prometheus.Metric) {
 			// check if thresholds are exceeded
 			buckets := db.ReportBuckets
 			bucketDuration := db.BucketDuration
-			if record.aboveThreshold.Load() {
+			if record.AboveThreshold.Load() {
 				sumFwdBps, sumFwdPps, sumDropBps, sumDropPps, address := record.GetMetrics(buckets, bucketDuration)
 				ch <- prometheus.MustNewConstMetric(
 					collector.trafficBpsDesc,

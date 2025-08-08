@@ -74,7 +74,7 @@ func (segment *ToptalkersMetrics) Run(wg *sync.WaitGroup) {
 		for _, key := range keys {
 			record := database.GetRecord(key)
 			record.Append(msg.Bytes, msg.Packets, msg.IsForwarded())
-			if record.aboveThreshold.Load() {
+			if record.AboveThreshold.Load() {
 				forward = true
 			}
 		}
