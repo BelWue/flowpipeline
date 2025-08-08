@@ -7,5 +7,5 @@ type Config struct {
 
 	//Define custom segment specific structured config params here
 	//The parameter MUST contain the segement name to not conflict with other existing config parameters
-	ThresholdMetricDefinition []*ThresholdMetricDefinition `yaml:"traffic_specific_toptalkers,omitempty"`
+	ThresholdMetricDefinition []*ThresholdMetricConfig `yaml:"traffic_specific_toptalkers,omitempty"`
 }
