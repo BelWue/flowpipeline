@@ -912,8 +912,8 @@ refresh interval setting pertains to the internal cache only.
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/modify/reversedns)
 [examples using this segment](https://github.com/search?q=%22segment%3A+reversedns%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
-#### snmpinterface
-The `snmpinterface` segment annotates flows with interface information learned
+#### snmp
+The `snmp` segment annotates flows with interface information learned
 directly from routers using SNMP. This is a potentially perfomance impacting
 segment and has to be configured carefully.
 
@@ -947,7 +947,7 @@ Roadmap:
 * cache timeout should be configurable
 
 ```yaml
-- segment: snmpinterface
+- segment: snmp
   # the lines below are optional and set to default
   config:
     community: public
