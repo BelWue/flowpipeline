@@ -14,6 +14,64 @@ forward their input from previous segment to their subsequent segment, i.e.
 even input or output segments can be chained to one another or be placed in the
 middle of a pipeline.
 
+This overview is structured as follows:
+- [Variable Expansion](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#variable-expansion)
+- [Parallel execution](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#parallel-execution)
+- [Parallel execution](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#available-segments)
+	- [Alert Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#alert-group)
+ 		- [http](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#http)
+	- [Analysis Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#analysis-group)
+ 		- [toptalkers_metrics](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#toptalkers_metrics)
+   		- [traffic_specific_toptalkers](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#traffic_specific_toptalkers)
+	- [Controlflow Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#controlflow-group)
+ 		- [branch](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#branch)
+   		- [skip](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#skip)
+     - [Export Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#skip)
+     	- [influx](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#influx)
+      	- [prometheus](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#prometheus)
+     - [Filter Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#filter-group)
+       	- [drop](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#drop)
+       	- [elephant](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#elephant)
+       	- [flowfilter](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#flowfilter)
+	 - [Input Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#input-group)
+    	- [bpf](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#bpf)
+       	- [goflow](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#goflow)
+       	- [kafkaconsumer](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#kafkaconsumer)
+       	- [packet](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#packet)
+       	- [replay](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#replay)
+       	- [stdin](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#stdin)
+       	- [diskbuffer](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#diskbuffer)
+	- [Modify Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#modify-group)
+   		- [addcid](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#addcid)
+     	- [addrstrings](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#addrstrings)
+     	- [anonymize](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#anonymize)
+     	- [aslookup](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#aslookup)
+     	- [bgp](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#bgp)
+     	- [dropfields](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#dropfields)
+     	- [geolocation](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#geolocation)
+     	- [normalize](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#normalize)
+     	- [protomap](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#protomap)
+     	- [remoteaddress](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#remoteaddress)
+     	- [reversedns](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#reversedns)
+     	- [snmpinterface](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#snmpinterface)
+     	- [sync_timestamps](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#sync_timestamps)
+	- [Meta Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#meta-group)
+ 		- [delay_monitoring](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#delay-monitoring)
+	- [Output Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#output-group)
+ 		- [csv](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#csv)
+ 		- [json](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#json)
+ 		- [kafkaproducer](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#kafkaproducer)
+ 		- [lumberjack](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#lumberjack-elastic-beats)
+ 		- [mongodb](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#mongodb)
+ 		- [sqlite](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#sqlite)
+	- [Print Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#print-group)
+ 		- [count](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#count)
+ 		- [printdots](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#printdots)
+ 		- [printflowdump](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#printflowdump)
+ 		- [toptalkers](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#toptalkers)
+	- [Ungrouped](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#print-group)
+ 		- [pass](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#pass)
+
 A list of full configuration examples with their own explanations can be found
 [here](https://github.com/BelWue/flowpipeline/tree/master/examples).
 
@@ -622,6 +680,28 @@ to remove the original fields.
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/modify/addrstrings)
 
+
+#### anonymize
+The `anonymize` segment anonymizes IP addresses occuring in flows using the
+Crypto-PAn algorithm. By default all possible IP address fields are targeted,
+this can be configured using the fields parameter. The key needs to be at least
+32 characters long.
+
+Supported Fields for anonymization are `SrcAddr,DstAddr,SamplerAddress,NextHop`
+
+```yaml
+- segment: anonymize
+  config:
+    key: "abcdef"
+    # the lines below are optionanonymizeal and set to default
+    fields: "SrcAddr,DstAddr,SamplerAddress"
+```
+[examples using this segment](https://github.com/search?q=%22segment%3A+bgp%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
+
+[CryptoPan module](https://github.com/Yawning/cryptopan)
+[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/modify/anonymize)
+[examples using this segment](https://github.com/search?q=%22segment%3A+anonymize%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
+
 #### aslookup
 The `aslookup` segment can add AS numbers to flows using route collector dumps.
 Dumps can be obtained from your RIR in the `.mrt` format and can be converted to
@@ -684,27 +764,6 @@ three are possibly overwritten from the original router export.
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/modify/bgp)
-[examples using this segment](https://github.com/search?q=%22segment%3A+bgp%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
-
-#### anonymize
-The `anonymize` segment anonymizes IP addresses occuring in flows using the
-Crypto-PAn algorithm. By default all possible IP address fields are targeted,
-this can be configured using the fields parameter. The key needs to be at least
-32 characters long.
-
-Supported Fields for anonymization are `SrcAddr,DstAddr,SamplerAddress,NextHop`
-
-```yaml
-- segment: anonymize
-  config:
-    key: "abcdef"
-    # the lines below are optional and set to default
-    fields: "SrcAddr,DstAddr,SamplerAddress"
-```
-
-[CryptoPan module](https://github.com/Yawning/cryptopan)
-[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/modify/anonymize)
-[examples using this segment](https://github.com/search?q=%22segment%3A+anonymize%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
 #### dropfields
 The segment `dropfields` deletes fields from flows as they pass through this
@@ -884,7 +943,7 @@ Roadmap:
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/modify/snmp)
 [examples using this segment](https://github.com/search?q=%22segment%3A+snmp%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
-#### Sync Timestamps
+#### sync_timestamps
 The segment `sync_timestamps` tries to fill empty time fields using existing ones.
 It works on the following fields:
  - TimeFlowStart:
@@ -941,6 +1000,35 @@ By default all fields are exported. To reduce them, use a valid comma seperated 
 [examples using this segment](https://github.com/search?q=%22segment%3A+csv%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
 
+#### json
+The `json` segment provides a JSON output option.
+It uses stdout by default, but can be instructed to write to file using the filename parameter.
+This is intended to be able to pipe flows between instances of flowpipeline, but it is
+also very useful when debugging flowpipelines or to create a quick plaintext
+dump.
+
+if the option `zstd` is set, the output will be compressed using the [zstandard algorithm](https://facebook.github.io/zstd/).
+If the option `zstd` is set to a positive integer, the compression level will be set to
+([approximately](https://github.com/klauspost/compress/tree/master/zstd#status)) that value.
+When `flowpipeline` is stopped abruptly (e.g by pressing Ctrl+C), the end of the archive will get corrupted.
+Simply use `zstdcat` to decompress the archive and remove the last line (`| head -n -1`).
+
+If the option `pretty` is set to true, the every flow will be formatted in a human-readable way (indented and with line breaks).
+When omitted, the output will be a single line per flow.
+
+```yaml
+- segment: json
+  # the lines below are optional and set to default
+  config:
+    filename: ""
+    zstd: 0
+    pretty: false
+```
+
+[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/json)
+[examples using this segment](https://github.com/search?q=%22segment%3A+json%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
+
+
 #### kafkaproducer
 The `kafkaproducer` segment produces flows to a Kafka topic. All settings are
 equivalent to the `kafkaconsumer` segment. Additionally, there is the
@@ -975,89 +1063,6 @@ number of other things.
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/kafkaproducer)
 [examples using this segment](https://github.com/search?q=%22segment%3A+kafkaproducer%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
-
-#### sqlite
-**This segment is unavailable in the static binary release due to its CGO dependency.**
-
-The `sqlite` segment provides a SQLite output option. It is intended for use as
-an ad-hoc dump method to answer questions on live traffic, i.e. average packet
-size for a specific class of traffic. The fields parameter optionally takes a
-string of comma-separated fieldnames, e.g. `SrcAddr,Bytes,Packets`.
-
-The batchsize parameter determines the number of flows stored in memory before
-writing them to the database in a transaction made up from as many insert
-statements. For the default value of 1000 in-memory flows, benchmarks show that
-this should be an okay value for processing at least 1000 flows per second on
-most szenarios, i.e. flushing to disk once per second. Mind the expected flow
-throughput when setting this parameter.
-
-```yaml
-- segment: sqlite
-  config:
-    filename: dump.sqlite
-    # the lines below are optional and set to default
-    fields: ""
-    batchsize: 1000
-```
-
-[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/sqlite)
-[examples using this segment](https://github.com/search?q=%22segment%3A+sqlite%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
-
-#### mongodb
-**This segment is unavailable in the static binary release due to its CGO dependency.**
-
-The `mongodb` segment provides a Mongodb output option. 
-The connection parameter of the mongodb must be configured in the parameter `mongodb_uri`.
-MongoDb is intended to be used as a ringbuffer like storage using capped collections.
-The maximumg (unecrypted) disk usage can be set using `max_disk_usage`.
-The fields parameter optionally takes a
-string of comma-separated fieldnames, e.g. `SrcAddr,Bytes,Packets`.
-
-The batchsize parameter determines the number of flows stored in memory before
-writing them to the database in a transaction made up from as many insert
-statements. For the default value of 1000 in-memory flows, benchmarks show that
-this should be an okay value for processing at least 1000 flows per second on
-most szenarios, i.e. flushing to disk once per second. Mind the expected flow
-throughput when setting this parameter.
-
-```yaml
-- segment: mongodb
-  config:
-    mongodb_uri: "mongodb://localhost:27017/"
-    max_disk_usage: "20 GB"
-    fields: "SrcAddr,DstAddr,SrcPort,DstPort"
-
-```
-
-[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/sqlite)
-
-#### json
-The `json` segment provides a JSON output option.
-It uses stdout by default, but can be instructed to write to file using the filename parameter.
-This is intended to be able to pipe flows between instances of flowpipeline, but it is
-also very useful when debugging flowpipelines or to create a quick plaintext
-dump.
-
-if the option `zstd` is set, the output will be compressed using the [zstandard algorithm](https://facebook.github.io/zstd/).
-If the option `zstd` is set to a positive integer, the compression level will be set to
-([approximately](https://github.com/klauspost/compress/tree/master/zstd#status)) that value.
-When `flowpipeline` is stopped abruptly (e.g by pressing Ctrl+C), the end of the archive will get corrupted.
-Simply use `zstdcat` to decompress the archive and remove the last line (`| head -n -1`).
-
-If the option `pretty` is set to true, the every flow will be formatted in a human-readable way (indented and with line breaks).
-When omitted, the output will be a single line per flow.
-
-```yaml
-- segment: json
-  # the lines below are optional and set to default
-  config:
-    filename: ""
-    zstd: 0
-    pretty: false
-```
-
-[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/json)
-[examples using this segment](https://github.com/search?q=%22segment%3A+json%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
 #### lumberjack (elastic beats)
 The `lumberjack` segment sends flows to one or more [elastic beats](https://github.com/elastic/beats)
@@ -1126,6 +1131,62 @@ strings and [strconv.ParseBool](https://pkg.go.dev/strconv#ParseBool) for allowe
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/lumberjack)
+
+#### mongodb
+**This segment is unavailable in the static binary release due to its CGO dependency.**
+
+The `mongodb` segment provides a Mongodb output option. 
+The connection parameter of the mongodb must be configured in the parameter `mongodb_uri`.
+MongoDb is intended to be used as a ringbuffer like storage using capped collections.
+The maximumg (unecrypted) disk usage can be set using `max_disk_usage`.
+The fields parameter optionally takes a
+string of comma-separated fieldnames, e.g. `SrcAddr,Bytes,Packets`.
+
+The batchsize parameter determines the number of flows stored in memory before
+writing them to the database in a transaction made up from as many insert
+statements. For the default value of 1000 in-memory flows, benchmarks show that
+this should be an okay value for processing at least 1000 flows per second on
+most szenarios, i.e. flushing to disk once per second. Mind the expected flow
+throughput when setting this parameter.
+
+```yaml
+- segment: mongodb
+  config:
+    mongodb_uri: "mongodb://localhost:27017/"
+    max_disk_usage: "20 GB"
+    fields: "SrcAddr,DstAddr,SrcPort,DstPort"
+
+```
+
+[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/mongodb)
+
+#### sqlite
+**This segment is unavailable in the static binary release due to its CGO dependency.**
+
+The `sqlite` segment provides a SQLite output option. It is intended for use as
+an ad-hoc dump method to answer questions on live traffic, i.e. average packet
+size for a specific class of traffic. The fields parameter optionally takes a
+string of comma-separated fieldnames, e.g. `SrcAddr,Bytes,Packets`.
+
+The batchsize parameter determines the number of flows stored in memory before
+writing them to the database in a transaction made up from as many insert
+statements. For the default value of 1000 in-memory flows, benchmarks show that
+this should be an okay value for processing at least 1000 flows per second on
+most szenarios, i.e. flushing to disk once per second. Mind the expected flow
+throughput when setting this parameter.
+
+```yaml
+- segment: sqlite
+  config:
+    filename: dump.sqlite
+    # the lines below are optional and set to default
+    fields: ""
+    batchsize: 1000
+```
+
+[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/sqlite)
+[examples using this segment](https://github.com/search?q=%22segment%3A+sqlite%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
+
 
 ### Print Group
 Segments in this group serve to print flows immediately to the user. This is intended for ad-hoc applications and instant feedback use cases.
