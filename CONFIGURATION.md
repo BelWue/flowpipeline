@@ -928,6 +928,7 @@ segment will:
 * not wait for a SNMP query to return, instead it will leave the flow as it was
   before sending it to the next segment (i.e. the first one on a given
   interface will always remain untouched)
+  * This can be deactivated by setting the config parameter `synchronous` to true
 * add any interface's data to a cache, which will be used to enrich the
   next flow using that same interface
 * clear the cache value after 1 hour has elapsed, resulting in another flow
@@ -935,13 +936,13 @@ segment will:
 
 These rules are applied for source and destination interfaces separately.
 
-The paramters to this segment specify the SNMPv2 community as well as the
-connection limit employed by this segment. The latter is again to not overload
-the routers SNMPd. Lastly, the regex parameter can be used to limit the
-`IfDesc` annotations to a certain part of the actual interface description.
-For instance, descriptions follow the format `customerid - blablalba`, the
-regex `(.*) -.*` would grab just that customer ID to put into the `IfDesc`
-fields. Also see the full examples linked below.
+The paramters to this segment specify the SNMPv2 community using the `community` 
+parameter as well as the connection limit using the `connlimit` parameter of this 
+segment. The latter is again to not overload the routers SNMPd. Lastly, the regex 
+parameter `regex` can be used to limit the `IfDesc` annotations to a certain part 
+of the actual interface description. For instance, descriptions follow the format 
+`customerid - blablalba`, the regex `(.*) -.*` would grab just that customer ID to 
+put into the `IfDesc` fields. Also see the full examples linked below.
 
 Roadmap:
 * cache timeout should be configurable
@@ -953,6 +954,7 @@ Roadmap:
     community: public
     regex: ".*"
     connlimit: 16
+    synchronous: false
 
 ```
 

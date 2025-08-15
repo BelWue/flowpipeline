@@ -54,9 +54,10 @@ var (
 
 type Snmp struct {
 	segments.BaseSegment
-	Community string // optional, default is 'public'
-	Regex     string // optional, default matches all, can be used to extract content from descriptions, see examples/enricher
-	ConnLimit uint64 // optional, default is 16
+	Community   string // optional, default is 'public'
+	Regex       string // optional, default matches all, can be used to extract content from descriptions, see examples/enricher
+	ConnLimit   uint64 // optional, default is 16
+	Synchronous bool   //optional, default is false. Only recommended for debugging
 
 	compiledRegex      *regexp.Regexp
 	snmpCache          *cache.Cache
@@ -77,6 +78,15 @@ func (segment Snmp) New(config map[string]string) segments.Segment {
 		}
 	} else {
 		log.Info().Msg("SNMP: 'connlimit' set to default '16'.")
+	}
+
+	synchronous := false
+	if config["synchronous"] != "" {
+		if synchronousConfig, err := strconv.ParseBool(config["synchronous"]); err == nil {
+			synchronous = synchronousConfig
+		} else {
+			log.Warn().Err(err).Msgf("Failed to parse 'synchronous' bool %s - using default false", config["synchronous"])
+		}
 	}
 
 	var community string = "public"
@@ -101,6 +111,7 @@ func (segment Snmp) New(config map[string]string) segments.Segment {
 		Regex:         regex,
 		ConnLimit:     connLimit,
 		compiledRegex: compiledRegex,
+		Synchronous:   synchronous,
 	}
 }
 
@@ -174,8 +185,7 @@ func (segment *Snmp) querySNMP(router string, iface uint32, key string) {
 	}
 }
 
-// Fetch interface data from cache or from the live router. The latter is done
-// async, so this method will return nils on the first call for any specific interface.
+// Fetch interface data from cache or from the live router.
 func (segment *Snmp) fetchInterfaceData(router string, iface uint32) (string, string, uint32) {
 	var name, desc string
 	var speed uint32
@@ -194,10 +204,31 @@ func (segment *Snmp) fetchInterfaceData(router string, iface uint32) (string, st
 				speed = uint32(value.(uint64))
 			}
 		} else {
-			// mark as "being queried" by putting nil into the cache, so a future run will use the cached nil
-			segment.snmpCache.Set(fmt.Sprintf("%s-%d-%s", router, iface, key), nil, cache.DefaultExpiration)
-			// go query it
-			go segment.querySNMP(router, iface, key)
+			if segment.Synchronous {
+				segment.querySNMP(router, iface, key)
+				if value, found := segment.snmpCache.Get(fmt.Sprintf("%s-%d-%s", router, iface, key)); found {
+					if value == nil { // this occures if a goroutine is querying this interface
+						return "", "", 0
+					}
+					switch key {
+					case "name":
+						name = value.(string)
+					case "desc":
+						desc = value.(string)
+					case "speed":
+						speed = uint32(value.(uint64))
+					}
+				} else {
+					//Still not found after query
+					return "", "", 0
+				}
+
+			} else { // done async, so this method will return nils on the first call for any specific interface.
+				// mark as "being queried" by putting nil into the cache, so a future run will use the cached nil
+				segment.snmpCache.Set(fmt.Sprintf("%s-%d-%s", router, iface, key), nil, cache.DefaultExpiration)
+				// go query it
+				go segment.querySNMP(router, iface, key)
+			}
 		}
 	}
 	return name, desc, speed
