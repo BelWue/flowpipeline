@@ -42,6 +42,8 @@ This overview is structured as follows:
        	- [replay](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#replay)
        	- [stdin](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#stdin)
        	- [diskbuffer](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#diskbuffer)
+	- [Meta Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#meta-group)
+ 		- [delay_monitoring](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#delay-monitoring)
 	- [Modify Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#modify-group)
    		- [addcid](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#addcid)
      	- [addrstrings](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#addrstrings)
@@ -56,8 +58,6 @@ This overview is structured as follows:
      	- [reversedns](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#reversedns)
      	- [snmpinterface](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#snmpinterface)
      	- [sync_timestamps](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#sync_timestamps)
-	- [Meta Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#meta-group)
- 		- [delay_monitoring](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#delay-monitoring)
 	- [Output Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#output-group)
  		- [csv](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#csv)
  		- [json](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#json)
@@ -381,6 +381,8 @@ Segments in this group all drop flows, i.e. remove them from the pipeline from
 this segment on. Fields in individual flows are never modified, only used as
 criteria.
 
+#### aggregate
+
 #### drop
 The `drop` segment is used to drain a pipeline, effectively starting a new
 pipeline after it. In conjunction with `skip`, this can act as a `flowfilter`.
@@ -632,6 +634,23 @@ BatchSize specifies how many flows will be at least written to disk
     readingmemorymark:   5
     maxcachesize:        1 GB
     queuesize:           65536
+```
+  
+### Meta Group
+Segments in this group are used for exporting meta data about the flowpipeline itself
+
+#### Delay Monitoring
+The `delay_monitoring` segment measures how old the processed flows are and publishs the delay in seconds using a prometheus server.
+The the delay is calculated using a exponential window moving average. The alpha value can be set using `alpha`.
+To reduce load, a sampling intervall can be set using `samplingRate`.
+
+```yaml
+- segment: delay_monitoring
+  # the lines below are optional and set to default
+  config:
+    endpoint: ":8080"
+    samplingRate: 1000
+    alpha: 0.2
 ```
 
 ### Modify Group
@@ -974,23 +993,6 @@ It works on the following fields:
  - TimeReceived:
   - TimeReceived
   - TimeReceivedNs
-  
-### Meta Group
-Segments in this group are used for exporting meta data about the flowpipeline itself
-
-#### Delay Monitoring
-The `delay_monitoring` segment measures how old the processed flows are and publishs the delay using a prometheus server.
-The the delay is calculated using a exponential window moving average. The alpha value can be set using `alpha`.
-To reduce load, a sampling intervall can be set using `samplingRate`.
-
-```yaml
-- segment: delay_monitoring
-  # the lines below are optional and set to default
-  config:
-    endpoint: ":8080"
-    samplingRate: 1000
-    alpha: 0.2
-```
 
 ### Output Group
 Segments in this group export flows, usually while keeping all information
