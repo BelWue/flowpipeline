@@ -27,6 +27,7 @@ This overview is structured as follows:
  		- [branch](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#branch)
    		- [skip](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#skip)
      - [Export Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#skip)
+     	- [clickhouse](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#clickhouse)
      	- [influx](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#influx)
       	- [prometheus](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#prometheus)
      - [Filter Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#filter-group)
@@ -309,6 +310,22 @@ the output group lies in the fact that these exports are potentially lossy,
 i.e. some fields might be lost. For instance, the `prometheus` segment as a
 metric provider does not export any information about flow timing or duration,
 among others.
+
+#### clickhouse
+The `clickhouse` segment dumps all incoming flow messages to a clickhouse database.
+
+The `batchsize` parameter determines the number of flows stored in memory before writing them to the database. Default is 1000.\
+The `dsn` parameter is used to specify the `Data Source Name` of the clickhouse database to which the flows should be dumped.\
+The `preset` parameter is used to specify the schema used to insert into clickhouse. Currently only the default value `flowhouse` is supported.
+
+```yaml
+- segment: clickhouse
+  config:
+    dns: "clickhouse+http://user:password@host:8443/db?protocol=https"
+    preset: "flowhouse"
+    batchsize: 1200
+```
+
 
 #### influx
 The `influx` segment provides a way to write into an Influxdb instance.
@@ -606,15 +623,15 @@ BatchSize specifies how many flows will be at least written to disk
 ```yaml
 - segment: diskbuffer
   config:
-	bufferdir:           "" # must be specified, rest is optional
-	batchsize:           128
-	queuestatusinterval: 0s
-	filesize:            50 MB
-	highmemorymark:      70
-	lowmemorymark:       30
-	readingmemorymark:   5
-	maxcachesize:        1 GB
-	queuesize:           65536
+    bufferdir:           "" # must be specified, rest is optional
+    batchsize:           128
+    queuestatusinterval: 0s
+    filesize:            50 MB
+    highmemorymark:      70
+    lowmemorymark:       30
+    readingmemorymark:   5
+    maxcachesize:        1 GB
+    queuesize:           65536
 ```
 
 ### Modify Group
