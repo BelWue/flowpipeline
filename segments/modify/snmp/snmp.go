@@ -23,7 +23,7 @@ var (
 	oidExts = map[string]uint8{"name": 1, "speed": 15, "desc": 18}
 )
 
-type SNMPInterface struct {
+type Snmp struct {
 	segments.BaseSegment
 	Community string // optional, default is 'public'
 	Regex     string // optional, default matches all, can be used to extract content from descriptions, see examples/enricher
@@ -34,7 +34,7 @@ type SNMPInterface struct {
 	connLimitSemaphore chan struct{}
 }
 
-func (segment SNMPInterface) New(config map[string]string) segments.Segment {
+func (segment Snmp) New(config map[string]string) segments.Segment {
 	var connLimit uint64 = 16
 	if config["connlimit"] != "" {
 		if parsedConnLimit, err := strconv.ParseUint(config["connlimit"], 10, 32); err == nil {
@@ -67,7 +67,7 @@ func (segment SNMPInterface) New(config map[string]string) segments.Segment {
 		log.Error().Err(err).Msg("SNMPInterface: Configuration error, regex does not compile: ")
 		return nil
 	}
-	return &SNMPInterface{
+	return &Snmp{
 		Community:     community,
 		Regex:         regex,
 		ConnLimit:     connLimit,
@@ -75,7 +75,7 @@ func (segment SNMPInterface) New(config map[string]string) segments.Segment {
 	}
 }
 
-func (segment *SNMPInterface) Run(wg *sync.WaitGroup) {
+func (segment *Snmp) Run(wg *sync.WaitGroup) {
 	defer func() {
 		close(segment.Out)
 		wg.Done()
@@ -112,7 +112,7 @@ func (segment *SNMPInterface) Run(wg *sync.WaitGroup) {
 }
 
 // Query a single SNMP datapoint. Supposedly a short-lived goroutine.
-func (segment *SNMPInterface) querySNMP(router string, iface uint32, key string) {
+func (segment *Snmp) querySNMP(router string, iface uint32, key string) {
 	defer func() {
 		<-segment.connLimitSemaphore // release
 	}()
@@ -147,7 +147,7 @@ func (segment *SNMPInterface) querySNMP(router string, iface uint32, key string)
 
 // Fetch interface data from cache or from the live router. The latter is done
 // async, so this method will return nils on the first call for any specific interface.
-func (segment *SNMPInterface) fetchInterfaceData(router string, iface uint32) (string, string, uint32) {
+func (segment *Snmp) fetchInterfaceData(router string, iface uint32) (string, string, uint32) {
 	var name, desc string
 	var speed uint32
 	for key := range oidExts {
@@ -174,7 +174,25 @@ func (segment *SNMPInterface) fetchInterfaceData(router string, iface uint32) (s
 	return name, desc, speed
 }
 
+// @Deprecated: Wrapper for old segment name. Gonna be removed
+type SNMPInterface struct {
+	Snmp
+}
+
+func (segment SNMPInterface) New(config map[string]string) segments.Segment {
+	log.Warn().Msg("Using deprected segment 'snmpinterface'. Please use 'snmp' instead")
+	return segment.Snmp.New(config)
+}
+
+func (segment *SNMPInterface) Run(wg *sync.WaitGroup) {
+	log.Warn().Msg("Using deprected segment 'snmpinterface'. Please use 'snmp' instead")
+	segment.Snmp.Run(wg)
+}
+
 func init() {
-	segment := &SNMPInterface{}
-	segments.RegisterSegment("snmpinterface", segment)
+	segment := &Snmp{}
+	segments.RegisterSegment("snmp", segment)
+
+	deprecatedSegment := &SNMPInterface{}
+	segments.RegisterSegment("snmpinterface", deprecatedSegment)
 }

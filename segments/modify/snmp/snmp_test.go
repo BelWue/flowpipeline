@@ -24,37 +24,37 @@ import (
 // }
 
 func TestSegment_SNMPInterface_instanciation(t *testing.T) {
-	snmpInterface := &SNMPInterface{}
+	snmpInterface := &Snmp{}
 	result := snmpInterface.New(map[string]string{})
 	if result == nil {
 		t.Error("([error] Segment SNMPInterface did not initiate despite good base config.")
 	}
 
-	snmpInterface = &SNMPInterface{}
+	snmpInterface = &Snmp{}
 	result = snmpInterface.New(map[string]string{"connlimit": "42"})
 	if result == nil {
 		t.Error("([error] Segment SNMPInterface did not initiate despite good base config.")
 	}
 
-	snmpInterface = &SNMPInterface{}
+	snmpInterface = &Snmp{}
 	result = snmpInterface.New(map[string]string{"community": "foo", "regex": ".*"})
 	if result == nil {
 		t.Error("([error] Segment SNMPInterface did not initiate despite good config.")
 	}
 
-	snmpInterface = &SNMPInterface{}
+	snmpInterface = &Snmp{}
 	result = snmpInterface.New(map[string]string{"community": "foo", "regex": "("})
 	if result != nil {
 		t.Error("([error] Segment SNMPInterface did initiate despite bad regex config.")
 	}
 
-	snmpInterface = &SNMPInterface{}
+	snmpInterface = &Snmp{}
 	result = snmpInterface.New(map[string]string{"connlimit": "-8"})
 	if result == nil {
 		t.Error("([error] Segment SNMPInterface did not fallback to connlimit default config.")
 	}
 
-	snmpInterface = &SNMPInterface{}
+	snmpInterface = &Snmp{}
 	result = snmpInterface.New(map[string]string{"connlimit": "0"})
 	if result != nil {
 		t.Error("([error] Segment SNMPInterface initiated despide bad config.")
