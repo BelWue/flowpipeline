@@ -931,8 +931,8 @@ segment will:
   * This can be deactivated by setting the config parameter `synchronous` to true
 * add any interface's data to a cache, which will be used to enrich the
   next flow using that same interface
-* clear the cache value after 1 hour has elapsed, resulting in another flow
-  without these annotations at that time
+* clear the cache value after the time set with `cache_interval` (default=1h) has  
+  elapsed, resulting in another flow without these annotations at that time
 
 These rules are applied for source and destination interfaces separately.
 
@@ -955,6 +955,7 @@ Roadmap:
     regex: ".*"
     connlimit: 16
     synchronous: false
+    cache_interval: "1h"
 
 ```
 

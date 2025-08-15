@@ -59,4 +59,18 @@ func TestSegment_SNMPInterface_instanciation(t *testing.T) {
 	if result != nil {
 		t.Error("([error] Segment SNMP initiated despide bad config.")
 	}
+
+	snmpInterface = &Snmp{}
+	result = snmpInterface.New(map[string]string{"cache_interval": "3h"})
+	if result == nil {
+		t.Error("([error] Segment SNMP did not initiate despite good base config.")
+	}
+	snmp, ok := result.(*Snmp)
+	if !ok {
+		t.Error("([error] Segment SNMP did not initialize correctly.")
+	}
+
+	if snmp.CacheInterval.Hours() != 3 {
+		t.Error("([error] Segment SNMP did not initialize cache interval correctly.")
+	}
 }
