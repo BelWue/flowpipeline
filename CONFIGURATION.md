@@ -17,7 +17,7 @@ middle of a pipeline.
 This overview is structured as follows:
 - [Variable Expansion](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#variable-expansion)
 - [Parallel execution](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#parallel-execution)
-- [Parallel execution](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#available-segments)
+- [Available Segments](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#available-segments)
 	- [Alert Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#alert-group)
  		- [http](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#http)
 	- [Analysis Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#analysis-group)
