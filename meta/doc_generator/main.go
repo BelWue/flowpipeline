@@ -35,11 +35,7 @@ func main() {
 	var docBuilder strings.Builder
 	docBuilder.WriteString("# flowpipeline Configuration and User Guide\n\n")
 
-	generatedInfo, err := generatedInfoPreabmle("meta/doc_generator/main.go")
-	if err != nil {
-		log.Fatalf("Failed to generate info: %v", err)
-		return
-	}
+	generatedInfo := generatedInfoPreabmle("meta/doc_generator/main.go")
 	docBuilder.WriteString(generatedInfo + "\n\n")
 
 	docBuilder.WriteString("## Available Segments\n\n")
@@ -107,6 +103,7 @@ func buildSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 	}
 
 	if tree.IsSegment {
+		fmt.Fprintf(docBuilder, "_This segment is implemented in %s._\n\n", linkFromPath(tree.Path, filepath.Base(tree.Path)))
 		packageDoc, err := extractPackageDoc(tree.Path)
 		if err != nil {
 			packageDoc = "_No segment documentation found._"
@@ -119,15 +116,12 @@ func buildSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 	}
 }
 
-func generatedInfoPreabmle(path string) (string, error) {
+func generatedInfoPreabmle(path string) string {
 	commit := envOr("GITHUB_SHA", "HEAD")
-	fileLink, err := linkFromPath(path)
-	if err != nil {
-		return "", err
-	}
+	fileLink := linkFromPath(path, path)
 	commitLink := linkFromCommit(commit)
 
-	return fmt.Sprintf("_This document was generated from '%s', based on commit '%s'._", fileLink, commitLink), nil
+	return fmt.Sprintf("_This document was generated from '%s', based on commit '%s'._", fileLink, commitLink)
 }
 
 func extractPackageDoc(path string) (string, error) {

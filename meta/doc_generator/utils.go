@@ -13,29 +13,36 @@ const FlowPipelineRepo = "https://github.com/BelWue/flowpipeline"
 const FlowPipelineFilesBase = FlowPipelineRepo + "/tree/master/"
 const FlowPipelineCommitBase = FlowPipelineRepo + "/commit/"
 
-func linkFromPath(path string) (string, error) {
+func linkTo(display string, url string) string {
+	if display == "" {
+		display = url
+	}
+	return fmt.Sprintf("[%s](%s)", display, url)
+}
+
+func linkFromPath(path string, display string) string {
 	projectBaseDir, err := projectRoot()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Could not determine project base directory.")
-		return "", err
+		return display
 	}
 
 	targetFilePath, err := filepath.Abs(path)
 	if err != nil {
 		log.Fatal().Err(err).Msgf("'%s' is not a valid path.", path)
-		return "", err
+		return display
 	}
 
 	if !strings.HasPrefix(targetFilePath, projectBaseDir) {
 		log.Fatal().Msgf("The path '%s' is not within the project base directory '%s'.", targetFilePath, projectBaseDir)
-		return "", err
+		return display
 	}
 
-	return fmt.Sprintf("[%s](%s)", path, FlowPipelineFilesBase+path), nil
+	return linkTo(display, FlowPipelineFilesBase + path)
 }
 
 func linkFromCommit(commit string) string {
-	return fmt.Sprintf("[%s](%s)", commit, FlowPipelineCommitBase+commit)
+	return linkTo(commit, FlowPipelineCommitBase+commit)
 }
 
 func projectRoot() (string, error) {
