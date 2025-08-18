@@ -5,6 +5,6 @@ config.yml
 .idea
 .vscode
 flowpipeline
-doc_generator
+/doc_generator
 *.sqlite
 csvs
