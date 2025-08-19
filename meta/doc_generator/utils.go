@@ -76,3 +76,12 @@ func multiline(lines ...string) string {
 	}
 	return sb.String()
 }
+
+func summary(summary string, details string) string {
+	return fmt.Sprintf(`<details>
+<summary>%s</summary>
+
+%s
+
+</details>`, summary, details)
+}

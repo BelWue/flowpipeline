@@ -56,9 +56,9 @@ func main() {
 
 	segmentTree := buildSegmentTree(rootDir)
 
-	docBuilder.WriteString("## Table of Contents\n\nThis overview is structures as follows:\n")
+	docBuilder.WriteString("This overview is structures as follows:\n")
 	toc := generateToC(segmentTree)
-	docBuilder.WriteString(toc + "\n\n")
+	docBuilder.WriteString(summary("Table of Contents", toc) + "\n\n")
 
 	docBuilder.WriteString("## Available Segments\n\n")
 	doc := generateSegmentDoc(segmentTree)
