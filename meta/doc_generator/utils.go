@@ -67,3 +67,12 @@ func linkifyText(text string) string {
 	text = strings.ReplaceAll(text, " ", "-")
 	return text
 }
+
+func multiline(lines ...string) string {
+	var sb strings.Builder
+	for _, line := range lines {
+		sb.WriteString(line)
+		sb.WriteString("\n")
+	}
+	return sb.String()
+}

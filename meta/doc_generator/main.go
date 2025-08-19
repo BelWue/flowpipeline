@@ -38,6 +38,22 @@ func main() {
 	generatedInfo := generatedInfoPreabmle("meta/doc_generator/main.go")
 	docBuilder.WriteString(generatedInfo + "\n\n")
 
+	docBuilder.WriteString(multiline(
+		"Any flowpipeline is configured in a single yaml file which is either located in",
+		"the default `config.yml` or specified using the `-c` option when calling the",
+		"binary. The config file contains a single list of so-called segments, which",
+		"are processing flows in order. Flows represented by",
+		"[protobuf messages](https://github.com/bwNetFlow/protobuf/blob/master/flow-messages-enriched.proto)",
+		"within the pipeline.",
+		"",
+		"Usually, the first segment is from the _input_ group, followed by any number of",
+		"different segments. Often, flowpipelines end with a segment from the _output_,",
+		"_print_, or _export_ groups. All segments, regardless from which group, accept and",
+		"forward their input from previous segment to their subsequent segment, i.e.",
+		"even input or output segments can be chained to one another or be placed in the",
+		"middle of a pipeline.",
+	))
+
 	segmentTree := buildSegmentTree(rootDir)
 
 	docBuilder.WriteString("## Table of Contents\n\nThis overview is structures as follows:\n")
