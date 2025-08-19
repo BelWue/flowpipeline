@@ -14,7 +14,9 @@ forward their input from previous segment to their subsequent segment, i.e.
 even input or output segments can be chained to one another or be placed in the
 middle of a pipeline.
 
-This overview is structured as follows:
+<details open>  
+  <summary>Table of contents</summary>
+
 - [Variable Expansion](#variable-expansion)
 - [Parallel execution](#parallel-execution)
 - [Available Segments](#available-segments)
@@ -72,9 +74,11 @@ This overview is structured as follows:
  		- [toptalkers](#toptalkers)
 	- [Ungrouped](#print-group)
  		- [pass](#pass)
+</details>
 
 A list of full configuration examples with their own explanations can be found
 [here](https://github.com/BelWue/flowpipeline/tree/master/examples).
+
 
 ## Variable Expansion
 
