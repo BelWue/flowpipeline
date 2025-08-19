@@ -38,9 +38,15 @@ func main() {
 	generatedInfo := generatedInfoPreabmle("meta/doc_generator/main.go")
 	docBuilder.WriteString(generatedInfo + "\n\n")
 
-	docBuilder.WriteString("## Available Segments\n\n")
 	segmentTree := buildSegmentTree(rootDir)
+
+	docBuilder.WriteString("## Table of Contents\n\nThis overview is structures as follows:\n")
+	generateToC(segmentTree, &docBuilder)
+	docBuilder.WriteString("\n\n")
+
+	docBuilder.WriteString("## Available Segments\n\n")
 	buildSegmentDoc(segmentTree, &docBuilder)
+	docBuilder.WriteString("\n\n")
 
 	_, err = docFile.WriteString(docBuilder.String())
 	if err != nil {
@@ -97,9 +103,23 @@ func _buildSegmentTree(path string, tree *SegmentTree) {
 	}
 }
 
+func generateToC(tree *SegmentTree, docBuilder *strings.Builder) {
+	if tree.Parent != nil {
+		formattedTitle := formatTitle(tree)
+		fmt.Fprintf(docBuilder, "%s- %s\n", strings.Repeat("  ", tree.Depth-1), linkTo(formattedTitle, "#"+linkifyText(formattedTitle)))
+	}
+
+	if !tree.IsSegment {
+		for _, child := range tree.Children {
+			generateToC(child, docBuilder)
+		}
+	}
+}
+
 func buildSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 	if tree.Parent != nil {
-		docBuilder.WriteString("\n" + formatTitle(tree, 2) + "\n")
+		headerLevel := strings.Repeat("#", tree.Depth+2)
+		fmt.Fprintf(docBuilder, "%s %s\n", headerLevel, formatTitle(tree))
 	}
 
 	if tree.IsSegment {
@@ -138,9 +158,7 @@ func extractPackageDoc(path string) (string, error) {
 	return "_No segment documentation found._", nil
 }
 
-func formatTitle(tree *SegmentTree, levelOffset int) string {
-	headerLevel := strings.Repeat("#", tree.Depth+levelOffset)
-
+func formatTitle(tree *SegmentTree) string {
 	var title string
 	if tree.IsSegment {
 		title = formatSegmentName(tree.Name)
@@ -148,7 +166,7 @@ func formatTitle(tree *SegmentTree, levelOffset int) string {
 		title = formatGroupTitle(tree.Name)
 	}
 
-	return headerLevel + " " + title
+	return title
 }
 
 func formatGroupTitle(name string) string {

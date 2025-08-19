@@ -38,7 +38,7 @@ func linkFromPath(path string, display string) string {
 		return display
 	}
 
-	return linkTo(display, FlowPipelineFilesBase + path)
+	return linkTo(display, FlowPipelineFilesBase+path)
 }
 
 func linkFromCommit(commit string) string {
@@ -59,4 +59,11 @@ func envOr(key string, defaultValue string) string {
 		return defaultValue
 	}
 	return value
+}
+
+func linkifyText(text string) string {
+	text = strings.TrimSpace(text)
+	text = strings.ToLower(text)
+	text = strings.ReplaceAll(text, " ", "-")
+	return text
 }
