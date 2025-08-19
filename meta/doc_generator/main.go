@@ -57,12 +57,12 @@ func main() {
 	segmentTree := buildSegmentTree(rootDir)
 
 	docBuilder.WriteString("## Table of Contents\n\nThis overview is structures as follows:\n")
-	generateToC(segmentTree, &docBuilder)
-	docBuilder.WriteString("\n\n")
+	toc := generateToC(segmentTree)
+	docBuilder.WriteString(toc + "\n\n")
 
 	docBuilder.WriteString("## Available Segments\n\n")
-	generateSegmentDoc(segmentTree, &docBuilder)
-	docBuilder.WriteString("\n\n")
+	doc := generateSegmentDoc(segmentTree)
+	docBuilder.WriteString(doc + "\n\n")
 
 	_, err = docFile.WriteString(docBuilder.String())
 	if err != nil {
@@ -119,7 +119,13 @@ func _buildSegmentTree(path string, tree *SegmentTree) {
 	}
 }
 
-func generateToC(tree *SegmentTree, docBuilder *strings.Builder) {
+func generateToC(tree *SegmentTree) string {
+	var docBuilder strings.Builder
+	_generateToC(tree, &docBuilder)
+	return docBuilder.String()
+}
+
+func _generateToC(tree *SegmentTree, docBuilder *strings.Builder) {
 	if tree.Parent != nil {
 		formattedTitle := formatTitle(tree)
 		fmt.Fprintf(docBuilder, "%s- %s\n", strings.Repeat("  ", tree.Depth-1), linkTo(formattedTitle, "#"+linkifyText(formattedTitle)))
@@ -127,12 +133,18 @@ func generateToC(tree *SegmentTree, docBuilder *strings.Builder) {
 
 	if !tree.IsSegment {
 		for _, child := range tree.Children {
-			generateToC(child, docBuilder)
+			_generateToC(child, docBuilder)
 		}
 	}
 }
 
-func generateSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
+func generateSegmentDoc(tree *SegmentTree) string {
+	var docBuilder strings.Builder
+	_generateSegmentDoc(tree, &docBuilder)
+	return docBuilder.String()
+}
+
+func _generateSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 	if tree.Parent != nil {
 		headerLevel := strings.Repeat("#", tree.Depth+2)
 		fmt.Fprintf(docBuilder, "%s %s\n", headerLevel, formatTitle(tree))
@@ -147,7 +159,7 @@ func generateSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 		docBuilder.WriteString(packageDoc + "\n")
 	} else {
 		for _, child := range tree.Children {
-			generateSegmentDoc(child, docBuilder)
+			_generateSegmentDoc(child, docBuilder)
 		}
 	}
 }
