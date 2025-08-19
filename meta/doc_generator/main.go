@@ -45,7 +45,7 @@ func main() {
 	docBuilder.WriteString("\n\n")
 
 	docBuilder.WriteString("## Available Segments\n\n")
-	buildSegmentDoc(segmentTree, &docBuilder)
+	generateSegmentDoc(segmentTree, &docBuilder)
 	docBuilder.WriteString("\n\n")
 
 	_, err = docFile.WriteString(docBuilder.String())
@@ -116,7 +116,7 @@ func generateToC(tree *SegmentTree, docBuilder *strings.Builder) {
 	}
 }
 
-func buildSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
+func generateSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 	if tree.Parent != nil {
 		headerLevel := strings.Repeat("#", tree.Depth+2)
 		fmt.Fprintf(docBuilder, "%s %s\n", headerLevel, formatTitle(tree))
@@ -131,7 +131,7 @@ func buildSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 		docBuilder.WriteString(packageDoc + "\n")
 	} else {
 		for _, child := range tree.Children {
-			buildSegmentDoc(child, docBuilder)
+			generateSegmentDoc(child, docBuilder)
 		}
 	}
 }
@@ -151,11 +151,11 @@ func extractPackageDoc(path string) (string, error) {
 		return "", err
 	}
 
-	if node.Doc != nil {
-		return strings.TrimSpace(node.Doc.Text()), nil
+	if node.Doc == nil {
+		return "_No segment documentation found._", nil
 	}
 
-	return "_No segment documentation found._", nil
+	return strings.TrimSpace(node.Doc.Text()), nil
 }
 
 func formatTitle(tree *SegmentTree) string {
