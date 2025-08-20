@@ -103,6 +103,10 @@ instance.
 For deployments in a production environment, the use of a central Kafka cluster is strongly advised.
 This allows distributing multiple redundant flowpipeline instances throughout multiple georedundant locations.
 The different workers can use the `kafkaconsumer` segment to read from and the `kafkaproducer` segment to write to the cluster.
+Redundant workers need to be configured using the same kafka group for all instances to not duplicate flows.
+
+<img width="2536" height="1372" alt="kafka-dark-transparent drawio" src="https://github.com/user-attachments/assets/3941568c-2c11-435f-8397-fcbb13ed3bdd" />
+
 ### Custom Segments
 If you find that the existing segments lack some functionality or you require
 some very specific behaviour, it is possible to include segments as a plugin.
