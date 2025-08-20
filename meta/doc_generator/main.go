@@ -4,13 +4,16 @@ import (
 	"fmt"
 	"go/parser"
 	"go/token"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 const rootDir = "segments"
@@ -26,9 +29,13 @@ type SegmentTree struct {
 }
 
 func main() {
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime})
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+
 	docFile, err := os.Create(outputFile)
 	if err != nil {
-		log.Fatalf("Failed to create config file: %v", err)
+		log.Fatal().Err(err).Msgf("Failed to create config file at %s", outputFile)
 	}
 	defer docFile.Close()
 
@@ -66,11 +73,11 @@ func main() {
 
 	_, err = docFile.WriteString(docBuilder.String())
 	if err != nil {
-		log.Fatalf("Failed to write to documentation file: %v", err)
+		log.Fatal().Err(err).Msgf("Failed to write to config file at %s", outputFile)
 		return
 	}
 
-	fmt.Printf("Successfully generated documentation in %s\n", outputFile)
+	log.Info().Msgf("Successfully generated documentation in %s", outputFile)
 }
 
 func buildSegmentTree(path string) *SegmentTree {
@@ -89,7 +96,7 @@ func buildSegmentTree(path string) *SegmentTree {
 func _buildSegmentTree(path string, tree *SegmentTree) {
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		log.Fatalf("Failed to read directory %s: %v", path, err)
+		log.Fatal().Err(err).Msgf("Failed to read directory %s", path)
 		return
 	}
 
