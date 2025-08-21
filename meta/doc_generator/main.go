@@ -160,10 +160,7 @@ func _generateSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 
 	if tree.IsSegment {
 		fmt.Fprintf(docBuilder, "_This segment is implemented in %s._\n\n", linkFromPath(tree.Path, filepath.Base(tree.Path)))
-		packageDoc, err := extractPackageDoc(tree.Path)
-		if err != nil {
-			packageDoc = "_No segment documentation found._"
-		}
+		packageDoc := extractPackageDoc(tree.Path)
 		docBuilder.WriteString(packageDoc + "\n")
 		extractConfigStruct(tree)
 	} else {
@@ -189,18 +186,16 @@ func generatedInfoPreabmle(path string) string {
 	return fmt.Sprintf("_This document was generated from '%s', based on commit '%s'._", fileLink, commitLink)
 }
 
-func extractPackageDoc(path string) (string, error) {
+func extractPackageDoc(path string) string {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
-	if err != nil {
-		return "", err
+
+	if err != nil || node.Doc == nil {
+		log.Warn().Err(err).Msgf("Failed to parse file %s for package documentation", path)
+		return "_No segment documentation found._"
 	}
 
-	if node.Doc == nil {
-		return "_No segment documentation found._", nil
-	}
-
-	return strings.TrimSpace(node.Doc.Text()), nil
+	return strings.TrimSpace(node.Doc.Text())
 }
 
 func extractConfigStruct(tree *SegmentTree) {
