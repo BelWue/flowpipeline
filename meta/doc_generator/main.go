@@ -167,6 +167,14 @@ func _generateSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 		docBuilder.WriteString(packageDoc + "\n")
 		extractConfigStruct(tree)
 	} else {
+		groupReadme := filepath.Join(tree.Path, "README.md")
+		data, err := os.ReadFile(groupReadme)
+		if err != nil {
+			log.Warn().Err(err).Msgf("Failed to read group README at %s", groupReadme)
+			docBuilder.WriteString("_No group documentation found._\n")
+		} else {
+			docBuilder.WriteString(strings.TrimSpace(string(data)) + "\n")
+		}
 		for _, child := range tree.Children {
 			_generateSegmentDoc(child, docBuilder)
 		}
