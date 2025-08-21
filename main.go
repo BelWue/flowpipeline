@@ -25,10 +25,6 @@ import (
 
 	_ "github.com/BelWue/flowpipeline/segments/controlflow/branch"
 
-	_ "github.com/BelWue/flowpipeline/segments/export/clickhouse"
-	_ "github.com/BelWue/flowpipeline/segments/export/influx"
-	_ "github.com/BelWue/flowpipeline/segments/export/prometheus"
-
 	_ "github.com/BelWue/flowpipeline/segments/filter/drop"
 	_ "github.com/BelWue/flowpipeline/segments/filter/elephant"
 
@@ -60,11 +56,14 @@ import (
 
 	_ "github.com/BelWue/flowpipeline/segments/pass"
 
+	_ "github.com/BelWue/flowpipeline/segments/output/clickhouse"
 	_ "github.com/BelWue/flowpipeline/segments/output/csv"
+	_ "github.com/BelWue/flowpipeline/segments/output/influx"
 	_ "github.com/BelWue/flowpipeline/segments/output/json"
 	_ "github.com/BelWue/flowpipeline/segments/output/kafkaproducer"
 	_ "github.com/BelWue/flowpipeline/segments/output/lumberjack"
 	_ "github.com/BelWue/flowpipeline/segments/output/mongodb"
+	_ "github.com/BelWue/flowpipeline/segments/output/prometheus"
 	_ "github.com/BelWue/flowpipeline/segments/output/sqlite"
 
 	_ "github.com/BelWue/flowpipeline/segments/print/count"
