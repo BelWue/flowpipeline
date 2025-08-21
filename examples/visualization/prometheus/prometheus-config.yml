@@ -1,0 +1,34 @@
+global:
+  scrape_interval: 15s
+  external_labels:
+    exporting_prometheus_node: flowpipeline-example
+
+scrape_configs:
+  - job_name: 'overview'
+    metrics_path: /flowdata
+    static_configs:
+    - targets:
+      - 127.0.0.1:8080
+    metric_relabel_configs:
+    - source_labels: [__name__]
+      regex: "flow_bits"
+      replacement: "all_flow_bits"
+      target_label: __name__
+    
+  - job_name: 'overview-metrics'
+    metrics_path: /metrics
+    static_configs:
+    - targets:
+      - 127.0.0.1:8080
+
+  - job_name: 'toptalkers'
+    metrics_path: /flowdata
+    static_configs:
+    - targets:
+      - 127.0.0.1:8081
+
+  - job_name: 'toptalkers-metrics'
+    metrics_path: /metrics
+    static_configs:
+    - targets:
+      - 127.0.0.1:8081

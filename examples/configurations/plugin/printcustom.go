@@ -1,5 +1,5 @@
 // TODO: Compile this using:
-// `go build -buildmode=plugin ./examples/plugin/printcustom.go`
+// `go build -buildmode=plugin ./examples/configuration/plugin/printcustom.go`
 package main
 
 import (

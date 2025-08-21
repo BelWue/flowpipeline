@@ -24,10 +24,10 @@ processing stack into a single piece of software which can be configured to
 serve any function:
 
 * accepting raw Netflow (using [goflow2](https://github.com/netsampler/goflow2))
-* enriching the resulting flow messages ([examples/enricher](https://github.com/BelWue/flowpipeline/tree/master/examples/enricher))
-* writing to and reading from Kafka ([examples/localkafka](https://github.com/BelWue/flowpipeline/tree/master/examples/localkafka))
-* dumping flows to cli (e.g. [flowdump](https://github.com/BelWue/flowpipeline/tree/master/examples/flowdump))
-* providing metrics and insights ([examples/prometheus](https://github.com/BelWue/flowpipeline/tree/master/examples/prometheus))
+* enriching the resulting flow messages ([examples/enricher](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/enricher))
+* writing to and reading from Kafka ([examples/localkafka](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/localkafka))
+* dumping flows to cli (e.g. [flowdump](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/flowdump))
+* providing metrics and insights ([examples/prometheus](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/prometheus))
 * and many more...
 
 ## Getting Started
@@ -63,9 +63,9 @@ mountpoint `/config` is prepended in all segments which accept configuration to
 open files, if the binary was built with the `container` build flag.
 
 ```sh
-podman run -v ./examples/xy:/config flowpipeline
+podman run -v ./examples/configuration/xy:/config flowpipeline
 # or
-docker run -v ./examples/xy:/config flowpipeline
+docker run -v ./examples/configuration/xy:/config flowpipeline
 ```
 
 ## Configuration
@@ -112,7 +112,7 @@ If you find that the existing segments lack some functionality or you require
 some very specific behaviour, it is possible to include segments as a plugin.
 This is done using the `-p yourplugin.so` commandline option and your own
 custom module. See
-[examples/plugin](https://github.com/BelWue/flowpipeline/tree/master/examples/plugin)
+[examples/plugin](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/plugin)
 for a basic example and instructions on how to compile your plugin.
 
 Note that this requires CGO and thus will not work using the static binary
