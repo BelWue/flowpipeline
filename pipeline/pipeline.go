@@ -85,6 +85,9 @@ func New(segmentList ...segments.Segment) *Pipeline {
 	channels := make([]chan *pb.EnrichedFlow, len(segmentList)+1)
 	channels[0] = make(chan *pb.EnrichedFlow)
 	for i, segment := range segmentList {
+		if segment == nil {
+			return nil
+		}
 		channels[i+1] = make(chan *pb.EnrichedFlow)
 		segment.Rewire(channels[i], channels[i+1])
 	}

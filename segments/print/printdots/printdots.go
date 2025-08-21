@@ -1,11 +1,10 @@
-// The `printdots` segment keeps counting flows internally and emits a dot (`.`)
-// every `flowsperdot` flows. Its parameter needs to be chosen with the expected
+// The `printdots` segment keeps counting flows internally and emits a dot (`.`) to
+// stdout every `flowsperdot` flows. Its parameter needs to be chosen with the expected
 // flows per second in mind to be useful. Used to get visual feedback when
-// necessary.
+// necessary. The segment can also print to a file if a filename is configured.
 package printdots
 
 import (
-	"fmt"
 	"strconv"
 	"sync"
 
@@ -15,11 +14,18 @@ import (
 )
 
 type PrintDots struct {
-	segments.BaseSegment
+	segments.BaseTextOutputSegment
 	FlowsPerDot uint64 // optional, default is 5000
 }
 
 func (segment PrintDots) New(config map[string]string) segments.Segment {
+	file, err := segment.GetOutput(config)
+	if err != nil {
+		log.Error().Err(err).Msg("PrintDots: File specified in 'filename' is not accessible: ")
+		return nil
+	}
+	log.Info().Msgf("PrintDots: configured output to %s", file.Name())
+
 	var fpd uint64 = 5000
 	if parsedFpd, err := strconv.ParseUint(config["flowsperdot"], 10, 32); err == nil {
 		fpd = parsedFpd
@@ -32,18 +38,22 @@ func (segment PrintDots) New(config map[string]string) segments.Segment {
 	}
 	return &PrintDots{
 		FlowsPerDot: fpd,
+		BaseTextOutputSegment: segments.BaseTextOutputSegment{
+			File: file,
+		},
 	}
 }
 
 func (segment *PrintDots) Run(wg *sync.WaitGroup) {
 	defer func() {
 		close(segment.Out)
+		segment.File.Close()
 		wg.Done()
 	}()
 	count := uint64(0)
 	for msg := range segment.In {
 		if count += 1; count >= segment.FlowsPerDot {
-			fmt.Printf(".")
+			segment.File.WriteString(".")
 			count = 0
 		}
 		segment.Out <- msg
