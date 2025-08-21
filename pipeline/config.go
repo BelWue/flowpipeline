@@ -112,6 +112,8 @@ func segmentFromTemplate(ifPipeline, thenPipeline, elsePipeline *Pipeline, segme
 			elsePipeline,
 		)
 	}
-	segment.AddCustomConfig(segmentrepr.Config)
+	if segment != nil {
+		segment.AddCustomConfig(segmentrepr.Config)
+	}
 	return segment
 }

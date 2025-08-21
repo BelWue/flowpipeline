@@ -141,6 +141,10 @@ func main() {
 	for i := 0; i < pipelineCount; i++ {
 		segments := pipeline.SegmentsFromRepr(segmentReprs)
 		pipe := pipeline.New(segments...)
+		if pipe == nil {
+			log.Fatal().Msg("An error occured during pipeline initialization - Exiting")
+			return
+		}
 		pipe.Start()
 		pipe.AutoDrain()
 		defer pipe.Close()

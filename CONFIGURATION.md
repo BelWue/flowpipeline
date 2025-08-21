@@ -1212,7 +1212,7 @@ throughput when setting this parameter.
 
 
 ### Print Group
-Segments in this group serve to print flows immediately to the user. This is intended for ad-hoc applications and instant feedback use cases.
+Segments in this group serve to print flows immediately to the user or a file. This is intended for ad-hoc applications and instant feedback use cases.
 
 #### count
 The `count` segment counts flows passing it. This is mainly for debugging
@@ -1221,29 +1221,31 @@ flowpipelines. For instance, placing two of these segments around a
 `"pre-filter: "`  and `"post-filter: "` to obtain a count of flows making it
 through the filter without resorting to some command employing `| wc -l`.
 
-The result is printed upon termination of the flowpipeline.
+The result is printed upon termination of the flowpipeline or to a file if a filename is configured using the parameter `filename`.
 
 ```yaml
 - segment: count
   # the lines below are optional and set to default
   config:
     prefix: ""
+    filename: "count.txt"
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/print/count)
 [examples using this segment](https://github.com/search?q=%22segment%3A+count%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
 #### printdots
-The `printdots` segment keeps counting flows internally and emits a dot (`.`)
+The `printdots` segment keeps counting flows internally and emits a dot (`.`) to stdout
 every `flowsperdot` flows. Its parameter needs to be chosen with the expected
 flows per second in mind to be useful. Used to get visual feedback when
-necessary.
+necessary. Can also print to a file if a filename is configured using the parameter `filename`
 
 ```yaml
 - segment: printdots
   # the lines below are optional and set to default
   config:
     flowsperdot: 5000
+    filename: "dots.txt"
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/print/printdots)
@@ -1276,6 +1278,7 @@ the decoded forwarding status (Cisco-style) in a human-readable manner. The
 `highlight` parameter causes the output of this segment to be printed in red,
 see the [relevant example](https://github.com/BelWue/flowpipeline/tree/master/examples/highlighted_flowdump)
 for an application.
+The parameter `filename`can be used to redirect the output to a file instead of printing it to stdout.
 
 ```yaml
 - segment: printflowdump
@@ -1284,6 +1287,7 @@ for an application.
     useprotoname: true
     verbose: false
     highlight: false
+    filename: "dump.txt"
 ```
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/print/printflowdump)
 [examples using this segment](https://github.com/search?q=%22segment%3A+printflowdump%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)

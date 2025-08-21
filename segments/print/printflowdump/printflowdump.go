@@ -20,7 +20,7 @@ import (
 )
 
 type PrintFlowdump struct {
-	segments.BaseSegment
+	segments.BaseTextOutputSegment
 	UseProtoname bool // optional, default is true
 	Verbose      bool // optional, default is false
 	Highlight    bool // optional, default is false
@@ -29,11 +29,12 @@ type PrintFlowdump struct {
 func (segment *PrintFlowdump) Run(wg *sync.WaitGroup) {
 	defer func() {
 		close(segment.Out)
+		segment.File.Close()
 		fmt.Println("\033[0m") // reset color in case we're still highlighting
 		wg.Done()
 	}()
 	for msg := range segment.In {
-		fmt.Println(segment.format_flow(msg))
+		segment.File.WriteString(segment.format_flow(msg))
 		segment.Out <- msg
 	}
 }
@@ -72,7 +73,21 @@ func (segment PrintFlowdump) New(config map[string]string) segments.Segment {
 		log.Info().Msg("PrintFlowdump: 'highlight' set to default false.")
 	}
 
-	return &PrintFlowdump{UseProtoname: useProtoname, Verbose: verbose, Highlight: highlight}
+	file, err := segment.GetOutput(config)
+	if err != nil {
+		log.Error().Err(err).Msg("PrintFlowdump: File specified in 'filename' is not accessible: ")
+		return nil
+	}
+	log.Info().Msgf("PrintFlowdump: configured output to %s", file.Name())
+
+	return &PrintFlowdump{
+		UseProtoname: useProtoname,
+		Verbose:      verbose,
+		Highlight:    highlight,
+		BaseTextOutputSegment: segments.BaseTextOutputSegment{
+			File: file,
+		},
+	}
 
 }
 
@@ -219,7 +234,7 @@ func (segment PrintFlowdump) format_flow(flowmsg *pb.EnrichedFlow) string {
 		note = " - " + flowmsg.Note
 	}
 
-	return fmt.Sprintf("%s%s: %s%s:%d → %s%s:%d [%s → %s@%s → %s], %s, %ds, %s, %s%s",
+	return fmt.Sprintf("%s%s: %s%s:%d → %s%s:%d [%s → %s@%s → %s], %s, %ds, %s, %s%s \n",
 		color, timestamp, srcas, src, flowmsg.SrcPort, dstas, dst,
 		flowmsg.DstPort, srcIfDesc, statusString, router, dstIfDesc,
 		proto, duration,
