@@ -1,6 +1,22 @@
 //go:build linux
 // +build linux
 
+// **This segment is available only on Linux.**
+//
+// The `bpf` segment sources packet header data from a local interface and uses
+// this data to run a Netflow-style cache before emitting flow data to the
+// pipeline.
+//
+// This however has some caveats:
+// * using this segment requires root privileges to place BPF code in kernel
+// * the default kernel perf buffer size of 64kB should be sufficient on recent
+//   CPUs for up to 1Gbit/s of traffic, but requires tweaks in some scenarios
+// * the linux kernel version must be reasonably recent (probably 4.18+, certainly 5+)
+//
+// Roadmap:
+// * allow hardware offloading to be configured
+// * implement sampling
+
 package bpf
 
 import (

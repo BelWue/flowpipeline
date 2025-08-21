@@ -1,6 +1,10 @@
-// Counts the number of passing flows and prints the result on termination.
-// Typically used to test flow counts before and after a filter segment, best
-// used with `prefix: pre` and `prefix: post`.
+// The `count` segment counts flows passing it. This is mainly for debugging
+// flowpipelines. For instance, placing two of these segments around a
+// `flowfilter` segment allows users to use the `prefix` parameter with values
+// `"pre-filter: "`  and `"post-filter: "` to obtain a count of flows making it
+// through the filter without resorting to some command employing `| wc -l`.
+//
+// The result is printed upon termination of the flowpipeline.
 package count
 
 import (

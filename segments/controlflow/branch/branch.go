@@ -1,3 +1,50 @@
+// The `branch` segment is used to select the further progression of the pipeline
+// between to branches. To this end, it uses additional syntax that other segments
+// do not have access to, namely the `if`, `then` and `else` keys which can
+// contain lists of segments that constitute embedded pipelines.
+//
+// The any of these three keys may be empty and they are by default. The `if`
+// segments receive the flows entering the `branch` segment unconditionally. If
+// the segments in `if` proceed any flow from the input all the way to the end of
+// the `if` segments, this flow will be moved on to the `then` segments. If flows
+// are dropped at any point within the `if` segments, they will be moved on to the
+// `else` branch immediately, shortcutting the traversal of the `if` segments. Any
+// edits made to flows during the `if` segments will be persisted in either
+// branch, `then` and `else`, as well as after the flows passed from the `branch`
+// segment into consecutive segments. Dropping flows behaves regularly in both
+// branches, but note that flows can not be dropped within the `if` branch
+// segments, as this is taken as a cue to move them into the `else` branch.
+// The `bypass-messages` flag can be used to forward all incoming messages to the
+// next segment, regardles of them being droped or forwarded inside the `if` or `else`
+// branch.
+//
+// If any of these three lists of segments (or subpipelines) is empty, the
+// `branch` segment will behave as if this subpipeline consisted of a single
+// `pass` segment.
+//
+// Instead of a minimal example, the following more elaborate one highlights all
+// TCP flows while printing to standard output and keeps only these highlighted
+// ones in a sqlite export:
+//
+// ```yaml
+// - segment: branch
+//   if:
+//   - segment: flowfilter
+//     config:
+//       filter: proto tcp
+//   - segment: elephant
+//   then:
+//   - segment: printflowdump
+//     config:
+//       highlight: 1
+//   else:
+//   - segment: printflowdump
+//   - segment: drop
+//
+// - segment: sqlite
+//   config:
+//     filename: tcponly.sqlite
+// ```
 package branch
 
 import (

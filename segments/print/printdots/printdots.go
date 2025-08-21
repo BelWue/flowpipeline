@@ -1,4 +1,7 @@
-// Prints a dot every n flows.
+// The `printdots` segment keeps counting flows internally and emits a dot (`.`)
+// every `flowsperdot` flows. Its parameter needs to be chosen with the expected
+// flows per second in mind to be useful. Used to get visual feedback when
+// necessary.
 package printdots
 
 import (

@@ -1,3 +1,20 @@
+// The `toptalkers` segment prints a report on which destination addresses
+// receives the most traffic. A report looks like this:
+//
+// ```
+// x.x.x.x: 734.515139 Mbps, 559.153067 kpps
+// x.x.x.x: 654.705813 Mbps, 438.586667 kpps
+// x.x.x.x: 507.164314 Mbps, 379.857067 kpps
+// x.x.x.x: 463.91171 Mbps, 318.9248 kpps
+// ...
+// ```
+//
+// One can configure the sliding window size using `window`, as well as the
+// `reportinterval`. Optionally, this segment can report its output to a file and
+// use a custom prefix for any of its lines in order to enable multiple segments
+// writing to the same file. The thresholds serve to only log when the largest top
+// talkers are of note: the output is suppressed when either bytes or packets per
+// second are under their thresholds.
 package toptalkers
 
 import (

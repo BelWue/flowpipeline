@@ -1,4 +1,19 @@
-// Prints all flows to stdout or a given file in json format, for consumption by the stdin segment or for debugging.
+// The `json` segment provides a JSON output option. It uses stdout by default, but can
+// be instructed to write to file using the filename parameter. This is intended to be
+// able to pipe flows between instances of flowpipeline, but it is also very useful when
+// debugging flowpipelines or to create a quick plaintext dump.
+//
+// If the option `zstd` is set, the output will be compressed using the
+// [zstandard algorithm](https://facebook.github.io/zstd/). If the option `zstd` is set
+// to a positive integer, the compression level will be set to
+// ([approximately](https://github.com/klauspost/compress/tree/master/zstd#status)) that
+// value. When `flowpipeline` is stopped abruptly (e.g by pressing Ctrl+C), the end of
+// the archive will get corrupted. Simply use `zstdcat` to decompress the archive and
+// remove the last line (`| head -n -1`).
+//
+// If the option `pretty` is set to true, the every flow will be formatted in a
+// human-readable way (indented and with line breaks). When omitted, the output will be
+// a single line per flow.
 package json
 
 import (

@@ -1,3 +1,10 @@
+// The `aslookup` segment can add AS numbers to flows using route collector dumps.
+// Dumps can be obtained from your RIR in the `.mrt` format and can be converted to
+// lookup databases using the `asnlookup-util` from the `asnlookup` package. These
+// databases contain a mapping from IP ranges to AS number in binary format.
+//
+// By default the type is set to `db`. It is possible to directly parse `.mrt` files,
+// however this is not recommended since this will significantly slow down lookup times.
 package aslookup
 
 import (

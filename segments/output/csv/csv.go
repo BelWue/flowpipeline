@@ -1,6 +1,8 @@
-// Package csv processes all flows from it's In channel and converts them into
-// CSV format. Using it's configuration options it can write to a file or to
-// stdout.
+// The `csv` segment provides an CSV output option. It uses stdout by default, but
+// can be instructed to write to file using the filename parameter. The fields
+// parameter can be used to limit which fields will be exported. If no filename is
+// provided or empty, the output goes to stdout. By default all fields are exported.
+// To reduce them, use a valid comma separated list of fields.
 package csv
 
 import (

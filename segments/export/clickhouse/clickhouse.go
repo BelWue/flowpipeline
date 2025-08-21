@@ -1,5 +1,4 @@
-// Dumps all incoming flow messages to a clickhouse database. The schema used
-// is selected according to the preset parameter.
+// The `clickhouse` segment dumps all incoming flow messages to a clickhouse database.
 package clickhouse_segment
 
 import (

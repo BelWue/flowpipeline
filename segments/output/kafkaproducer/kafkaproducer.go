@@ -1,6 +1,18 @@
-// Produces all received flows to Kafka instance. This segment is based on the
-// kafkaconnector library:
-// https://github.com/bwNetFlow/kafkaconnector
+// The `kafkaproducer` segment produces flows to a Kafka topic. All settings are
+// equivalent to the `kafkaconsumer` segment. Additionally, there is the
+// `topicsuffix` parameter, which allows pipelines to write to multiple topics at
+// once. A typical use case is this:
+//
+// * set `topic: customer-`
+// * set `topicsuffix: Cid`
+// * this will result in a number of topics which will a) be created or b) need to
+//   exist, depending on your Kafka cluster settings.
+// * the topics will take the form `customer-123` for all values of Cid
+// * it is advisable to use the `flowfilter` segment to limit the number of
+//   topics
+//
+// This could also be used to populate topics by Proto, or by Etype, or by any
+// number of other things.
 package kafkaproducer
 
 import (

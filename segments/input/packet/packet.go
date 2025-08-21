@@ -1,6 +1,25 @@
 //go:build linux
 // +build linux
 
+// **This segment is available only on Linux.**
+// **This segment is available in the static binary release with some caveats in configuration.**
+//
+// The `packet` segment sources packet header data from a local interface and uses
+// this data to run a Netflow-style cache before emitting flow data to the
+// pipeline. As opposed to the `bpf` segment, this one uses the classic packet
+// capture method and has no prospect of supporting hardware offloading. The segment
+// supports different methods:
+//
+// - `pcapgo`, the only completely CGO-free, pure-Go method that should work anywhere, but does not support BPF filters
+// - `pcap`, a wrapper around libpcap, requires that at compile- and runtime
+// - `pfring`, a wrapper around PF_RING, requires the appropriate libraries as well as the loaded kernel module
+// - `file`, a `pcapgo` replay reader for PCAP files which will fallback to `pcap` automatically if either:
+//   1. the file is not in `.pcapng` format, but using the legacy `.pcap` format
+//   2. a BPF filter was specified
+//
+// The filter parameter available for some methods will filter packets before they are
+// aggregated in any flow cache.
+
 package packet
 
 import (

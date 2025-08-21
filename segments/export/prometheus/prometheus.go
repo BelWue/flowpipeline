@@ -1,19 +1,11 @@
-// Collects and serves statistics about flows.
-// Configuration options for this segments are:
-// The endoint field can be configured:
-// <host>:8080/flowdata
-// <host>:8080/metrics
-// The labels to be exported can be set in the configuration.
-// Default labels are:
+// The `prometheus` segment provides a standard prometheus exporter, exporting its
+// own monitoring info at `:8080/metrics` and its flow data at `:8080/flowdata` by
+// default. The label set included with each metric is freely configurable with a
+// comma-separated list from any field available in the [protobuf definition](https://github.com/BelWue/flowpipeline/blob/master/pb/flow.proto).
 //
-//	Etype,Proto
-//
-// Additional Labels can be defined as long as they match a field in flowpipeline/pb/enrichedflow.pb.go:EnrichedFlow
-// These include :
-//
-// # SrcAs,DstAs,Proto,DstPort,Bytes,Packets,SamplerAddress,ForwardingStatus,TimeReceived,TimeReceivedNs,TimeFlowStart,TimeFlowStartNs
-//
-// The additional label should be used with care, because of infite quantity.
+// Note that some of the above fields might not be present depending on the method
+// of flow export, the input segment used in this pipeline, or the modify segments
+// in front of this export segment.
 package prometheus
 
 import (

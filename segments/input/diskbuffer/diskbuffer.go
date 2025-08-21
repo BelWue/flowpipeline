@@ -1,3 +1,9 @@
+// The `diskbuffer` segment buffers flows in memory and on-demand on disk.
+// Writing to disk is done in the JSON representation of the flows, compressed using
+// `zstd`. The flows are written to disk, when the MemoryBuffer reaches the percentual
+// fill level HighMemoryMark, until the LowMemoryMark is reached again. Files are read
+// from disk if the fill level reaches ReadingMemoryMark. The maximum file size and the
+// maximum size on disk are configurable via the `filesize` and `maxcachesize` parameter.
 package diskbuffer
 
 import (

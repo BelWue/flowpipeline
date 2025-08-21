@@ -1,6 +1,9 @@
-// Anonymize uses the CryptoPan prefix-preserving IP address sanitization as specified by J. Fan, J. Xu, M. Ammar, and S. Moon.
-// By default this segment is anonymizing the SrcAddr, DstAddr and SamplerAddress fields in the flowmessage.
-// The required encryption key has to be created with the length of 32 chars.
+// The `anonymize` segment anonymizes IP addresses occuring in flows using the
+// Crypto-PAn algorithm. By default all possible IP address fields are targeted,
+// this can be configured using the fields parameter. The key needs to be at least
+// 32 characters long.
+//
+// Supported Fields for anonymization are `SrcAddr,DstAddr,SamplerAddress,NextHop`
 package anonymize
 
 import (

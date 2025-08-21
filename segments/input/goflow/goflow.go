@@ -1,7 +1,11 @@
-// Captures Netflow v9 and feeds flows to the following segments. Currently,
-// this segment only uses a limited subset of goflow2 functionality.
-// If no configuration option is provided a sflow and a netflow collector will be started.
-// netflowLagcy is also built in but currently not tested.
+// The `goflow` segment provides a convenient interface for
+// [goflow2](https://github.com/netsampler/goflow2) right from flowpipeline
+// config. It behaves closely like a regular goflow2 instance but provides flows
+// directly in our extended format (which has been based on goflow's from the
+// beginning of this project).
+//
+// This flow collector needs to receive input from any IPFIX/Netflow/sFlow
+// exporters, for instance your network devices.
 package goflow
 
 import (

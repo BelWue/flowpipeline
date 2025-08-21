@@ -1,6 +1,18 @@
-// Consumes flows from a Kafka instance and passes them to the following
-// segments. This segment is based on the kafkaconnector library:
-// https://github.com/bwNetFlow/kafkaconnector
+// The `kafkaconsumer` segment consumes flows from a Kafka topic. This topic can
+// be created using the `kafkaproducer` module or using an external instance of
+// [goflow2](https://github.com/netsampler/goflow2).
+//
+// This segment can be used in conjunction with the `kafkaproducer` segment to
+// enrich, reduce, or filter flows in transit between Kafka topics, or even sort
+// them into different Kafka topics. See the examples this particular usage.
+//
+// The startat configuration sets whether to start at the newest or oldest
+// available flow (i.e. Kafka offset). It only takes effect if Kafka has no stored
+// state for this specific user/topic/consumergroup combination.
+//
+// The supported group partion assignor balancing strategies can be set using a comma
+// separated list for `strategy`. Supported values are `sticky`, `roundrobin` and
+// `range`. Default is `sticky`.
 package kafkaconsumer
 
 import (

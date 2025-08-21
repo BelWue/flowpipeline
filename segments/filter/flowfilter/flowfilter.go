@@ -1,5 +1,6 @@
-// Runs flows through a filter and forwards only matching flows. Reuses our own
-// https://github.com/BelWue/flowfilter project, see the docs there.
+// The `flowfilter` segment uses [flowfilter syntax](https://github.com/BelWue/flowfilter)
+// to drop flows based on the evaluation value of the provided filter conditional against
+// any flow passing through this segment.
 package flowfilter
 
 import (

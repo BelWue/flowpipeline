@@ -1,4 +1,8 @@
-// Drops fields from any passing flow.
+// The segment `dropfields` deletes fields from flows as they pass through this
+// segment. To this end, this segment requires a policy parameter to be set to
+// "keep" or "drop". It will then either keep or drop all fields specified in the
+// fields parameter. For a list of fields, check our
+// [protobuf definition](https://github.com/bwNetFlow/protobuf/blob/master/flow-messages-enriched.proto).
 package dropfields
 
 import (

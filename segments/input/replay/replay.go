@@ -1,4 +1,10 @@
-// Replays flows from an sqlite database created by the `sqlite` segment.
+// The `replay` segment reads a sqlite database previously created by the `sqlite`
+// segment and emits the flows contained in it. The location of the database is
+// specified with the `filename` parameter. Note that as of now, the database must
+// contain all columns/fields that are exported from the `EnrichedFlow` type. If
+// `respecttiming` is set to `true`, the segment will respect the timing of the original
+// flows and will replay them accordingly. Otherwise, the segment will emit all flows
+// instantly after each other.
 package replay
 
 import (

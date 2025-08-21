@@ -1,4 +1,16 @@
-// Calculates missing time fields based on existing ones
+// The segment `sync_timestamps` tries to fill empty time fields using existing ones.
+// It works on the following fields:
+// - TimeFlowStart:
+//   - TimeFlowStart
+//   - TimeFlowStartMs
+//   - TimeFlowStartNs
+// - TimeFlowEnd:
+//   - TimeFlowEnd
+//   - TimeFlowEndMs
+//   - TimeFlowEndNs
+// - TimeReceived:
+//   - TimeReceived
+//   - TimeReceivedNs
 package sync_timestamps
 
 import (
