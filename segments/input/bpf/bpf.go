@@ -16,7 +16,6 @@
 // Roadmap:
 // * allow hardware offloading to be configured
 // * implement sampling
-
 package bpf
 
 import (

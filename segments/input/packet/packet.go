@@ -19,7 +19,6 @@
 //
 // The filter parameter available for some methods will filter packets before they are
 // aggregated in any flow cache.
-
 package packet
 
 import (
