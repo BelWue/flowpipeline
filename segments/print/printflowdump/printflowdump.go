@@ -1,7 +1,29 @@
-// Prints all incoming flows in a specific flowdump format.
-// Add the protomap segment before this segment to enrich any flow message
-// with human readable protocol names instead of the protocol numbers.
-// This segment currently has no way to configure the output format (TODO).
+// The `printflowdump` prints a tcpdump-style representation of flows with some
+// addition deemed useful at [BelWü](https://www.belwue.de) Ops. It looks up
+// protocol names from flows if the segment `protoname` is part of the pipeline so
+// far or determines them on its own (using the same method as the `protoname`
+// segment), unless configured otherwise.
+//
+// It currently looks like `timereceived: SrcAddr -> DstAddr [ingress iface desc from snmp segment →
+// @SamplerAddress → egress iface desc], ProtoName, Duration, avg bps, avg pps`. In
+// action:
+//
+// ```
+// 14:47:41: x.x.x.x:443 -> 193.197.x.x:9854 [Telia → @193.196.190.193 → stu-nwz-a99], TCP, 52s, 52.015384 Mbps, 4.334 kpps
+// 14:47:49: 193.197.x.x:54643 -> x.x.x.x:7221 [Uni-Ulm → @193.196.190.2 → Telia], UDP, 60s, 2.0288 Mbps, 190 pps
+// 14:47:49: 2003:x:x:x:x:x:x:x:51052 -> 2001:7c0:x:x::x:443 [DTAG → @193.196.190.193 → stu-nwz-a99], UDP, 60s, 29.215333 Mbps, 2.463 kpps
+// ```
+//
+// This segment is commonly used as a pipeline with some input provider and the
+// `flowfilter` segment preceeding it, to create a tcpdump-style utility. This is
+// even more versatile when using `$0` as a placeholder in `flowfilter` to use the
+// flowpipeline invocation's first argument as a filter.
+//
+// The parameter `verbose` changes some output elements, it will for instance add
+// the decoded forwarding status (Cisco-style) in a human-readable manner. The
+// `highlight` parameter causes the output of this segment to be printed in red,
+// see the [relevant example](https://github.com/BelWue/flowpipeline/tree/master/examples/highlighted_flowdump)
+// for an application. The parameter `filename`can be used to redirect the output to a file instead of printing it to stdout.
 package printflowdump
 
 import (
@@ -20,7 +42,7 @@ import (
 )
 
 type PrintFlowdump struct {
-	segments.BaseSegment
+	segments.BaseTextOutputSegment
 	UseProtoname bool // optional, default is true
 	Verbose      bool // optional, default is false
 	Highlight    bool // optional, default is false
@@ -29,11 +51,12 @@ type PrintFlowdump struct {
 func (segment *PrintFlowdump) Run(wg *sync.WaitGroup) {
 	defer func() {
 		close(segment.Out)
+		segment.File.Close()
 		fmt.Println("\033[0m") // reset color in case we're still highlighting
 		wg.Done()
 	}()
 	for msg := range segment.In {
-		fmt.Println(segment.format_flow(msg))
+		segment.File.WriteString(segment.format_flow(msg))
 		segment.Out <- msg
 	}
 }
@@ -72,7 +95,21 @@ func (segment PrintFlowdump) New(config map[string]string) segments.Segment {
 		log.Info().Msg("PrintFlowdump: 'highlight' set to default false.")
 	}
 
-	return &PrintFlowdump{UseProtoname: useProtoname, Verbose: verbose, Highlight: highlight}
+	file, err := segment.GetOutput(config)
+	if err != nil {
+		log.Error().Err(err).Msg("PrintFlowdump: File specified in 'filename' is not accessible: ")
+		return nil
+	}
+	log.Info().Msgf("PrintFlowdump: configured output to %s", file.Name())
+
+	return &PrintFlowdump{
+		UseProtoname: useProtoname,
+		Verbose:      verbose,
+		Highlight:    highlight,
+		BaseTextOutputSegment: segments.BaseTextOutputSegment{
+			File: file,
+		},
+	}
 
 }
 
@@ -219,7 +256,7 @@ func (segment PrintFlowdump) format_flow(flowmsg *pb.EnrichedFlow) string {
 		note = " - " + flowmsg.Note
 	}
 
-	return fmt.Sprintf("%s%s: %s%s:%d → %s%s:%d [%s → %s@%s → %s], %s, %ds, %s, %s%s",
+	return fmt.Sprintf("%s%s: %s%s:%d → %s%s:%d [%s → %s@%s → %s], %s, %ds, %s, %s%s \n",
 		color, timestamp, srcas, src, flowmsg.SrcPort, dstas, dst,
 		flowmsg.DstPort, srcIfDesc, statusString, router, dstIfDesc,
 		proto, duration,

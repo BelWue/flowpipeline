@@ -1,5 +1,7 @@
-// Serves as a template for new segments and forwards flows, otherwise does
-// nothing.
+// The `pass` segment serves as a heavily annotated template for new segments. So
+// does this piece of documentation. Aside from summarizing what a segment does,
+// it should include a description of all the parameters it accepts as well as any
+// caveats users should be aware of.
 package pass
 
 import (

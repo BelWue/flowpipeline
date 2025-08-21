@@ -1,4 +1,8 @@
-// This segment is used to alert on flows reaching a specified threshold
+// The traffic specific toptalker metrics segement is simmilar to the `toptalker-metrics` segment,
+// but allows filtering for specific protocols. The use of nested filters is supported to
+// allow for a more efficient filtering.
+//
+// Filters with a specified `traffictyp` will be exported if they reach the configured thresholds.
 package traffic_specific_toptalkers
 
 import (

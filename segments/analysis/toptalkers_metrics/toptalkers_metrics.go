@@ -1,3 +1,27 @@
+// The `toptalkers_metrics` segment calculates statistics about traffic levels
+// per IP address and exports them in OpenMetrics format via HTTP.
+//
+// Traffic is counted in bits per second and packets per second, categorized into
+// forwarded and dropped traffic. By default, only the destination IP addresses
+// are accounted, but the configuration allows using the source IP address or
+// both addresses. For the latter, a flows number of bytes and packets are
+// counted for both addresses. `connection` is used to look a specific combinations
+// of "source -> target".
+//
+// Thresholds for bits per second or packets per second can be configured. Only
+// metrics for addresses that exceeded this threshold during the last window size
+// are exported. This can be used for detection of unusual or unwanted traffic
+// levels. This can also be used as a flow filter: While the average traffic for
+// an address is above threshold, flows are passed, other flows are dropped.
+//
+// The averages are calculated with a sliding window. The window size (in number
+// of buckets) and the bucket duration can be configured. By default, it uses
+// 60 buckets of 1 second each (1 minute of sliding window). Optionally, the
+// window size for the exported metrics calculation and for the threshold check
+// can be configured differently.
+//
+// The parameter "traffictype" is passed as OpenMetrics label, so this segment
+// can be used multiple times in one pipeline without metrics getting mixed up.
 package toptalkers_metrics
 
 import (

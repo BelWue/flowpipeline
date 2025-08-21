@@ -1,4 +1,8 @@
-// Rewrites the Note field of passing flows to the remote addresses reverse DNS entry.
+// The `reversedns` segment looks up DNS PTR records for Src, Dst, Sampler and
+// NextHopAddr and adds them to our flows. The results are also written to a internal
+// cache which works well for ad-hoc usage, but it's recommended to use an actual
+// caching resolver in real deployment scenarios. The refresh interval setting pertains
+// to the internal cache only.
 package reversedns
 
 import (

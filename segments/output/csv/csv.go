@@ -1,13 +1,14 @@
-// Package csv processes all flows from it's In channel and converts them into
-// CSV format. Using it's configuration options it can write to a file or to
-// stdout.
+// The `csv` segment provides an CSV output option. It uses stdout by default, but
+// can be instructed to write to file using the filename parameter. The fields
+// parameter can be used to limit which fields will be exported. If no filename is
+// provided or empty, the output goes to stdout. By default all fields are exported.
+// To reduce them, use a valid comma separated list of fields.
 package csv
 
 import (
 	"encoding/csv"
 	"fmt"
 	"net"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -20,31 +21,21 @@ import (
 )
 
 type Csv struct {
-	segments.BaseSegment
+	segments.BaseTextOutputSegment
 	writer     *csv.Writer
 	fieldNames []string
 
-	FileName string // optional, default is empty which means stdout
-	Fields   string // optional comma-separated list of fields to export, default is "", meaning all fields
+	Fields string // optional comma-separated list of fields to export, default is "", meaning all fields
 }
 
 func (segment Csv) New(config map[string]string) segments.Segment {
 	newsegment := &Csv{}
-
-	var filename string = "stdout"
-	var file *os.File
-	var err error
-	if config["filename"] != "" {
-		file, err = os.Create(config["filename"])
-		if err != nil {
-			log.Error().Err(err).Msg("Csv: File specified in 'filename' is not accessible: ")
-		}
-		filename = config["filename"]
-	} else {
-		file = os.Stdout
-		log.Info().Msg("Csv: 'filename' unset, using stdout.")
+	file, err := segment.GetOutput(config)
+	if err != nil {
+		log.Error().Err(err).Msg("Csv: File specified in 'filename' is not accessible: ")
+		return nil
 	}
-	newsegment.FileName = filename
+	log.Info().Msgf("Csv: configured output to %s", file.Name())
 
 	var heading []string
 	if config["fields"] != "" {
@@ -85,6 +76,7 @@ func (segment Csv) New(config map[string]string) segments.Segment {
 func (segment *Csv) Run(wg *sync.WaitGroup) {
 	defer func() {
 		segment.writer.Flush()
+		segment.File.Close()
 		close(segment.Out)
 		wg.Done()
 	}()

@@ -1,3 +1,16 @@
+// The `addrstrings` segment adds string representations of IP and MAC addresses which
+// are set. The new fields are
+//
+// * `SourceIP` (from `SrcAddr`)
+// * `DestinationIP` (from `DstAddr`)
+// * `NextHopIP` (from `NextHop`)
+// * `SamplerIP` (from `SamplerAddress`)
+//
+// * `SourceMAC` (from `SrcMac`)
+// * `DestinationMAC` (from `DstMac`)
+//
+// This segment has no configuration options. It is intended to be used in conjunction
+// with the `dropfields` segment to remove the original fields.
 package addrstrings
 
 import (

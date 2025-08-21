@@ -1,3 +1,5 @@
+// The `drop` segment is used to drain a pipeline, effectively starting a new
+// pipeline after it. In conjunction with `skip`, this can act as a `flowfilter`.
 package drop
 
 import (

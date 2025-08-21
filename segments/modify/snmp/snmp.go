@@ -1,6 +1,35 @@
-// Enriches passing flows with human-readable versions of interface ids, sourced from SNMP.
-// Obviously, this module requires to be run on a subnet which is accepted by
-// any router or exporter named by a flow's SampleAddress field.
+// The `snmpinterface` segment annotates flows with interface information learned
+// directly from routers using SNMP. This is a potentially perfomance impacting
+// segment and has to be configured carefully.
+//
+// In principle, this segment tries to fetch a SNMP OID datapoint from the address
+// in SamplerAddress, which corresponds to a router on normal flow-exporter
+// generated flows. The fields used to query this router are SrcIf and DstIf, i.e.
+// the interface IDs which are part of the flow. If successfull, a flow will have
+// the fields `{Src,Dst}IfName`, `{Src,Dst}IfDesc`, and `{Src,Dst}IfSpeed`
+// populated. In order to not to overload the router and to introduce delays, this
+// segment will:
+//
+// * not wait for a SNMP query to return, instead it will leave the flow as it was
+//   before sending it to the next segment (i.e. the first one on a given
+//   interface will always remain untouched)
+// * add any interface's data to a cache, which will be used to enrich the
+//   next flow using that same interface
+// * clear the cache value after 1 hour has elapsed, resulting in another flow
+//   without these annotations at that time
+//
+// These rules are applied for source and destination interfaces separately.
+//
+// The paramters to this segment specify the SNMPv2 community as well as the
+// connection limit employed by this segment. The latter is again to not overload
+// the routers SNMPd. Lastly, the regex parameter can be used to limit the
+// `IfDesc` annotations to a certain part of the actual interface description.
+// For instance, descriptions follow the format `customerid - blablalba`, the
+// regex `(.*) -.*` would grab just that customer ID to put into the `IfDesc`
+// fields. Also see the full examples linked below.
+//
+// Roadmap:
+// * cache timeout should be configurable
 package snmp
 
 import (

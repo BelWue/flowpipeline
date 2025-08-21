@@ -1,10 +1,26 @@
+// The `toptalkers` segment prints a report on which destination addresses
+// receives the most traffic. A report looks like this:
+//
+// ```
+// x.x.x.x: 734.515139 Mbps, 559.153067 kpps
+// x.x.x.x: 654.705813 Mbps, 438.586667 kpps
+// x.x.x.x: 507.164314 Mbps, 379.857067 kpps
+// x.x.x.x: 463.91171 Mbps, 318.9248 kpps
+// ...
+// ```
+//
+// One can configure the sliding window size using `window`, as well as the
+// `reportinterval`. Optionally, this segment can report its output to a file and
+// use a custom prefix for any of its lines in order to enable multiple segments
+// writing to the same file. The thresholds serve to only log when the largest top
+// talkers are of note: the output is suppressed when either bytes or packets per
+// second are under their thresholds.
 package toptalkers
 
 import (
 	"bufio"
 	"fmt"
 	"math"
-	"os"
 	"sort"
 	"strconv"
 	"sync"
@@ -24,12 +40,11 @@ type Record struct {
 }
 
 type TopTalkers struct {
-	segments.BaseSegment
+	segments.BaseTextOutputSegment
 	writer *bufio.Writer
 
 	Window         int    // optional, default is 60, sets the number of seconds used as a sliding window size
 	ReportInterval int    // optional, default is 10, sets the number of seconds between report printing
-	FileName       string // optional, default is "" (stdout), where to put the toptalker logs
 	LogPrefix      string // optional, default is "", a prefix for each log line, useful in case multiple segments log to the same file
 	ThresholdBps   uint64 // optional, default is 0, only log talkers with an average bits per second rate higher than this value
 	ThresholdPps   uint64 // optional, default is 0, only log talkers with an average packets per second rate higher than this value
@@ -40,7 +55,6 @@ func (segment TopTalkers) New(config map[string]string) segments.Segment {
 	newsegment := &TopTalkers{
 		Window:         60,
 		ReportInterval: 10,
-		FileName:       config["filename"],
 		LogPrefix:      config["logprefix"],
 		TopN:           10,
 	}
@@ -81,17 +95,13 @@ func (segment TopTalkers) New(config map[string]string) segments.Segment {
 		log.Info().Msg("TopTalkers: 'reportinterval' set to default 60.")
 	}
 
-	if config["filename"] != "" {
-		file, err := os.Create(config["filename"])
-		if err != nil {
-			log.Error().Err(err).Msg("TopTalkers: File specified in 'filename' is not accessible: ")
-		}
-		newsegment.FileName = config["filename"]
-		newsegment.writer = bufio.NewWriter(file)
-	} else {
-		newsegment.writer = bufio.NewWriter(os.Stdout)
-		log.Info().Msg("TopTalkers: Parameter 'filename' empty, output goes to StdOut by default.")
+	file, err := segment.GetOutput(config)
+	if err != nil {
+		log.Error().Err(err).Msg("Csv: File specified in 'filename' is not accessible: ")
+		return nil
 	}
+	log.Info().Msgf("TopTalkers: configured output to %s", file.Name())
+	newsegment.writer = bufio.NewWriter(file)
 
 	if config["thresholdbps"] != "" {
 		if parsedThresholdBps, err := strconv.ParseUint(config["thresholdbps"], 10, 32); err == nil {

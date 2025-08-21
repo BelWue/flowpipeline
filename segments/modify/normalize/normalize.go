@@ -1,4 +1,12 @@
-// Rewrites passing flows with all sampling rate affected fields normalized.
+// The `normalize` segment multiplies the Bytes and the Packets field by the flows
+// SamplingRate field. Additionally, it sets the Normalized field for this flow to 1.
+//
+// The fallback parameter is for flows known to be sampled which do not include
+// the sampling rate for some reason.
+//
+// Roadmap:
+// * replace Normalized with an OriginalSamplingRate field and set SamplingRate to 1
+// instead
 package normalize
 
 import (

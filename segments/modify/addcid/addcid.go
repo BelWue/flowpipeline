@@ -1,10 +1,26 @@
-// Enriches any passing flow message with a customer id field based on a CIDR
-// match. Requires a remote address to be marked in any given flow message by
-// default, but lookups can be done for both source and destination address
-// separately using the matchboth parameter. The result is written to the Cid
-// field of any flow. If matchboth is set, SrcCid and DstCid will contain the
-// results, with Cid containing an additional copy if just one address had a
-// match.
+// The `addcid` segment can add a customer ID to flows according to the IP prefix
+// the flow is matched to. These prefixes are sourced from a simple csv file
+// consisting of lines in the format `ip prefix,integer`. For example:
+//
+// ```csv
+// 192.168.88.0/24,1
+// 2001:db8:1::/48,1
+// ```
+//
+// Which IP address is matched against this data base is determined by the
+// RemoteAddress field of the flow. If this is unset, the flow is forwarded
+// untouched. To set this field, see the `remoteaddress` segment. If matchboth is
+// set to true, this segment will not try to establish the remote address and
+// instead check both, source and destination address, in this order on a
+// first-match basis. The assumption here is that there are no flows of customers
+// sending traffic to one another.
+//
+// If dropunmatched is set to true no untouched flows will pass this segment,
+// regardless of the reason for the flow being unmatched (absence of RemoteAddress
+// field, actually no matching entry in data base).
+//
+// Roadmap:
+// * figure out how to deal with customers talking to one another
 package addcid
 
 import (

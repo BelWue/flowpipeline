@@ -1,5 +1,7 @@
-// Enriches any passing flow message with the human readable protocol.
-// The result is written to the protoname field of any flow
+// The `protomap` segment sets the ProtoName string field according to the Proto
+// integer field. Note that this should only be done before final usage, as
+// lugging additional string content around can be costly regarding performance
+// and storage size.
 package protomap
 
 import (

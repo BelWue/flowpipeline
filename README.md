@@ -44,11 +44,12 @@ maybe follow the instructions there).
 ### Binary Releases
 Download our [latest release](https://github.com/BelWue/flowpipeline/releases)
 and run it, same as if you compiled it yourself.
+The flowpipeline releases contain executables for MacOS (`flowpipeline-darwin`) and for linux (`flowpipeline-linux`).
 
 The default, dynamically linked version requires a reasonably recent system
 (glibc 2.32+, linux 5.11+ for `bpf`, `mongodb` ...) and comes with all features.
 As a fallback option, the static binaries will work in older environments
-(CentOS 7, Debian 10, ...), but come without the segments that require
+(Rocky Linux 8, Debian 11, ...), but come without the segments that require
 CGO/dynamically linked code (`bpf`, `sqlite`, `mongodb` and plugin support, check
 [CONFIGURATION.md](https://github.com/BelWue/flowpipeline/blob/master/CONFIGURATION.md)).
 
@@ -72,20 +73,39 @@ docker run -v ./examples/xy:/config flowpipeline
 Refer to [CONFIGURATION.md](https://github.com/BelWue/flowpipeline/blob/master/CONFIGURATION.md)
 for the full guide. Other than that, looking at the examples should give you a
 good idea what the config looks like in detail and what the possible
-applications are. For sake of completeness, here's another minimal example
+applications are. 
+The default configuration file used by flowpipeline is `config.yml`. 
+To use another configuration file, its location has to be specified using `-c path/to/file.yml`.
+
+A configuration file should start with a segment from the `input` group. This can then be followed
+by one or more segments. The following segments process all flows output by the previous segment.
+Most segments output all flows that they consumed from the previous segment. 
+The exception to this are the `filter` group segments.
+
+For sake of completeness, here's another minimal example
 which starts listening for Netflow v9 on port 2055, applies the filter given as
-first argument, and then prints it out in a `tcpdump`-style format.
+first argument, and then prints it out to `stdout` in a `tcpdump`-style format.
 
 ```yaml
 - segment: goflow
+
 - segment: flowfilter
   config:
     filter: $0
+
 - segment: printflowdump
 ```
 
 You'd call it with `./flowpipeline "proto tcp and (port 80 or port 443)"`., for
 instance.
+
+### Production Deployment
+For deployments in a production environment, the use of a central Kafka cluster is strongly advised.
+This allows distributing multiple redundant flowpipeline instances throughout multiple georedundant locations.
+The different workers can use the `kafkaconsumer` segment to read from and the `kafkaproducer` segment to write to the cluster.
+Redundant workers need to be configured using the same kafka group for all instances to not duplicate flows.
+
+<img width="2536" height="1372" alt="kafka-dark-transparent drawio" src="https://github.com/user-attachments/assets/3941568c-2c11-435f-8397-fcbb13ed3bdd" />
 
 ### Custom Segments
 If you find that the existing segments lack some functionality or you require

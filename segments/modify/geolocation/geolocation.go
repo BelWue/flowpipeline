@@ -1,6 +1,13 @@
-// Enriches flows with a geolocation. By default requires RemoteAddr to be set
-// as it populates the RemoteCountry field. Optionally matches both addresses
-// and writes the results to the Src and DstCountry fields.
+// The `geolocation` segment annotates flows with their RemoteCountry field.
+// Requires the filename parameter to be set to the location of a MaxMind
+// geolocation file, as shown in our example.
+//
+// For this to work, it requires RemoteAddress to be set in the flow if matchboth
+// is set to its default `false`. If matchboth is true, the behaviour is
+// different from the `addcid` segment, as the result will be written for both
+// SrcAddr and DstAddr into SrcCountry and DstCountry. The dropunmatched parameter
+// however behaves in the same way: flows without any remote country data set will
+// be dropped.
 package geolocation
 
 import (

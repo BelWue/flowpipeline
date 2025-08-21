@@ -3,28 +3,31 @@
 // This segment basically runs flows through a switch case directive using its
 // only config parameter, 'policy'. Some policies unlock additional parameters.
 //
-// 'cidr' matches first source address and then destination address against the
-// prefixed provided in the CSV file using the config parameter 'filename'.
-// When a match to a non-zero value occurs, the RemoteAddress indicator is set
-// accordingly. Accordingly means that a non-zero value is assumed to be a
-// customer ID as used by the 'AddCid' segment, i.e. the customer-address
-// (whether it's source or destination) will be considered local. Optionally,
-// unmatched flows can be dropped using 'dropunmatched'.
+// * 'cidr' matches first source address and then destination address against the
+//   prefixed provided in the CSV file using the config parameter 'filename'.
+//   When a match to a non-zero value occurs, the RemoteAddress indicator is set
+//   accordingly. Accordingly means that a non-zero value is assumed to be a
+//   customer ID as used by the 'AddCid' segment, i.e. the customer-address
+//   (whether it's source or destination) will be considered local. Optionally,
+//   unmatched flows can be dropped using 'dropunmatched'.
 //
-// 'border' assumes flows are exported on border interfaces: If a flow's
-// direction is 'ingress' on such an interface, its remote address is the
-// source address of the flow, whereas the local address of the flow would be
-// its destination address inside our network. The same logic applies vice
-// versa: 'egress' flows have a remote destination address.
+// * 'border' assumes flows are exported on border interfaces: If a flow's
+//   direction is 'ingress' on such an interface, its remote address is the
+//   source address of the flow, whereas the local address of the flow would be
+//   its destination address inside our network. The same logic applies vice
+//   versa: 'egress' flows have a remote destination address.
 //
-// 'user' assumes flows are exported on user interfaces: If a flow's
-// direction is 'ingress' on such an interface, its remote address is the
-// destination address of the flow, whereas the local address of the flow would be
-// its destination address inside our user's network. The same logic applies
-// vice versa: 'egress' flows have a remote source address.
+// * 'user' assumes flows are exported on user interfaces: If a flow's
+//   direction is 'ingress' on such an interface, its remote address is the
+//   destination address of the flow, whereas the local address of the flow would be
+//   its destination address inside our user's network. The same logic applies
+//   vice versa: 'egress' flows have a remote source address.
 //
-// 'clear' assumes flows are exported whereever, and thus all remote address
-// info is cleared in this case.
+// * 'clear' assumes flows are exported whereever, and thus all remote address
+//   info is cleared in this case.
+//
+// Any optional parameters relate to the `cidr` policy only and behave as in the
+// `addcid` segment.
 package remoteaddress
 
 import (

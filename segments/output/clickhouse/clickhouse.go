@@ -1,5 +1,8 @@
-// Dumps all incoming flow messages to a clickhouse database. The schema used
-// is selected according to the preset parameter.
+// The `clickhouse` segment dumps all incoming flow messages to a clickhouse database.
+//
+// The `batchsize` parameter determines the number of flows stored in memory before writing them to the database. Default is 1000.\
+// The `dsn` parameter is used to specify the `Data Source Name` of the clickhouse database to which the flows should be dumped.\
+// The `preset` parameter is used to specify the schema used to insert into clickhouse. Currently only the default value `flowhouse` is supported.
 package clickhouse_segment
 
 import (

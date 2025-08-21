@@ -14,67 +14,70 @@ forward their input from previous segment to their subsequent segment, i.e.
 even input or output segments can be chained to one another or be placed in the
 middle of a pipeline.
 
-This overview is structured as follows:
-- [Variable Expansion](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#variable-expansion)
-- [Parallel execution](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#parallel-execution)
-- [Available Segments](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#available-segments)
-	- [Alert Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#alert-group)
- 		- [http](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#http)
-	- [Analysis Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#analysis-group)
- 		- [toptalkers_metrics](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#toptalkers_metrics)
-   		- [traffic_specific_toptalkers](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#traffic_specific_toptalkers)
-	- [Controlflow Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#controlflow-group)
- 		- [branch](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#branch)
-   		- [skip](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#skip)
-     - [Export Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#skip)
-     	- [clickhouse](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#clickhouse)
-     	- [influx](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#influx)
-      	- [prometheus](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#prometheus)
-     - [Filter Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#filter-group)
-       	- [drop](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#drop)
-       	- [elephant](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#elephant)
-       	- [flowfilter](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#flowfilter)
-	 - [Input Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#input-group)
-    	- [bpf](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#bpf)
-       	- [goflow](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#goflow)
-       	- [kafkaconsumer](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#kafkaconsumer)
-       	- [packet](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#packet)
-       	- [replay](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#replay)
-       	- [stdin](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#stdin)
-       	- [diskbuffer](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#diskbuffer)
-	- [Meta Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#meta-group)
- 		- [delay_monitoring](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#delay-monitoring)
-	- [Modify Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#modify-group)
-   		- [addcid](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#addcid)
-     	- [addrstrings](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#addrstrings)
-     	- [anonymize](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#anonymize)
-     	- [aslookup](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#aslookup)
-     	- [bgp](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#bgp)
-     	- [dropfields](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#dropfields)
-     	- [geolocation](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#geolocation)
-     	- [normalize](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#normalize)
-     	- [protomap](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#protomap)
-     	- [remoteaddress](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#remoteaddress)
-     	- [reversedns](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#reversedns)
-     	- [snmpinterface](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#snmpinterface)
-     	- [sync_timestamps](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#sync_timestamps)
-	- [Output Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#output-group)
- 		- [csv](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#csv)
- 		- [json](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#json)
- 		- [kafkaproducer](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#kafkaproducer)
- 		- [lumberjack](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#lumberjack-elastic-beats)
- 		- [mongodb](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#mongodb)
- 		- [sqlite](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#sqlite)
-	- [Print Group](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#print-group)
- 		- [count](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#count)
- 		- [printdots](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#printdots)
- 		- [printflowdump](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#printflowdump)
- 		- [toptalkers](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#toptalkers)
-	- [Ungrouped](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#print-group)
- 		- [pass](https://github.com/BelWue/flowpipeline/blob/Configuration.md-update/CONFIGURATION.md#pass)
+<details open>  
+  <summary>Table of contents</summary>
+
+- [Variable Expansion](#variable-expansion)
+- [Parallel execution](#parallel-execution)
+- [Available Segments](#available-segments)
+  - [Alert Group](#alert-group)
+    - [http](#http)
+	- [Analysis Group](#analysis-group)
+    - [toptalkers_metrics](#toptalkers_metrics)
+    - [traffic_specific_toptalkers](#traffic_specific_toptalkers)
+  - [Controlflow Group](#controlflow-group)
+    - [branch](#branch)
+    - [skip](#skip)
+  - [Filter Group](#filter-group)
+    - [drop](#drop)
+    - [elephant](#elephant)
+    - [flowfilter](#flowfilter)
+  - [Input Group](#input-group)
+    - [bpf](#bpf)
+    - [goflow](#goflow)
+    - [kafkaconsumer](#kafkaconsumer)
+    - [packet](#packet)
+    - [replay](#replay)
+    - [stdin](#stdin)
+    - [diskbuffer](#diskbuffer)
+  - [Meta Group](#meta-group)
+    - [delay_monitoring](#delay-monitoring)
+  - [Modify Group](#modify-group)
+    - [addcid](#addcid)
+    - [addrstrings](#addrstrings)
+    - [anonymize](#anonymize)
+    - [aslookup](#aslookup)
+    - [bgp](#bgp)
+    - [dropfields](#dropfields)
+    - [geolocation](#geolocation)
+    - [normalize](#normalize)
+    - [protomap](#protomap)
+    - [remoteaddress](#remoteaddress)
+    - [reversedns](#reversedns)
+    - [snmpinterface](#snmpinterface)
+    - [sync_timestamps](#sync_timestamps)
+  - [Output Group](#output-group)
+    - [clickhouse](#clickhouse)
+    - [csv](#csv)
+    - [influx](#influx)
+    - [json](#json)
+    - [kafkaproducer](#kafkaproducer)
+    - [lumberjack](#lumberjack-elastic-beats)
+    - [mongodb](#mongodb)
+    - [prometheus](#prometheus)
+    - [sqlite](#sqlite)
+  - [Print Group](#print-group)
+    - [count](#count)
+    - [printdots](#printdots)
+    - [printflowdump](#printflowdump)
+    - [toptalkers](#toptalkers)
+  - [Ungrouped](#print-group)
+    - [pass](#pass)
+</details>
 
 A list of full configuration examples with their own explanations can be found
 [here](https://github.com/BelWue/flowpipeline/tree/master/examples).
+
 
 ## Variable Expansion
 
@@ -304,77 +307,6 @@ condition.
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/controlflow/skip)
 [examples using this segment](https://github.com/search?q=%22segment%3A+skip%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
-### Export Group
-Segments in this group export flows to external databases. The distinction from
-the output group lies in the fact that these exports are potentially lossy,
-i.e. some fields might be lost. For instance, the `prometheus` segment as a
-metric provider does not export any information about flow timing or duration,
-among others.
-
-#### clickhouse
-The `clickhouse` segment dumps all incoming flow messages to a clickhouse database.
-
-The `batchsize` parameter determines the number of flows stored in memory before writing them to the database. Default is 1000.\
-The `dsn` parameter is used to specify the `Data Source Name` of the clickhouse database to which the flows should be dumped.\
-The `preset` parameter is used to specify the schema used to insert into clickhouse. Currently only the default value `flowhouse` is supported.
-
-```yaml
-- segment: clickhouse
-  config:
-    dns: "clickhouse+http://user:password@host:8443/db?protocol=https"
-    preset: "flowhouse"
-    batchsize: 1200
-```
-
-
-#### influx
-The `influx` segment provides a way to write into an Influxdb instance.
-The `tags` parameter allows any field to be used as a tag and takes a comma-separated list from any
-field available in the [protobuf definition](https://github.com/BelWue/flowpipeline/blob/master/pb/flow.proto).
-The `fields` works in the exact same way, except that these protobuf fields won't be indexed by InfluxDB.
-
-Note that some of the above fields might not be present depending on the method
-of flow export, the input segment used in this pipeline, or the modify segments
-in front of this export segment.
-
-```yaml
-- segment: influx
-  config:
-    org: my-org
-    bucket: my-bucket
-    token: $AUTH_TOKEN_ENVVAR
-    # the lines below are optional and set to default
-    address: http://127.0.0.1:8086
-    tags: "ProtoName"
-    fields: "Bytes,Packets"
-```
-
-[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/export/prometheus)
-[examples using this segment](https://github.com/search?q=%22segment%3A+prometheus%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
-
-
-#### prometheus
-The `prometheus` segment provides a standard prometheus exporter, exporting its
-own monitoring info at `:8080/metrics` and its flow data at `:8080/flowdata` by
-default. The label set included with each metric is freely configurable with a
-comma-separated list from any field available in the [protobuf definition](https://github.com/BelWue/flowpipeline/blob/master/pb/flow.proto).
-
-Note that some of the above fields might not be present depending on the method
-of flow export, the input segment used in this pipeline, or the modify segments
-in front of this export segment.
-
-```yaml
-- segment: prometheus
-  config:
-    # the lines below are optional and set to default
-    endpoint: ":8080"
-    labels: "Etype,Proto"
-    metricspath: "/metrics"
-    flowdatapath: "/flowdata"
-```
-
-[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/export/prometheus)
-[examples using this segment](https://github.com/search?q=%22segment%3A+prometheus%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
 ### Filter Group
 Segments in this group all drop flows, i.e. remove them from the pipeline from
@@ -995,10 +927,25 @@ It works on the following fields:
   - TimeReceivedNs
 
 ### Output Group
-Segments in this group export flows, usually while keeping all information
-unless instructed otherwise. As all other segments do, these still forward
+Segments in this group export flows to external tools, databases or file-storage.
+As all other segments do, these still forward
 incoming flows to the next segment, i.e. multiple output segments can be used in
 sequence to export to different places.
+
+#### clickhouse
+The `clickhouse` segment dumps all incoming flow messages to a clickhouse database.
+
+The `batchsize` parameter determines the number of flows stored in memory before writing them to the database. Default is 1000.\
+The `dsn` parameter is used to specify the `Data Source Name` of the clickhouse database to which the flows should be dumped.\
+The `preset` parameter is used to specify the schema used to insert into clickhouse. Currently only the default value `flowhouse` is supported.
+
+```yaml
+- segment: clickhouse
+  config:
+    dns: "clickhouse+http://user:password@host:8443/db?protocol=https"
+    preset: "flowhouse"
+    batchsize: 1200
+```
 
 #### csv
 The `csv` segment provides an CSV output option. It uses stdout by default, but
@@ -1017,6 +964,32 @@ By default all fields are exported. To reduce them, use a valid comma seperated 
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/csv)
 [examples using this segment](https://github.com/search?q=%22segment%3A+csv%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
+
+
+#### influx
+The `influx` segment provides a way to write into an Influxdb instance.
+The `tags` parameter allows any field to be used as a tag and takes a comma-separated list from any
+field available in the [protobuf definition](https://github.com/BelWue/flowpipeline/blob/master/pb/flow.proto).
+The `fields` works in the exact same way, except that these protobuf fields won't be indexed by InfluxDB.
+
+Note that some of the above fields might not be present depending on the method
+of flow export, the input segment used in this pipeline, or the modify segments
+in front of this export segment.
+
+```yaml
+- segment: influx
+  config:
+    org: my-org
+    bucket: my-bucket
+    token: $AUTH_TOKEN_ENVVAR
+    # the lines below are optional and set to default
+    address: http://127.0.0.1:8086
+    tags: "ProtoName"
+    fields: "Bytes,Packets"
+```
+
+[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/export/prometheus)
+[examples using this segment](https://github.com/search?q=%22segment%3A+prometheus%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
 
 #### json
@@ -1179,6 +1152,31 @@ throughput when setting this parameter.
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/mongodb)
 
+
+#### prometheus
+The `prometheus` segment provides a standard prometheus exporter, exporting its
+own monitoring info at `:8080/metrics` and its flow data at `:8080/flowdata` by
+default. The label set included with each metric is freely configurable with a
+comma-separated list from any field available in the [protobuf definition](https://github.com/BelWue/flowpipeline/blob/master/pb/flow.proto).
+
+Note that some of the above fields might not be present depending on the method
+of flow export, the input segment used in this pipeline, or the modify segments
+in front of this export segment.
+
+```yaml
+- segment: prometheus
+  config:
+    # the lines below are optional and set to default
+    endpoint: ":8080"
+    labels: "Etype,Proto"
+    metricspath: "/metrics"
+    flowdatapath: "/flowdata"
+```
+
+[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/export/prometheus)
+[examples using this segment](https://github.com/search?q=%22segment%3A+prometheus%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
+
+
 #### sqlite
 **This segment is unavailable in the static binary release due to its CGO dependency.**
 
@@ -1208,7 +1206,7 @@ throughput when setting this parameter.
 
 
 ### Print Group
-Segments in this group serve to print flows immediately to the user. This is intended for ad-hoc applications and instant feedback use cases.
+Segments in this group serve to print flows immediately to the user or a file. This is intended for ad-hoc applications and instant feedback use cases.
 
 #### count
 The `count` segment counts flows passing it. This is mainly for debugging
@@ -1217,29 +1215,31 @@ flowpipelines. For instance, placing two of these segments around a
 `"pre-filter: "`  and `"post-filter: "` to obtain a count of flows making it
 through the filter without resorting to some command employing `| wc -l`.
 
-The result is printed upon termination of the flowpipeline.
+The result is printed upon termination of the flowpipeline or to a file if a filename is configured using the parameter `filename`.
 
 ```yaml
 - segment: count
   # the lines below are optional and set to default
   config:
     prefix: ""
+    filename: "count.txt"
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/print/count)
 [examples using this segment](https://github.com/search?q=%22segment%3A+count%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
 
 #### printdots
-The `printdots` segment keeps counting flows internally and emits a dot (`.`)
+The `printdots` segment keeps counting flows internally and emits a dot (`.`) to stdout
 every `flowsperdot` flows. Its parameter needs to be chosen with the expected
 flows per second in mind to be useful. Used to get visual feedback when
-necessary.
+necessary. Can also print to a file if a filename is configured using the parameter `filename`
 
 ```yaml
 - segment: printdots
   # the lines below are optional and set to default
   config:
     flowsperdot: 5000
+    filename: "dots.txt"
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/print/printdots)
@@ -1272,6 +1272,7 @@ the decoded forwarding status (Cisco-style) in a human-readable manner. The
 `highlight` parameter causes the output of this segment to be printed in red,
 see the [relevant example](https://github.com/BelWue/flowpipeline/tree/master/examples/highlighted_flowdump)
 for an application.
+The parameter `filename`can be used to redirect the output to a file instead of printing it to stdout.
 
 ```yaml
 - segment: printflowdump
@@ -1280,6 +1281,7 @@ for an application.
     useprotoname: true
     verbose: false
     highlight: false
+    filename: "dump.txt"
 ```
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/print/printflowdump)
 [examples using this segment](https://github.com/search?q=%22segment%3A+printflowdump%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)

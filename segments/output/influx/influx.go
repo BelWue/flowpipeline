@@ -1,8 +1,11 @@
-// Collects and exports all flows to influxdb for long term storage.
-// Tags to configure for Influxdb are from the protobuf definition.
-// Supported Tags are:
-// Cid,ProtoName,RemoteCountry,SamplerAddress,SrcIfDesc,DstIfDesc
-// If no Tags are provided 'ProtoName' will be the only Tag used by default.
+// The `influx` segment provides a way to write into an Influxdb instance.
+// The `tags` parameter allows any field to be used as a tag and takes a comma-separated list from any
+// field available in the [protobuf definition](https://github.com/BelWue/flowpipeline/blob/master/pb/flow.proto).
+// The `fields` works in the exact same way, except that these protobuf fields won't be indexed by InfluxDB.
+//
+// Note that some of the above fields might not be present depending on the method
+// of flow export, the input segment used in this pipeline, or the modify segments
+// in front of this export segment.
 package influx
 
 import (

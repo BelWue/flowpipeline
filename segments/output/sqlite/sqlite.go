@@ -1,8 +1,19 @@
 //go:build cgo
 // +build cgo
 
-// Dumps all incoming flow messages to a local sqlite database. The schema used
-// for this is preset.
+// **This segment is unavailable in the static binary release due to its CGO dependency.**
+//
+// The `sqlite` segment provides a SQLite output option. It is intended for use as
+// an ad-hoc dump method to answer questions on live traffic, i.e. average packet
+// size for a specific class of traffic. The fields parameter optionally takes a
+// string of comma-separated fieldnames, e.g. `SrcAddr,Bytes,Packets`.
+//
+// The batchsize parameter determines the number of flows stored in memory before
+// writing them to the database in a transaction made up from as many insert
+// statements. For the default value of 1000 in-memory flows, benchmarks show that
+// this should be an okay value for processing at least 1000 flows per second on
+// most szenarios, i.e. flushing to disk once per second. Mind the expected flow
+// throughput when setting this parameter.
 package sqlite
 
 import (

@@ -1,5 +1,8 @@
-// Receives flows from stdin in JSON format, as exported by the json segment.
-// This segment can also read from a file with flows in json format per each line
+// The `stdin` segment reads JSON encoded flows from stdin or a given file and introduces
+// this into the pipeline. This is intended to be used in conjunction with the `json`
+// segment, which allows flowpipelines to be piped into each other. This segment can
+// also read files created with the `json` segment. The `eofcloses` parameter can
+// therefore be used to gracefully terminate the pipeline after reading the file.
 package stdin
 
 import (

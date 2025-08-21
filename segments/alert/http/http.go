@@ -1,4 +1,7 @@
-// This segment is used to alert on flows using webhooks - WIP, but basically usable.
+// The `http` segment is currently a work in progress and is limited to sending
+// post requests with the full flow data to a single endpoint at the moment. The
+// roadmap includes various features such as different methods, builtin
+// conditional, limiting payload data, and multiple receivers.
 package http
 
 import (
