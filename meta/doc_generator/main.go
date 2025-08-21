@@ -216,23 +216,12 @@ func extractConfigStruct(tree *SegmentTree) {
 
 	var configType *ast.TypeSpec = nil
 	for _, decl := range node.Decls {
-		switch t := decl.(type) {
-		case *ast.GenDecl:
-			if t.Tok == token.TYPE {
-				if len(t.Specs) != 1 {
-					panic("Expected exactly one type spec in type declaration")
-				}
-				switch spec := t.Specs[0].(type) {
-				case *ast.TypeSpec:
-					if strings.EqualFold(spec.Name.Name, unfilenamify(tree.Name)) {
-						configType = spec
-						break
-					}
-				default:
-					panic(fmt.Sprintf("Unexpected type spec: %T", spec))
-				}
+		configType = onCorrectType(decl, func(genDecl *ast.GenDecl) *ast.TypeSpec {
+			if len(genDecl.Specs) != 1 {
+				panic("Expected exactly one type spec in type declaration")
 			}
-		}
+			return expectType[*ast.TypeSpec](genDecl.Specs[0])
+		})
 	}
 
 	if configType == nil {

@@ -92,3 +92,23 @@ func summary(summary string, details string) string {
 
 </details>`, summary, details)
 }
+
+func onCorrectType[T any, R any](value any, f func(T) R) R {
+	switch t := value.(type) {
+	case T:
+		return f(t)
+	default:
+		var zero R
+		return zero
+	}
+}
+
+func expectType[T any](value any) T {
+	switch t := value.(type) {
+	case T:
+		return t
+	default:
+		var zero T
+		panic(fmt.Sprintf("Expected type %T, but got %T", zero, value))
+	}
+}
