@@ -68,6 +68,13 @@ func linkifyText(text string) string {
 	return text
 }
 
+func unfilenamify(text string) string {
+	text = strings.TrimSpace(text)
+	text = strings.ReplaceAll(text, "-", "")
+	text = strings.ReplaceAll(text, "_", "")
+	return text
+}
+
 func multiline(lines ...string) string {
 	var sb strings.Builder
 	for _, line := range lines {

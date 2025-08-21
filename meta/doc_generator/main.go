@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
@@ -164,6 +165,7 @@ func _generateSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 			packageDoc = "_No segment documentation found._"
 		}
 		docBuilder.WriteString(packageDoc + "\n")
+		extractConfigStruct(tree)
 	} else {
 		for _, child := range tree.Children {
 			_generateSegmentDoc(child, docBuilder)
@@ -191,6 +193,45 @@ func extractPackageDoc(path string) (string, error) {
 	}
 
 	return strings.TrimSpace(node.Doc.Text()), nil
+}
+
+func extractConfigStruct(tree *SegmentTree) {
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, tree.Path, nil, parser.ParseComments)
+	if err != nil {
+		return
+	}
+
+	if node.Decls == nil {
+		return
+	}
+
+	var configType *ast.TypeSpec = nil
+	for _, decl := range node.Decls {
+		switch t := decl.(type) {
+		case *ast.GenDecl:
+			if t.Tok == token.TYPE {
+				if len(t.Specs) != 1 {
+					panic("Expected exactly one type spec in type declaration")
+				}
+				switch spec := t.Specs[0].(type) {
+				case *ast.TypeSpec:
+					if strings.EqualFold(spec.Name.Name, unfilenamify(tree.Name)) {
+						configType = spec
+						break
+					}
+				default:
+					panic(fmt.Sprintf("Unexpected type spec: %T", spec))
+				}
+			}
+		}
+	}
+
+	if configType == nil {
+		log.Warn().Msgf("No config type found for segment '%s'", tree.Name)
+	}
+
+	// configType > Type > Fields > List (1 ist base segment, danach fields)
 }
 
 func formatTitle(tree *SegmentTree) string {
