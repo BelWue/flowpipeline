@@ -34,7 +34,7 @@ require (
 	github.com/Shopify/sarama v1.38.1 // indirect
 	github.com/alecthomas/participle/v2 v2.1.4 // indirect
 	github.com/banviktor/go-mrt v0.0.0-20230515165434-0ce2ad0d8984 // indirect
-	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
