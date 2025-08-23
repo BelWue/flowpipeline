@@ -1,99 +1,98 @@
 package branch
 
 import (
-	"sync"
 	"testing"
 
-	"github.com/rs/zerolog/log"
-
 	"github.com/BelWue/flowpipeline/pb"
-	"github.com/BelWue/flowpipeline/segments"
+	"github.com/BelWue/flowpipeline/pipeline"
+
+	_ "github.com/BelWue/flowpipeline/segments/filter/drop"
+	_ "github.com/BelWue/flowpipeline/segments/filter/flowfilter"
+	_ "github.com/BelWue/flowpipeline/segments/modify/dropfields"
+	_ "github.com/BelWue/flowpipeline/segments/testing/generator"
 )
 
-// Branch Segment test, passthrough test
-// This does not work currently, as segment tests are scoped for segment
-// package only, and this specific segment requires some pipeline
-// initialization, which would lead to an import cycle. Thus, this test
-// confirms that it fails silently, and this segment is instead tested from the
-// pipeline package test files.
-func TestSegment_Branch_passthrough(t *testing.T) {
-	segment := segments.LookupSegment("branch").New(map[string]string{}).(*Branch)
-	if segment == nil {
-		log.Fatal().Msg("Configured segment 'branch' could not be initialized properly, see previous messages.")
+func Test_Branch_passthrough(t *testing.T) {
+	pipeline := pipeline.NewFromConfig([]byte(`---
+- segment: branch
+  if:
+  - segment: flowfilter
+    config:
+      filter: proto tcp
+  then:
+  - segment: dropfields
+    config:
+      policy: drop
+      fields: InIf
+  else:
+  - segment: dropfields
+    config:
+      policy: drop
+      fields: OutIf
+`))
+	pipeline.Start()
+	pipeline.In <- &pb.EnrichedFlow{Proto: 6, InIf: 1, OutIf: 1}
+	fmsg := <-pipeline.Out
+	if fmsg.Proto != 6 || fmsg.InIf == 1 || fmsg.OutIf != 1 {
+		t.Errorf("[error] Branch segment did not work correctly, state is Proto %d, InIf %d, OutIf %d, should be (6, 0, 1).", fmsg.Proto, fmsg.InIf, fmsg.OutIf)
 	}
-	segment.condition = NewMockPipeline()
-	segment.then_branch = NewMockPipeline()
-	segment.else_branch = NewMockPipeline()
-
-	in, out := make(chan *pb.EnrichedFlow), make(chan *pb.EnrichedFlow)
-	segment.Rewire(in, out)
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go segment.Run(wg)
-	in <- &pb.EnrichedFlow{}
-	result := <-segment.else_branch.GetDrop() //condition drops --> else branch --> drops
-	if result == nil {
-		t.Error("Segment Goflow is not dropping flows as expected.")
-	}
-}
-
-// If bypass is enabled, that branch forwards every incoming message regardless of the internal segments
-func TestSegment_Branch_passthrough_bypass(t *testing.T) {
-	segment := segments.LookupSegment("branch").New(map[string]string{"bypass-messages": "true"}).(*Branch)
-	if segment == nil {
-		log.Fatal().Msg("Configured segment 'branch' could not be initialized properly, see previous messages.")
-	}
-	segment.condition = NewMockPipeline()
-	segment.then_branch = NewMockPipeline()
-	segment.else_branch = NewMockPipeline()
-
-	in, out := make(chan *pb.EnrichedFlow), make(chan *pb.EnrichedFlow)
-	segment.Rewire(in, out)
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go segment.Run(wg)
-	in <- &pb.EnrichedFlow{}
-	result := <-out
-	if result == nil {
-		t.Error("Segment Goflow is not passing through flows.")
-	}
-	close(in)
-}
-
-func NewMockPipeline() Pipeline {
-	mock := &MockPipeline{}
-	mock.Drop = make(chan *pb.EnrichedFlow)
-	mock.In = make(chan *pb.EnrichedFlow)
-	mock.Out = make(chan *pb.EnrichedFlow)
-	return mock
-}
-
-// Mock implementation dropping every message
-type MockPipeline struct {
-	In   chan *pb.EnrichedFlow
-	Out  <-chan *pb.EnrichedFlow
-	Drop chan *pb.EnrichedFlow
-}
-
-func (m *MockPipeline) Start() {
-	for msg := range m.In { // connect our own input to conditional
-		m.Drop <- msg
+	pipeline.In <- &pb.EnrichedFlow{Proto: 42, InIf: 1, OutIf: 1}
+	fmsg = <-pipeline.Out
+	if fmsg.Proto != 42 || fmsg.InIf != 1 || fmsg.OutIf == 1 {
+		t.Errorf("[error] Branch segment did not work correctly, state is Proto %d, InIf %d, OutIf %d, should be (42, 1, 0).", fmsg.Proto, fmsg.InIf, fmsg.OutIf)
 	}
 }
-func (m *MockPipeline) Close() {
-	defer func() {
-		recover() // in case In is already closed
-	}()
-	close(m.In)
+
+func Test_Branch_DeadlockFreeGeneration_If(t *testing.T) {
+	pipeline := pipeline.NewFromConfig([]byte(`---
+- segment: branch
+  if:
+  - segment: generator
+  - segment: flowfilter
+    config:
+      filter: proto tcp
+  then:
+  - segment: dropfields
+    config:
+      policy: drop
+      fields: Bytes
+`))
+	pipeline.Start()
+	pipeline.In <- &pb.EnrichedFlow{Proto: 42, Bytes: 42}
+	for i := 0; i < 5; i++ {
+		fmsg := <-pipeline.Out
+		if fmsg.Proto == 6 && fmsg.Bytes != 0 {
+			t.Errorf("[error] Branch segment did not work correctly, state is Proto %d, Bytes %d, should be (6, 0).", fmsg.Proto, fmsg.Bytes)
+		} else if fmsg.Proto == 42 && fmsg.Bytes != 42 {
+			t.Errorf("[error] Branch segment did not work correctly, state is Proto %d, Bytes %d, should be (42, 42).", fmsg.Proto, fmsg.Bytes)
+		}
+	}
 }
-func (m *MockPipeline) GetInput() chan *pb.EnrichedFlow {
-	return m.In
+
+func Test_Branch_DeadlockFreeGeneration_Then(t *testing.T) {
+	pipeline := pipeline.NewFromConfig([]byte(`---
+- segment: branch
+  then:
+  - segment: generator
+`))
+	pipeline.Start()
+	pipeline.In <- &pb.EnrichedFlow{Proto: 42, Bytes: 42}
+	for i := 0; i < 5; i++ {
+		// no checks, not timeouting is enough
+		<-pipeline.Out
+	}
 }
-func (m *MockPipeline) GetOutput() <-chan *pb.EnrichedFlow {
-	return m.Out
-}
-func (m *MockPipeline) GetDrop() <-chan *pb.EnrichedFlow {
-	return m.Drop
+
+func Test_Branch_DeadlockFreeGeneration_Else(t *testing.T) {
+	pipeline := pipeline.NewFromConfig([]byte(`---
+- segment: branch
+  else:
+  - segment: generator
+`))
+	pipeline.Start()
+	pipeline.In <- &pb.EnrichedFlow{Proto: 42, Bytes: 42}
+	for i := 0; i < 5; i++ {
+		// no checks, not timeouting is enough
+		<-pipeline.Out
+	}
 }
