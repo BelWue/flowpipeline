@@ -163,7 +163,7 @@ func _generateSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 		fmt.Fprintf(docBuilder, "_This segment is implemented in %s._\n\n", linkFromPath(tree.Path, filepath.Base(tree.Path)))
 		packageDoc := extractPackageDoc(tree.Path)
 		docBuilder.WriteString(packageDoc + "\n")
-		fieldsDoc := extractConfigStruct(tree)
+		fieldsDoc := extractConfigStructDoc(tree)
 		if fieldsDoc != "" {
 			docBuilder.WriteString(summary("Configuration options", fieldsDoc))
 		}
@@ -203,7 +203,7 @@ func extractPackageDoc(path string) string {
 }
 
 // TODO: use examples from Type struct https://pkg.go.dev/go/doc@master#Type
-func extractConfigStruct(tree *SegmentTree) string {
+func extractConfigStructDoc(tree *SegmentTree) string {
 	type FieldDoc struct {
 		Name string
 		Type string
