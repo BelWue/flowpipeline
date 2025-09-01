@@ -204,6 +204,12 @@ func extractPackageDoc(path string) string {
 
 // TODO: use examples from Type struct https://pkg.go.dev/go/doc@master#Type
 func extractConfigStruct(tree *SegmentTree) string {
+	type FieldDoc struct {
+		Name string
+		Type string
+		Doc  string
+	}
+
 	noConfigStruct := "_No config struct found._"
 
 	fset := token.NewFileSet()
@@ -240,51 +246,43 @@ func extractConfigStruct(tree *SegmentTree) string {
 		expectType[*ast.TypeSpec](configType.Decl.Specs[0]).Type, // Specification of the declared config struct
 	).Fields.List // List of fields in the type spec
 
-	var fieldDocBuilder strings.Builder
+	var fieldDocs []FieldDoc
 	for _, field := range fields {
 		onCorrectType(field.Type, func(fieldType *ast.Ident) any { // Field has to be an identifier
 			if l := len(field.Names); l != 1 { // I don't know when this would be different
 				log.Warn().Msgf("Expected exactly one name for field, got %d in segment %s", l, tree.Name)
 				return nil
 			}
+
 			fieldName := field.Names[0].Name
 			typeName := fieldType.Name
 			fieldDoc := field.Doc.Text()
 
-			fmt.Fprintf(&fieldDocBuilder, "* **%s** _%s_", fieldName, typeName)
-			if fieldDoc == "" {
-				fieldDocBuilder.WriteString("\n")
-			} else {
-				fmt.Fprintf(&fieldDocBuilder, ": %s\n", fieldDoc)
-			}
+			fieldDocs = append(fieldDocs, FieldDoc{fieldName, typeName, fieldDoc})
 			return nil
 		}, nil)
 
 		onCorrectType(field.Type, func(fieldType *ast.SelectorExpr) any { // We handle base segments manually
-			type FieldDoc struct {
-				Name string
-				Type string
-				Doc  string
-			}
-			baseSegmentFields := []FieldDoc{}
-			baseFilterSegmentFields := []FieldDoc{}
 			baseTextOutputSegmentFields := []FieldDoc{
 				{"File", "*os.File", "Optional output file. If not set, stdout is used."},
 			}
-			var fields []FieldDoc
 			switch fieldType.Sel.Name {
 			case "BaseSegment":
-				fields = baseSegmentFields
 			case "BaseFilterSegment":
-				fields = append(baseSegmentFields, baseFilterSegmentFields...)
 			case "BaseTextOutputSegment":
-				fields = append(baseSegmentFields, baseTextOutputSegmentFields...)
-			}
-			for _, field := range fields {
-				fmt.Fprintf(&fieldDocBuilder, "* **%s** _%s_: %s\n", field.Name, field.Type, field.Doc)
+				fieldDocs = append(fieldDocs, baseTextOutputSegmentFields...)
 			}
 			return nil
 		}, nil)
+	}
+
+	var fieldDocBuilder strings.Builder
+	for _, field := range fieldDocs {
+		fmt.Fprintf(&fieldDocBuilder, "* **%s** _%s_", field.Name, field.Type)
+		if field.Doc != "" {
+			fmt.Fprintf(&fieldDocBuilder, ": %s", field.Doc)
+		}
+		fieldDocBuilder.WriteString("\n")
 	}
 
 	return fieldDocBuilder.String()
