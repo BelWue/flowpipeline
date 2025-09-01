@@ -216,7 +216,7 @@ func extractConfigStruct(tree *SegmentTree) string {
 
 	var configType *doc.Type = nil
 	for _, typeDecl := range pkg.Types {
-		if !strings.EqualFold(typeDecl.Name, unfilenamify(tree.Name)) {
+		if !strings.EqualFold(typeDecl.Name, unfilenamify(tree.Name)) { // Config struct is named after segment. Skip if not matching
 			continue
 		}
 		configType = typeDecl
@@ -235,12 +235,15 @@ func extractConfigStruct(tree *SegmentTree) string {
 		panic(fmt.Sprintf("Unexpected number of specs. Expected 1, got %d in segment %s", l, tree.Name))
 	}
 
-	fields := expectType[*ast.StructType](expectType[*ast.TypeSpec](configType.Decl.Specs[0]).Type).Fields.List
+	// Exported elements of config struct: configType -> Decl -> Specs[0] -> Type -> Fields -> List
+	fields := expectType[*ast.StructType](
+		expectType[*ast.TypeSpec](configType.Decl.Specs[0]).Type, // Specification of the declared config struct
+	).Fields.List // List of fields in the type spec
 
 	var fieldDocBuilder strings.Builder
 	for _, field := range fields {
-		onCorrectType(field.Type, func(fieldType *ast.Ident) any {
-			if l := len(field.Names); l != 1 {
+		onCorrectType(field.Type, func(fieldType *ast.Ident) any { // Field has to be an identifier
+			if l := len(field.Names); l != 1 { // I don't know when this would be different
 				log.Warn().Msgf("Expected exactly one name for field, got %d in segment %s", l, tree.Name)
 				return nil
 			}
