@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"go/ast"
+	"go/doc"
 	"go/parser"
 	"go/token"
 	"os"
@@ -162,7 +163,10 @@ func _generateSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
 		fmt.Fprintf(docBuilder, "_This segment is implemented in %s._\n\n", linkFromPath(tree.Path, filepath.Base(tree.Path)))
 		packageDoc := extractPackageDoc(tree.Path)
 		docBuilder.WriteString(packageDoc + "\n")
-		extractConfigStruct(tree)
+		fieldsDoc := extractConfigStruct(tree)
+		if fieldsDoc != "" {
+			docBuilder.WriteString(summary("Configuration options", fieldsDoc))
+		}
 	} else {
 		groupReadme := filepath.Join(tree.Path, "README.md")
 		data, err := os.ReadFile(groupReadme)
@@ -191,39 +195,70 @@ func extractPackageDoc(path string) string {
 	node, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 
 	if err != nil || node.Doc == nil {
-		log.Warn().Err(err).Msgf("Failed to parse file %s for package documentation", path)
+		log.Warn().Err(err).Msgf("No documentation found for file %s", path)
 		return "_No segment documentation found._"
 	}
 
 	return strings.TrimSpace(node.Doc.Text())
 }
 
-func extractConfigStruct(tree *SegmentTree) {
+// TODO: use examples from Type struct https://pkg.go.dev/go/doc@master#Type
+func extractConfigStruct(tree *SegmentTree) string {
+	noConfigStruct := "_No config struct found._"
+
 	fset := token.NewFileSet()
-	node, err := parser.ParseFile(fset, tree.Path, nil, parser.ParseComments)
+	files := []*ast.File{expectParse(fset, tree.Path)}
+	pkg, err := doc.NewFromFiles(fset, files, "")
 	if err != nil {
-		return
+		log.Warn().Err(err).Msgf("Failed to parse file %s for documentation", tree.Path)
+		return noConfigStruct
 	}
 
-	if node.Decls == nil {
-		return
-	}
-
-	var configType *ast.TypeSpec = nil
-	for _, decl := range node.Decls {
-		configType = onCorrectType(decl, func(genDecl *ast.GenDecl) *ast.TypeSpec {
-			if len(genDecl.Specs) != 1 {
-				panic("Expected exactly one type spec in type declaration")
-			}
-			return expectType[*ast.TypeSpec](genDecl.Specs[0])
-		})
+	var configType *doc.Type = nil
+	for _, typeDecl := range pkg.Types {
+		if !strings.EqualFold(typeDecl.Name, unfilenamify(tree.Name)) {
+			continue
+		}
+		configType = typeDecl
+		break
 	}
 
 	if configType == nil {
-		log.Warn().Msgf("No config type found for segment '%s'", tree.Name)
+		log.Warn().Msgf("No config type found in segment %s", tree.Name)
+		return noConfigStruct
 	}
 
-	// configType > Type > Fields > List (1 ist base segment, danach fields)
+	if configType.Decl.Tok != token.TYPE { // sanity check
+		panic(fmt.Sprintf("Found matching config struct with token type %s in segment %s", configType.Decl.Tok, tree.Name))
+	}
+	if l := len(configType.Decl.Specs); l != 1 { // sanity check
+		panic(fmt.Sprintf("Unexpected number of specs. Expected 1, got %d in segment %s", l, tree.Name))
+	}
+
+	fields := expectType[*ast.StructType](expectType[*ast.TypeSpec](configType.Decl.Specs[0]).Type).Fields.List
+
+	var fieldDocBuilder strings.Builder
+	for _, field := range fields {
+		onCorrectType(field.Type, func(fieldType *ast.Ident) any {
+			if l := len(field.Names); l != 1 {
+				log.Warn().Msgf("Expected exactly one name for field, got %d in segment %s", l, tree.Name)
+				return nil
+			}
+			fieldName := field.Names[0].Name
+			typeName := fieldType.Name
+			fieldDoc := field.Doc.Text()
+
+			fmt.Fprintf(&fieldDocBuilder, "* **%s** _%s_", fieldName, typeName)
+			if fieldDoc == "" {
+				fieldDocBuilder.WriteString("\n")
+			} else {
+				fmt.Fprintf(&fieldDocBuilder, ": %s\n", fieldDoc)
+			}
+			return nil
+		}, nil)
+	}
+
+	return fieldDocBuilder.String()
 }
 
 func formatTitle(tree *SegmentTree) string {

@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"strings"
@@ -90,15 +93,24 @@ func summary(summary string, details string) string {
 
 %s
 
-</details>`, summary, details)
+</details>
+
+`, summary, details)
 }
 
-func onCorrectType[T any, R any](value any, f func(T) R) R {
+func expectParse(fset *token.FileSet, filename string) *ast.File {
+	file, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
+	if err != nil {
+		log.Fatal().Err(err).Msgf("Failed to parse file: %s", filename)
+	}
+	return file
+}
+
+func onCorrectType[T any, R any](value any, f func(T) R, zero R) R {
 	switch t := value.(type) {
 	case T:
 		return f(t)
 	default:
-		var zero R
 		return zero
 	}
 }
