@@ -210,14 +210,12 @@ func extractConfigStructDoc(tree *SegmentTree) string {
 		Doc  string
 	}
 
-	noConfigStruct := "_No config struct found._"
-
 	fset := token.NewFileSet()
 	files := []*ast.File{expectParse(fset, tree.Path)}
 	pkg, err := doc.NewFromFiles(fset, files, "")
 	if err != nil {
 		log.Warn().Err(err).Msgf("Failed to parse file %s for documentation", tree.Path)
-		return noConfigStruct
+		return ""
 	}
 
 	var configType *doc.Type = nil
@@ -231,7 +229,7 @@ func extractConfigStructDoc(tree *SegmentTree) string {
 
 	if configType == nil {
 		log.Warn().Msgf("No config type found in segment %s", tree.Name)
-		return noConfigStruct
+		return ""
 	}
 
 	if configType.Decl.Tok != token.TYPE { // sanity check
