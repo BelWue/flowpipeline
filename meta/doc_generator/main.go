@@ -259,6 +259,32 @@ func extractConfigStruct(tree *SegmentTree) string {
 			}
 			return nil
 		}, nil)
+
+		onCorrectType(field.Type, func(fieldType *ast.SelectorExpr) any { // We handle base segments manually
+			type FieldDoc struct {
+				Name string
+				Type string
+				Doc  string
+			}
+			baseSegmentFields := []FieldDoc{}
+			baseFilterSegmentFields := []FieldDoc{}
+			baseTextOutputSegmentFields := []FieldDoc{
+				{"File", "*os.File", "Optional output file. If not set, stdout is used."},
+			}
+			var fields []FieldDoc
+			switch fieldType.Sel.Name {
+			case "BaseSegment":
+				fields = baseSegmentFields
+			case "BaseFilterSegment":
+				fields = append(baseSegmentFields, baseFilterSegmentFields...)
+			case "BaseTextOutputSegment":
+				fields = append(baseSegmentFields, baseTextOutputSegmentFields...)
+			}
+			for _, field := range fields {
+				fmt.Fprintf(&fieldDocBuilder, "* **%s** _%s_: %s\n", field.Name, field.Type, field.Doc)
+			}
+			return nil
+		}, nil)
 	}
 
 	return fieldDocBuilder.String()
