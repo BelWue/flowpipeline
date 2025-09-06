@@ -4,12 +4,12 @@ import (
 	"testing"
 )
 
-// SNMPInterface Segment test
+// SNMP Segment test
 // TODO: find a way to run this elsewhere, as this currently only works by
 // having the local 161/udp port forwarded to some router.
-// func TestSegment_SNMPInterface(t *testing.T) {
+// func TestSegment_SNMP(t *testing.T) {
 // 	result := testSegmentWithFlows(
-// 		&SNMPInterface{
+// 		&SNMP{
 // 			Community: "public",
 // 			Regex:     "^_[a-z]{3}_[0-9]{5}_[0-9]{5}_ [A-Z0-9]+ (.*?) *( \\(.*)?$",
 // 			ConnLimit: 1,
@@ -19,44 +19,44 @@ import (
 // 			&pb.EnrichedFlow{SamplerAddress: []byte{127, 0, 0, 1}, InIf: 70},
 // 		})
 // 	if result.SrcIfDesc == "" {
-// 		t.Error("([error] Segment SNMPInterface is not adding a SrcIfDesc.")
+// 		t.Error("([error] Segment SNMP is not adding a SrcIfDesc.")
 // 	}
 // }
 
-func TestSegment_SNMPInterface_instanciation(t *testing.T) {
-	snmpInterface := &SNMPInterface{}
+func TestSegment_SNMP_instanciation(t *testing.T) {
+	snmpInterface := &SNMP{}
 	result := snmpInterface.New(map[string]string{})
 	if result == nil {
-		t.Error("([error] Segment SNMPInterface did not initiate despite good base config.")
+		t.Error("([error] Segment SNMP did not initiate despite good base config.")
 	}
 
-	snmpInterface = &SNMPInterface{}
+	snmpInterface = &SNMP{}
 	result = snmpInterface.New(map[string]string{"connlimit": "42"})
 	if result == nil {
-		t.Error("([error] Segment SNMPInterface did not initiate despite good base config.")
+		t.Error("([error] Segment SNMP did not initiate despite good base config.")
 	}
 
-	snmpInterface = &SNMPInterface{}
+	snmpInterface = &SNMP{}
 	result = snmpInterface.New(map[string]string{"community": "foo", "regex": ".*"})
 	if result == nil {
-		t.Error("([error] Segment SNMPInterface did not initiate despite good config.")
+		t.Error("([error] Segment SNMP did not initiate despite good config.")
 	}
 
-	snmpInterface = &SNMPInterface{}
+	snmpInterface = &SNMP{}
 	result = snmpInterface.New(map[string]string{"community": "foo", "regex": "("})
 	if result != nil {
-		t.Error("([error] Segment SNMPInterface did initiate despite bad regex config.")
+		t.Error("([error] Segment SNMP did initiate despite bad regex config.")
 	}
 
-	snmpInterface = &SNMPInterface{}
+	snmpInterface = &SNMP{}
 	result = snmpInterface.New(map[string]string{"connlimit": "-8"})
 	if result == nil {
-		t.Error("([error] Segment SNMPInterface did not fallback to connlimit default config.")
+		t.Error("([error] Segment SNMP did not fallback to connlimit default config.")
 	}
 
-	snmpInterface = &SNMPInterface{}
+	snmpInterface = &SNMP{}
 	result = snmpInterface.New(map[string]string{"connlimit": "0"})
 	if result != nil {
-		t.Error("([error] Segment SNMPInterface initiated despide bad config.")
+		t.Error("([error] Segment SNMP initiated despide bad config.")
 	}
 }

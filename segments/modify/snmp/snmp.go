@@ -1,4 +1,4 @@
-// The `snmpinterface` segment annotates flows with interface information learned
+// The `snmp` segment annotates flows with interface information learned
 // directly from routers using SNMP. This is a potentially perfomance impacting
 // segment and has to be configured carefully.
 //
@@ -52,7 +52,7 @@ var (
 	oidExts = map[string]uint8{"name": 1, "speed": 15, "desc": 18}
 )
 
-type SNMPInterface struct {
+type SNMP struct {
 	segments.BaseSegment
 	Community string // optional, default is 'public'
 	Regex     string // optional, default matches all, can be used to extract content from descriptions, see examples/enricher
@@ -63,40 +63,40 @@ type SNMPInterface struct {
 	connLimitSemaphore chan struct{}
 }
 
-func (segment SNMPInterface) New(config map[string]string) segments.Segment {
+func (segment SNMP) New(config map[string]string) segments.Segment {
 	var connLimit uint64 = 16
 	if config["connlimit"] != "" {
 		if parsedConnLimit, err := strconv.ParseUint(config["connlimit"], 10, 32); err == nil {
 			connLimit = parsedConnLimit
 			if connLimit == 0 {
-				log.Error().Msg("SNMPInterface: Limiting connections to 0 will not work. Remove this segment or use a higher value (recommendation >= 16).")
+				log.Error().Msg("SNMP: Limiting connections to 0 will not work. Remove this segment or use a higher value (recommendation >= 16).")
 				return nil
 			}
 		} else {
-			log.Error().Msg("SNMPInterface: Could not parse 'connlimit' parameter, using default 16.")
+			log.Error().Msg("SNMP: Could not parse 'connlimit' parameter, using default 16.")
 		}
 	} else {
-		log.Info().Msg("SNMPInterface: 'connlimit' set to default '16'.")
+		log.Info().Msg("SNMP: 'connlimit' set to default '16'.")
 	}
 
 	var community string = "public"
 	if config["community"] != "" {
 		community = config["community"]
 	} else {
-		log.Info().Msg("SNMPInterface: 'community' set to default 'public'.")
+		log.Info().Msg("SNMP: 'community' set to default 'public'.")
 	}
 	var regex string = "^(.*)$"
 	if config["regex"] != "" {
 		regex = config["regex"]
 	} else {
-		log.Info().Msg("SNMPInterface: 'regex' set to default '^(.*)$'.")
+		log.Info().Msg("SNMP: 'regex' set to default '^(.*)$'.")
 	}
 	compiledRegex, err := regexp.Compile(regex)
 	if err != nil {
-		log.Error().Err(err).Msg("SNMPInterface: Configuration error, regex does not compile: ")
+		log.Error().Err(err).Msg("SNMP: Configuration error, regex does not compile: ")
 		return nil
 	}
-	return &SNMPInterface{
+	return &SNMP{
 		Community:     community,
 		Regex:         regex,
 		ConnLimit:     connLimit,
@@ -104,7 +104,7 @@ func (segment SNMPInterface) New(config map[string]string) segments.Segment {
 	}
 }
 
-func (segment *SNMPInterface) Run(wg *sync.WaitGroup) {
+func (segment *SNMP) Run(wg *sync.WaitGroup) {
 	defer func() {
 		close(segment.Out)
 		wg.Done()
@@ -141,7 +141,7 @@ func (segment *SNMPInterface) Run(wg *sync.WaitGroup) {
 }
 
 // Query a single SNMP datapoint. Supposedly a short-lived goroutine.
-func (segment *SNMPInterface) querySNMP(router string, iface uint32, key string) {
+func (segment *SNMP) querySNMP(router string, iface uint32, key string) {
 	defer func() {
 		<-segment.connLimitSemaphore // release
 	}()
@@ -149,7 +149,7 @@ func (segment *SNMPInterface) querySNMP(router string, iface uint32, key string)
 
 	s, err := gosnmp.NewGoSNMP(router, segment.Community, gosnmp.Version2c, 1)
 	if err != nil {
-		log.Error().Err(err).Msg("SNMPInterface: Connection Error")
+		log.Error().Err(err).Msg("SNMP: Connection Error")
 		segment.snmpCache.Delete(fmt.Sprintf("%s-%d-%s", router, iface, key))
 		return
 	}
@@ -158,7 +158,7 @@ func (segment *SNMPInterface) querySNMP(router string, iface uint32, key string)
 	oid := fmt.Sprintf(oidBase, oidExts[key], iface)
 	resp, err := s.Get(oid)
 	if err != nil {
-		log.Warn().Err(err).Msgf("SNMPInterface: Failed getting OID '%s' from %s.", oid, router)
+		log.Warn().Err(err).Msgf("SNMP: Failed getting OID '%s' from %s.", oid, router)
 		segment.snmpCache.Delete(fmt.Sprintf("%s-%d-%s", router, iface, key))
 		return
 	} else {
@@ -170,13 +170,13 @@ func (segment *SNMPInterface) querySNMP(router string, iface uint32, key string)
 		snmpvalue := resp.Variables[0].Value
 		segment.snmpCache.Set(fmt.Sprintf("%s-%d-%s", router, iface, key), snmpvalue, cache.DefaultExpiration)
 	} else {
-		log.Warn().Msgf("SNMPInterface: Bad response getting %s from %s. Error: %v", key, router, resp.Variables)
+		log.Warn().Msgf("SNMP: Bad response getting %s from %s. Error: %v", key, router, resp.Variables)
 	}
 }
 
 // Fetch interface data from cache or from the live router. The latter is done
 // async, so this method will return nils on the first call for any specific interface.
-func (segment *SNMPInterface) fetchInterfaceData(router string, iface uint32) (string, string, uint32) {
+func (segment *SNMP) fetchInterfaceData(router string, iface uint32) (string, string, uint32) {
 	var name, desc string
 	var speed uint32
 	for key := range oidExts {
@@ -204,6 +204,6 @@ func (segment *SNMPInterface) fetchInterfaceData(router string, iface uint32) (s
 }
 
 func init() {
-	segment := &SNMPInterface{}
-	segments.RegisterSegment("snmpinterface", segment)
+	segment := &SNMP{}
+	segments.RegisterSegment("SNMP", segment)
 }
