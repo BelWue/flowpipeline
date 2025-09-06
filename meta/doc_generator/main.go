@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"go/ast"
 	"go/doc"
@@ -18,9 +19,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const rootDir = "segments"
-const outputFile = "CONFIGURATION_TEST.md"
-
 type SegmentTree struct {
 	Name      string
 	Path      string
@@ -35,9 +33,14 @@ func main() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 
-	docFile, err := os.Create(outputFile)
+	outputFile := flag.String("out", "CONFIGURATION.md", "Output file for the generated documentation")
+	segmentRoot := flag.String("root", "segments", "Root directory for segments")
+
+	flag.Parse()
+
+	docFile, err := os.Create(*outputFile)
 	if err != nil {
-		log.Fatal().Err(err).Msgf("Failed to create config file at %s", outputFile)
+		log.Fatal().Err(err).Msgf("Failed to create config file at %s", *outputFile)
 	}
 	defer docFile.Close()
 
@@ -61,7 +64,7 @@ func main() {
 		))
 		mdBuilder.WriteParagraph("This overview is structures as follows:")
 
-		segmentTree := buildSegmentTree(rootDir)
+		segmentTree := buildSegmentTree(*segmentRoot)
 		toc := generateToC(segmentTree)
 		doc := generateSegmentDoc(segmentTree, mdBuilder.nesting+1)
 
@@ -73,11 +76,11 @@ func main() {
 
 	_, err = docFile.WriteString(mdBuilder.String())
 	if err != nil {
-		log.Fatal().Err(err).Msgf("Failed to write to config file at %s", outputFile)
+		log.Fatal().Err(err).Msgf("Failed to write to config file at %s", *outputFile)
 		return
 	}
 
-	log.Info().Msgf("Successfully generated documentation in %s", outputFile)
+	log.Info().Msgf("Successfully generated documentation in %s", *outputFile)
 }
 
 func buildSegmentTree(path string) *SegmentTree {
