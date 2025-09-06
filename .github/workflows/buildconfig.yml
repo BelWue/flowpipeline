@@ -1,0 +1,50 @@
+name: Generate the configuration markdown file
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+    paths:
+      - 'segments/**'
+      - 'meta/doc_generator/**'
+
+env:
+  CONFIG_FILE: "CONFIGURATION.md"
+  GO_VERSION: "1.23"
+  GENERATOR_EXEC: "./generator"
+
+jobs:
+  build-and-commit:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Build config generator
+        run: go build -o $GENERATOR_EXEC ./meta/doc_generator
+
+      - name: Generate configuration markdown file
+        run: $GENERATOR_EXEC -out "$CONFIG_FILE"
+
+      - name: Commit and Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add "$CONFIG_FILE"
+
+          if ! git diff --staged --quiet; then
+            git commit -m "docs: auto-generated $CONFIG_FILE"
+            git push origin master
+          else
+            echo "No changes to commit."
+          fi
