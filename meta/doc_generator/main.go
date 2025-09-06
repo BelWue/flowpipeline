@@ -232,7 +232,7 @@ func extractConfigStructDoc(tree *SegmentTree) string {
 	}
 
 	if configType == nil {
-		log.Warn().Msgf("No config type found in segment %s", tree.Name)
+		log.Warn().Msgf("No config type found in segment %s. Searched for %s.", tree.Name, unfilenamify(tree.Name))
 		return ""
 	}
 
