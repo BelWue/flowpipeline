@@ -79,12 +79,7 @@ func unfilenamify(text string) string {
 }
 
 func multiline(lines ...string) string {
-	var sb strings.Builder
-	for _, line := range lines {
-		sb.WriteString(line)
-		sb.WriteString("\n")
-	}
-	return sb.String()
+	return strings.Join(lines, "\n")
 }
 
 func summary(summary string, details string) string {
@@ -93,9 +88,7 @@ func summary(summary string, details string) string {
 
 %s
 
-</details>
-
-`, summary, details)
+</details>`, summary, details)
 }
 
 func expectParse(fset *token.FileSet, filename string) *ast.File {

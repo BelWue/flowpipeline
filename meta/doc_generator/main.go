@@ -41,39 +41,37 @@ func main() {
 	}
 	defer docFile.Close()
 
-	var docBuilder strings.Builder
-	docBuilder.WriteString("# flowpipeline Configuration and User Guide\n\n")
+	var mdBuilder MdBuilder
+	mdBuilder.WriteSection("flowpipeline Configuration and User Guide", func() {
+		mdBuilder.WriteParagraph(generatedInfoPreabmle("meta/doc_generator/main.go"))
+		mdBuilder.WriteParagraph(multiline(
+			"Any flowpipeline is configured in a single yaml file which is either located in",
+			"the default `config.yml` or specified using the `-c` option when calling the",
+			"binary. The config file contains a single list of so-called segments, which",
+			"are processing flows in order. Flows represented by",
+			"[protobuf messages](https://github.com/bwNetFlow/protobuf/blob/master/flow-messages-enriched.proto)",
+			"within the pipeline.",
+			"",
+			"Usually, the first segment is from the _input_ group, followed by any number of",
+			"different segments. Often, flowpipelines end with a segment from the _output_,",
+			"_print_, or _export_ groups. All segments, regardless from which group, accept and",
+			"forward their input from previous segment to their subsequent segment, i.e.",
+			"even input or output segments can be chained to one another or be placed in the",
+			"middle of a pipeline.",
+		))
+		mdBuilder.WriteParagraph("This overview is structures as follows:")
 
-	generatedInfo := generatedInfoPreabmle("meta/doc_generator/main.go")
-	docBuilder.WriteString(generatedInfo + "\n\n")
+		segmentTree := buildSegmentTree(rootDir)
+		toc := generateToC(segmentTree)
+		doc := generateSegmentDoc(segmentTree, mdBuilder.nesting+1)
 
-	docBuilder.WriteString(multiline(
-		"Any flowpipeline is configured in a single yaml file which is either located in",
-		"the default `config.yml` or specified using the `-c` option when calling the",
-		"binary. The config file contains a single list of so-called segments, which",
-		"are processing flows in order. Flows represented by",
-		"[protobuf messages](https://github.com/bwNetFlow/protobuf/blob/master/flow-messages-enriched.proto)",
-		"within the pipeline.",
-		"",
-		"Usually, the first segment is from the _input_ group, followed by any number of",
-		"different segments. Often, flowpipelines end with a segment from the _output_,",
-		"_print_, or _export_ groups. All segments, regardless from which group, accept and",
-		"forward their input from previous segment to their subsequent segment, i.e.",
-		"even input or output segments can be chained to one another or be placed in the",
-		"middle of a pipeline.",
-	))
+		mdBuilder.WriteParagraph(summary("Table of Contents", toc))
+		mdBuilder.WriteSection("Available Segments", func() {
+			mdBuilder.WriteParagraph(doc)
+		})
+	})
 
-	segmentTree := buildSegmentTree(rootDir)
-
-	docBuilder.WriteString("This overview is structures as follows:\n")
-	toc := generateToC(segmentTree)
-	docBuilder.WriteString(summary("Table of Contents", toc) + "\n\n")
-
-	docBuilder.WriteString("## Available Segments\n\n")
-	doc := generateSegmentDoc(segmentTree)
-	docBuilder.WriteString(doc + "\n\n")
-
-	_, err = docFile.WriteString(docBuilder.String())
+	_, err = docFile.WriteString(mdBuilder.String())
 	if err != nil {
 		log.Fatal().Err(err).Msgf("Failed to write to config file at %s", outputFile)
 		return
@@ -147,39 +145,42 @@ func _generateToC(tree *SegmentTree, docBuilder *strings.Builder) {
 	}
 }
 
-func generateSegmentDoc(tree *SegmentTree) string {
-	var docBuilder strings.Builder
-	_generateSegmentDoc(tree, &docBuilder)
-	return docBuilder.String()
+func generateSegmentDoc(tree *SegmentTree, nestingOffset int) string {
+	mdBuilder := MdBuilder{nesting: nestingOffset}
+	_generateSegmentDoc(tree, &mdBuilder)
+	return mdBuilder.String()
 }
 
-func _generateSegmentDoc(tree *SegmentTree, docBuilder *strings.Builder) {
-	if tree.Parent != nil {
-		headerLevel := strings.Repeat("#", tree.Depth+2)
-		fmt.Fprintf(docBuilder, "%s %s\n", headerLevel, formatTitle(tree))
+func _generateSegmentDoc(tree *SegmentTree, mdBuilder *MdBuilder) {
+	if tree.Parent == nil {
+		for _, child := range tree.Children {
+			_generateSegmentDoc(child, mdBuilder)
+		}
+		return
 	}
 
-	if tree.IsSegment {
-		fmt.Fprintf(docBuilder, "_This segment is implemented in %s._\n\n", linkFromPath(tree.Path, filepath.Base(tree.Path)))
-		packageDoc := extractPackageDoc(tree.Path)
-		docBuilder.WriteString(packageDoc + "\n")
-		fieldsDoc := extractConfigStructDoc(tree)
-		if fieldsDoc != "" {
-			docBuilder.WriteString(summary("Configuration options", fieldsDoc))
-		}
-	} else {
-		groupReadme := filepath.Join(tree.Path, "README.md")
-		data, err := os.ReadFile(groupReadme)
-		if err != nil {
-			log.Warn().Err(err).Msgf("Failed to read group README at %s", groupReadme)
-			docBuilder.WriteString("_No group documentation found._\n")
+	mdBuilder.WriteSection(formatTitle(tree), func() {
+		if tree.IsSegment {
+			fmt.Fprintf(mdBuilder, "_This segment is implemented in %s._", linkFromPath(tree.Path, filepath.Base(tree.Path)))
+			mdBuilder.WriteParagraph(extractPackageDoc(tree.Path))
+			fieldsDoc := extractConfigStructDoc(tree)
+			if fieldsDoc != "" {
+				mdBuilder.WriteParagraph(summary("Configuration options", fieldsDoc))
+			}
 		} else {
-			docBuilder.WriteString(strings.TrimSpace(string(data)) + "\n")
+			groupReadme := filepath.Join(tree.Path, "README.md")
+			data, err := os.ReadFile(groupReadme)
+			if err != nil {
+				log.Warn().Err(err).Msgf("Failed to read group README at %s", groupReadme)
+				mdBuilder.WriteParagraph("_No group documentation found._")
+			} else {
+				mdBuilder.WriteParagraph(strings.TrimSpace(string(data)))
+			}
+			for _, child := range tree.Children {
+				_generateSegmentDoc(child, mdBuilder)
+			}
 		}
-		for _, child := range tree.Children {
-			_generateSegmentDoc(child, docBuilder)
-		}
-	}
+	})
 }
 
 func generatedInfoPreabmle(path string) string {
@@ -275,12 +276,14 @@ func extractConfigStructDoc(tree *SegmentTree) string {
 	}
 
 	var fieldDocBuilder strings.Builder
-	for _, field := range fieldDocs {
+	for i, field := range fieldDocs {
+		if i != 0 {
+			fieldDocBuilder.WriteString("\n")
+		}
 		fmt.Fprintf(&fieldDocBuilder, "* **%s** _%s_", field.Name, field.Type)
 		if field.Doc != "" {
 			fmt.Fprintf(&fieldDocBuilder, ": %s", field.Doc)
 		}
-		fieldDocBuilder.WriteString("\n")
 	}
 
 	return fieldDocBuilder.String()
