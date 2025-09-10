@@ -30,12 +30,13 @@
     policy: "border"
 
 ###############################################################################
-# Add a customer id field to all flows by CIDR match. As this works on local
-# addresses only, we need to run after the 'remoteaddress' segment.
-- segment: addcid
+# Add a customer id field to all flows by CIDR match. To use it with local
+# addresses, we need to run after the 'remoteaddress' segment.
+- segment: addnetid
   config:
-    filename: customer_subnets.csv
+    filename: subnet_ids.csv
     dropunmatched: 1  # limit to flows belonging to customers
+    useintids: 1 # user integers for customer ids
 
 ###############################################################################
 # Looks up AS numbers from a local database which can be generated from

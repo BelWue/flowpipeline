@@ -144,6 +144,12 @@ message LegacyEnrichedFlow {
   string CidString = 1001; // deprecated, delete for v1.0.0
   uint32 SrcCid = 1012;
   uint32 DstCid = 1013;
+  uint32 NetId = 2017;
+  string NetIdString = 2018;
+  uint32 SrcId = 2019;
+  string SrcIdString = 2020;
+  uint32 DstId = 2021;
+  string DstIdString = 2022;
 
   // modify/anonymize
   enum AnonymizedType {

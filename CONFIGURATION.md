@@ -591,6 +591,10 @@ not drop flows unless specifically instructed and only change fields within
 them. This group contains both, enriching and reducing segments.
 
 #### addcid
+*DEPRECATION NOTICE*: This segment will be deprecated in a future version of
+flowpipeline. The `addnetid` segment documented directly below is a more generic implementation 
+and supports traffic between customers.
+
 The `addcid` segment can add a customer ID to flows according to the IP prefix
 the flow is matched to. These prefixes are sourced from a simple csv file
 consisting of lines in the format `ip prefix,integer`. For example:
@@ -626,6 +630,51 @@ Roadmap:
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/modify/addcid)
 [examples using this segment](https://github.com/search?q=%22segment%3A+addcid%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
+
+#### addnetid
+The `addnetid` segment can add a subnet ID to flows according to the IP prefix
+the flow is matched to. These prefixes are sourced from a simple csv file
+consisting of lines in the format `ip prefix,id`. 
+An id can either be an integer or a string, by default all ids are processed as strings.
+If `useintids` is set to true all ids have to be valid integers
+
+For example:
+
+```csv
+192.168.88.0/24,1
+2001:db8:1::/48,1
+```
+or with string ids:
+
+```csv
+192.168.88.0/24,exp-1
+2001:db8:1::/48,exp-1
+```
+
+Which IP address is matched against this database is determined by the
+RemoteAddress field of the flow. If this is unset, the flow is forwarded
+untouched. To set this field, see the `remoteaddress` segment. If matchboth is
+set to true, this segment will not try to establish the remote address and
+instead check both, source and destination address.
+
+If dropunmatched is set to true no untouched flows will pass this segment,
+regardless of the reason for the flow being unmatched (absence of RemoteAddress
+field, actually no matching entry in database).
+
+
+```yaml
+- segment: addnetid
+  config:
+    filename: filename.csv
+    # the lines below are optional and set to default
+    dropunmatched: false
+    matchboth: false
+    useintids: false
+```
+
+[godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/modify/addnetid)
+[examples using this segment](https://github.com/search?q=%22segment%3A+addnetid%22+extension%3Ayml+repo%3AbwNetFlow%2Fflowpipeline%2Fexamples&type=Code)
+
 
 #### addrstrings
 

@@ -372,15 +372,21 @@ type LegacyEnrichedFlow struct {
 	TimeIdleMean      uint64 `protobuf:"varint,1156,opt,name=TimeIdleMean,proto3" json:"TimeIdleMean,omitempty"`           // new
 	TimeIdleStdDev    uint64 `protobuf:"varint,1157,opt,name=TimeIdleStdDev,proto3" json:"TimeIdleStdDev,omitempty"`       // new
 	// modify/addcid
-	Cid                               uint32                            `protobuf:"varint,1000,opt,name=Cid,proto3" json:"Cid,omitempty"`            // TODO: deprecate and provide as helper?
-	CidString                         string                            `protobuf:"bytes,1001,opt,name=CidString,proto3" json:"CidString,omitempty"` // deprecated, delete for v1.0.0
-	SrcCid                            uint32                            `protobuf:"varint,1012,opt,name=SrcCid,proto3" json:"SrcCid,omitempty"`
-	DstCid                            uint32                            `protobuf:"varint,1013,opt,name=DstCid,proto3" json:"DstCid,omitempty"`
-	SrcAddrAnon                       LegacyEnrichedFlow_AnonymizedType `protobuf:"varint,1160,opt,name=SrcAddrAnon,proto3,enum=flowpb.LegacyEnrichedFlow_AnonymizedType" json:"SrcAddrAnon,omitempty"`
-	DstAddrAnon                       LegacyEnrichedFlow_AnonymizedType `protobuf:"varint,1161,opt,name=DstAddrAnon,proto3,enum=flowpb.LegacyEnrichedFlow_AnonymizedType" json:"DstAddrAnon,omitempty"`
-	SrcAddrPreservedLen               uint32                            `protobuf:"varint,1162,opt,name=SrcAddrPreservedLen,proto3" json:"SrcAddrPreservedLen,omitempty"`
-	DstAddrPreservedLen               uint32                            `protobuf:"varint,1163,opt,name=DstAddrPreservedLen,proto3" json:"DstAddrPreservedLen,omitempty"`
-	SamplerAddrAnon                   LegacyEnrichedFlow_AnonymizedType `protobuf:"varint,1164,opt,name=SamplerAddrAnon,proto3,enum=flowpb.LegacyEnrichedFlow_AnonymizedType" json:"SamplerAddrAnon,omitempty"`
+	Cid                           uint32                            `protobuf:"varint,1000,opt,name=Cid,proto3" json:"Cid,omitempty"`            // TODO: deprecate and provide as helper?
+	CidString                     string                            `protobuf:"bytes,1001,opt,name=CidString,proto3" json:"CidString,omitempty"` // deprecated, delete for v1.0.0
+	SrcCid                        uint32                            `protobuf:"varint,1012,opt,name=SrcCid,proto3" json:"SrcCid,omitempty"`
+	DstCid                        uint32                            `protobuf:"varint,1013,opt,name=DstCid,proto3" json:"DstCid,omitempty"`
+	NetId                         uint32                            `protobuf:"varint,2017,opt,name=NetId,proto3" json:"NetId,omitempty"`
+	NetIdString                   string                            `protobuf:"varint,2018,opt,name=NetIdString,proto3" json:"NetIdString,omitempty"`
+	SrcId                         uint32                            `protobuf:"varint,2019,opt,name=SrcId,proto3" json:"NetId,omitempty"`
+	SrcIdString                   string                            `protobuf:"varint,2020,opt,name=SrcIdString,proto3" json:"NetIdString,omitempty"`
+	DstId                         uint32                            `protobuf:"varint,2021,opt,name=DstId,proto3" json:"NetId,omitempty"`
+	DstIdString                   string                            `protobuf:"varint,2022,opt,name=DstIdString,proto3" json:"DstIdString,omitempty"`
+	SrcAddrAnon                   LegacyEnrichedFlow_AnonymizedType `protobuf:"varint,1160,opt,name=SrcAddrAnon,proto3,enum=flowpb.LegacyEnrichedFlow_AnonymizedType" json:"SrcAddrAnon,omitempty"`
+	DstAddrAnon                   LegacyEnrichedFlow_AnonymizedType `protobuf:"varint,1161,opt,name=DstAddrAnon,proto3,enum=flowpb.LegacyEnrichedFlow_AnonymizedType" json:"DstAddrAnon,omitempty"`
+	SrcAddrPreservedLen           uint32                            `protobuf:"varint,1162,opt,name=SrcAddrPreservedLen,proto3" json:"SrcAddrPreservedLen,omitempty"`
+	DstAddrPreservedLen           uint32                            `protobuf:"varint,1163,opt,name=DstAddrPreservedLen,proto3" json:"DstAddrPreservedLen,omitempty"`
+	SamplerAddrAnon               LegacyEnrichedFlow_AnonymizedType `protobuf:"varint,1164,opt,name=SamplerAddrAnon,proto3,enum=flowpb.LegacyEnrichedFlow_AnonymizedType" json:"SamplerAddrAnon,omitempty"`
 	SamplerAddrPreservedPrefixLen uint32                            `protobuf:"varint,1165,opt,name=SamplerAddrPreservedPrefixLen,proto3" json:"SamplerAddrPreservedPrefixLen,omitempty"`
 	// modify/bgp
 	// as done by a number of Netflow implementations, these refer to the destination

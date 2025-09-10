@@ -489,6 +489,12 @@ type EnrichedFlow struct {
 	CidString                     string                      `protobuf:"bytes,2001,opt,name=CidString,proto3" json:"CidString,omitempty"` // deprecated, delete for v1.0.0
 	SrcCid                        uint32                      `protobuf:"varint,2012,opt,name=SrcCid,proto3" json:"SrcCid,omitempty"`
 	DstCid                        uint32                      `protobuf:"varint,2013,opt,name=DstCid,proto3" json:"DstCid,omitempty"`
+	NetId                         uint32                      `protobuf:"varint,2017,opt,name=NetId,proto3" json:"NetId,omitempty"`
+	NetIdString                   string                      `protobuf:"varint,2018,opt,name=NetIdString,proto3" json:"NetIdString,omitempty"`
+	SrcId                         uint32                      `protobuf:"varint,2019,opt,name=SrcId,proto3" json:"NetId,omitempty"`
+	SrcIdString                   string                      `protobuf:"varint,2020,opt,name=SrcIdString,proto3" json:"NetIdString,omitempty"`
+	DstId                         uint32                      `protobuf:"varint,2021,opt,name=DstId,proto3" json:"NetId,omitempty"`
+	DstIdString                   string                      `protobuf:"varint,2022,opt,name=DstIdString,proto3" json:"DstIdString,omitempty"`
 	SrcAddrAnon                   EnrichedFlow_AnonymizedType `protobuf:"varint,2160,opt,name=SrcAddrAnon,proto3,enum=flowpb.EnrichedFlow_AnonymizedType" json:"SrcAddrAnon,omitempty"`
 	DstAddrAnon                   EnrichedFlow_AnonymizedType `protobuf:"varint,2161,opt,name=DstAddrAnon,proto3,enum=flowpb.EnrichedFlow_AnonymizedType" json:"DstAddrAnon,omitempty"`
 	SrcAddrPreservedLen           uint32                      `protobuf:"varint,2162,opt,name=SrcAddrPreservedLen,proto3" json:"SrcAddrPreservedLen,omitempty"`
@@ -1281,6 +1287,48 @@ func (x *EnrichedFlow) GetDstCid() uint32 {
 		return x.DstCid
 	}
 	return 0
+}
+
+func (x *EnrichedFlow) GetNetId() uint32 {
+	if x != nil {
+		return x.NetId
+	}
+	return 0
+}
+
+func (x *EnrichedFlow) GetNetIdString() string {
+	if x != nil {
+		return x.NetIdString
+	}
+	return ""
+}
+
+func (x *EnrichedFlow) GetSrcId() uint32 {
+	if x != nil {
+		return x.SrcId
+	}
+	return 0
+}
+
+func (x *EnrichedFlow) GetSrcIdString() string {
+	if x != nil {
+		return x.SrcIdString
+	}
+	return ""
+}
+
+func (x *EnrichedFlow) GetDstId() uint32 {
+	if x != nil {
+		return x.DstId
+	}
+	return 0
+}
+
+func (x *EnrichedFlow) GetDstIdString() string {
+	if x != nil {
+		return x.DstIdString
+	}
+	return ""
 }
 
 func (x *EnrichedFlow) GetSrcAddrAnon() EnrichedFlow_AnonymizedType {
