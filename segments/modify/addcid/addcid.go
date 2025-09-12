@@ -1,3 +1,6 @@
+// Deprecated: This segment was very specific and was replaced by a more generic
+// addnetid segment. Set useintids to true to have a similar behaviour to addcid.
+//
 // The `addcid` segment can add a customer ID to flows according to the IP prefix
 // the flow is matched to. These prefixes are sourced from a simple csv file
 // consisting of lines in the format `ip prefix,integer`. For example:
@@ -60,6 +63,7 @@ func (segment AddCid) New(config map[string]string) segments.Segment {
 		log.Error().Msg("AddCid: This segment requires a 'filename' parameter.")
 		return nil
 	}
+	log.Info().Msg("AddCid: This segment is deprecated and should be replaced by the addnetid segment with useintids set to true.")
 
 	return &AddCid{
 		FileName:      config["filename"],
