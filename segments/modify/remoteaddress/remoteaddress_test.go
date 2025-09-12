@@ -23,7 +23,24 @@ func TestSegment_RemoteAddress_localAddrIsDst(t *testing.T) {
 	result := segments.TestSegment("remoteaddress", map[string]string{"policy": "cidr", "filename": "../../../examples/enricher/subnet_ids.csv"},
 		&pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 42}})
 	if result.RemoteAddr != 1 {
-		t.Error("([error] Segment RemoteAddress is not determining the local address correctly by 'cidr'.")
+		t.Error("([error] Segment RemoteAddress is not determining the remote address correctly by 'cidr'.")
+	}
+}
+
+func TestSegment_RemoteAddress_localAddrIsSrc(t *testing.T) {
+	result := segments.TestSegment("remoteaddress", map[string]string{"policy": "cidr", "filename": "../../../examples/enricher/subnet_ids.csv"},
+		&pb.EnrichedFlow{DstAddr: []byte{192, 168, 88, 42}})
+	if result.RemoteAddr != 2 {
+		t.Error("([error] Segment RemoteAddress is not determining the remote address correctly by 'cidr'.")
+	}
+}
+
+// if both are matching src is determined as the remote address
+func TestSegment_RemoteAddress_localAddrIs(t *testing.T) {
+	result := segments.TestSegment("remoteaddress", map[string]string{"policy": "cidr", "filename": "../../../examples/enricher/subnet_ids.csv"},
+		&pb.EnrichedFlow{DstAddr: []byte{192, 168, 88, 42}, SrcAddr: []byte{192, 168, 88, 43}})
+	if result.RemoteAddr != 1 {
+		t.Error("([error] Segment RemoteAddress is not determining the remote address correctly by 'cidr'.")
 	}
 }
 

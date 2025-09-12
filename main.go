@@ -41,6 +41,7 @@ import (
 	_ "github.com/BelWue/flowpipeline/segments/meta/monitoring"
 
 	_ "github.com/BelWue/flowpipeline/segments/modify/addcid"
+	_ "github.com/BelWue/flowpipeline/segments/modify/addnetid"
 	_ "github.com/BelWue/flowpipeline/segments/modify/addrstrings"
 	_ "github.com/BelWue/flowpipeline/segments/modify/anonymize"
 	_ "github.com/BelWue/flowpipeline/segments/modify/aslookup"

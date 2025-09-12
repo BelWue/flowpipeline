@@ -807,11 +807,9 @@ Requires the filename parameter to be set to the location of a MaxMind
 geolocation file, as shown in our example.
 
 For this to work, it requires RemoteAddress to be set in the flow if matchboth
-is set to its default `false`. If matchboth is true, the behaviour is
-different from the `addcid` segment, as the result will be written for both
-SrcAddr and DstAddr into SrcCountry and DstCountry. The dropunmatched parameter
-however behaves in the same way: flows without any remote country data set will
-be dropped.
+is set to its default `false`. If matchboth is true the result will be written for both
+SrcAddr and DstAddr into SrcCountry and DstCountry. The dropunmatched parameter 
+will drop flows without any remote country data set.
 
 ```yaml
 - segment: geolocation
@@ -868,7 +866,8 @@ for a detailed explanation.
 
 The short version is:
 * `cidr` assumes the remote address is the one that has a match in the CSV file
-  used by the `addcid` segment. Done for source and destination addres.
+  used by the `addnetid` segment. Done for source and destination address.
+  Source is always preffered over destination.
 * `border` assumes all flows originate at the outside network border, i.e. on
   peering, exchange, or transit interfaces. Thus, any incoming flows originate
   at a remote address (source address), and any outgoing flows originate at a
@@ -880,7 +879,7 @@ The short version is:
   sources before reestablishing remote address using `cidr`.
 
 Any optional parameters relate to the `cidr` policy only and behave as in the
-`addcid` segment.
+`addnetid` segment.
 
 ```yaml
 - segment: remoteaddress
@@ -888,7 +887,7 @@ Any optional parameters relate to the `cidr` policy only and behave as in the
     # required, one of cidr, border, user, or clear
     policy: cidr
     # required if policy is cidr
-    filename: same_csv_file_as_for_addcid_segment.csv
+    filename: same_csv_file_as_for_addnetid_segment.csv
     # the lines below are optional and set to default, relevant to policy cidr only
     dropunmatched: false
 ```
