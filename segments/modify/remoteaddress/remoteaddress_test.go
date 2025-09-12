@@ -20,7 +20,7 @@ func TestSegment_RemoteAddress(t *testing.T) {
 }
 
 func TestSegment_RemoteAddress_localAddrIsDst(t *testing.T) {
-	result := segments.TestSegment("remoteaddress", map[string]string{"policy": "cidr", "filename": "../../../examples/enricher/customer_subnets.csv"},
+	result := segments.TestSegment("remoteaddress", map[string]string{"policy": "cidr", "filename": "../../../examples/enricher/subnet_ids.csv"},
 		&pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 42}})
 	if result.RemoteAddr != 1 {
 		t.Error("([error] Segment RemoteAddress is not determining the local address correctly by 'cidr'.")
@@ -32,7 +32,7 @@ func BenchmarkRemoteAddress(b *testing.B) {
 	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
-	segment := RemoteAddress{}.New(map[string]string{"policy": "cidr", "filename": "../../../examples/enricher/customer_subnets.csv"})
+	segment := RemoteAddress{}.New(map[string]string{"policy": "cidr", "filename": "../../../examples/enricher/subnet_ids.csv"})
 
 	in, out := make(chan *pb.EnrichedFlow), make(chan *pb.EnrichedFlow)
 	segment.Rewire(in, out)
