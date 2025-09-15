@@ -27,6 +27,7 @@ package toptalkers_metrics
 import (
 	"sync"
 
+	"github.com/BelWue/flowpipeline/pipeline/config/evaluation_mode"
 	"github.com/BelWue/flowpipeline/segments"
 	"github.com/rs/zerolog/log"
 )
@@ -75,8 +76,8 @@ func (segment *ToptalkersMetrics) Run(wg *sync.WaitGroup) {
 	var promExporter = PrometheusExporter{}
 
 	database := NewDatabase(segment.PrometheusMetricsParams, &promExporter)
-	collector := NewPrometheusCollector([]*Database{&database})
 	promExporter.Initialize()
+	collector := NewPrometheusCollector([]*Database{&database})
 	promExporter.FlowReg.MustRegister(collector)
 	promExporter.ServeEndpoints(&segment.PrometheusParams)
 
@@ -86,19 +87,19 @@ func (segment *ToptalkersMetrics) Run(wg *sync.WaitGroup) {
 	for msg := range segment.In {
 		promExporter.KafkaMessageCount.Inc()
 		var keys []string
-		switch segment.RelevantAddress {
-		case "source":
+		switch segment.EvaluationMode {
+		case evaluation_mode.Source:
 			keys = []string{msg.SrcAddrObj().String()}
-		case "destination":
+		case evaluation_mode.Destination:
 			keys = []string{msg.DstAddrObj().String()}
-		case "both":
+		case evaluation_mode.SourceAndDestination:
 			keys = []string{msg.SrcAddrObj().String(), msg.DstAddrObj().String()}
 		}
 		forward := false
 		for _, key := range keys {
-			record := database.GetRecord(key)
-			record.Append(msg.Bytes, msg.Packets, msg.IsForwarded())
-			if record.aboveThreshold.Load() {
+			record := database.GetRecord(key, msg.SrcAddrObj().String(), msg.DstAddrObj().String())
+			record.Append(msg)
+			if record.AboveThreshold().Load() {
 				forward = true
 			}
 		}

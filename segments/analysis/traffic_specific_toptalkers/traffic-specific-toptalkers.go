@@ -1,8 +1,39 @@
-// The traffic specific toptalker metrics segement is simmilar to the `toptalker-metrics` segment,
+// The `traffic_specific_toptalkers` segement is simmilar to the `toptalker-metrics` segment,
 // but allows filtering for specific protocols. The use of nested filters is supported to
 // allow for a more efficient filtering.
 //
 // Filters with a specified `traffictyp` will be exported if they reach the configured thresholds.
+// The traffic specific toptalker metrics segement is simmilar to the `toptalker-metrics` segment,
+// but allows filtering for specific protocols. The use of nested filters is supported to
+// allow for a more efficient filtering.
+
+// Filters with a specified `traffictyp` will be exported if they reach the configured thresholds.
+
+// ```yaml
+// - segment: traffic_specific_toptalkers
+//   config:
+//     endpoint: ":8085"
+//     traffic_specific_toptalkers:
+//     - filter: "proto udp"
+//       subfilter:
+//       - filter: "port 0"
+//         traffictype: "UDP Fragmented"
+//         thresholdbps: 100
+//       - filter: "port 53"
+//         traffictype: "DNS"
+//         filter: "port 53"
+//         thresholdbps: 100
+//       - filter: "port 123"
+//         traffictype: "NTP"
+//         thresholdbps: 100
+//       - filter: "port 389"
+//         traffictype: "CLDAP"
+//         thresholdbps: 100
+//     - filter: "proto icmp or proto icmpv6"
+//       traffictype: "ICMP"
+//       thresholdpps: 100
+// ```
+
 package traffic_specific_toptalkers
 
 import (
@@ -14,6 +45,7 @@ import (
 	"github.com/BelWue/flowfilter/parser"
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/pipeline/config"
+	"github.com/BelWue/flowpipeline/pipeline/config/evaluation_mode"
 	"github.com/BelWue/flowpipeline/segments"
 	"github.com/BelWue/flowpipeline/segments/analysis/toptalkers_metrics"
 	"github.com/BelWue/flowpipeline/segments/filter/flowfilter"
@@ -23,7 +55,7 @@ type TrafficSpecificToptalkers struct {
 	segments.BaseSegment
 	toptalkers_metrics.PrometheusParams
 	ThresholdMetricDefinition []*ThresholdMetric
-	RelevantAddress           string // optional, default is "destination", options are "destination", "source", "both", "connection"
+	EvaluationMode            evaluation_mode.EvaluationMode // optional, default is "destination", options are "destination", "source", "both", "connection"
 }
 
 type ThresholdMetric struct {
@@ -54,10 +86,26 @@ func (segment TrafficSpecificToptalkers) New(config map[string]string) segments.
 	} else {
 		newSegment.FlowdataPath = config["flowdatapath"]
 	}
-	if config["relevantaddress"] != "" {
-		newSegment.RelevantAddress = config["relevantaddress"]
+	if config["evaluationmode"] == "" && config["relevantaddress"] != "" {
+		log.Warn().Msg("ThresholdToptalkersMetrics: Using deprecated parameter 'relevantaddress' - please use evaluationmode instead")
+		config["evaluationmode"] = config["relevantaddress"]
+	}
+
+	if config["evaluationmode"] == "" {
+		log.Info().Msg("ThresholdToptalkersMetrics: 'evaluationmode' set to default 'destination'.")
+		newSegment.EvaluationMode = evaluation_mode.Destination
 	} else {
-		newSegment.RelevantAddress = ""
+		if config["evaluationmode"] == "both" {
+			log.Warn().Msg("ThresholdToptalkersMetrics: using depected evaluation mode 'both' - please use 'Source and Destination' instead")
+		}
+		evaluationMode := evaluation_mode.ParseEvaluationMode(config["evaluationmode"])
+
+		if evaluationMode == evaluation_mode.Unknown {
+			log.Error().Msg("ThresholdToptalkersMetrics: Could not parse 'evaluationmode', using default value 'destination'.")
+			evaluationMode = evaluation_mode.Destination
+		}
+		newSegment.EvaluationMode = evaluationMode
+
 	}
 
 	return newSegment
@@ -80,8 +128,8 @@ func (segment *TrafficSpecificToptalkers) metricFromDefinition(definition *confi
 	metric.FilterDefinition = definition.FilterDefinition
 	metric.InitDefaultPrometheusMetricParams()
 
-	if segment.RelevantAddress != "" {
-		metric.RelevantAddress = segment.RelevantAddress
+	if metric.EvaluationMode == evaluation_mode.Unknown {
+		metric.EvaluationMode = segment.EvaluationMode
 	}
 
 	metric.Expression, err = parser.Parse(definition.FilterDefinition)
@@ -165,19 +213,19 @@ func addMessageToMatchingToptalkers(msg *pb.EnrichedFlow, definition *ThresholdM
 		// Update Counters if definition has a prometheus label defined
 		if definition.PrometheusMetricsParams.TrafficType != "" {
 			var keys []string
-			switch definition.PrometheusMetricsParams.RelevantAddress {
-			case "source":
+			switch definition.PrometheusMetricsParams.EvaluationMode {
+			case evaluation_mode.Source:
 				keys = []string{msg.SrcAddrObj().String()}
-			case "destination":
+			case evaluation_mode.Destination:
 				keys = []string{msg.DstAddrObj().String()}
-			case "both":
+			case evaluation_mode.SourceAndDestination:
 				keys = []string{msg.SrcAddrObj().String(), msg.DstAddrObj().String()}
-			case "connection":
+			case evaluation_mode.Connection:
 				keys = []string{fmt.Sprintf("%s -> %s", msg.SrcAddrObj().String(), msg.DstAddrObj().String())}
 			}
 			for _, key := range keys {
-				record := definition.Database.GetTypedRecord(definition.PrometheusMetricsParams.TrafficType, key)
-				record.Append(msg.Bytes, msg.Packets, msg.IsForwarded())
+				record := definition.Database.GetTypedRecord(definition.PrometheusMetricsParams.TrafficType, key, msg.SrcAddrObj().String(), msg.DstAddrObj().String())
+				record.Append(msg)
 			}
 		}
 
