@@ -5,6 +5,7 @@
 package segments
 
 import (
+	"strings"
 	"sync"
 	"syscall"
 
@@ -22,6 +23,7 @@ var (
 // Used by Segments to register themselves in their init() functions. Errors
 // and exits immediately on conflicts.
 func RegisterSegment(name string, s Segment) {
+	name = strings.ToLower(name)
 	_, ok := registeredSegments[name]
 	if ok {
 		log.Fatal().Msgf("Segments: Tried to register conflicting segment name '%s'.", name)
@@ -34,6 +36,7 @@ func RegisterSegment(name string, s Segment) {
 // Used by the pipeline package to convert segment names in configuration to
 // actual Segment objects.
 func LookupSegment(name string) Segment {
+	name = strings.ToLower(name)
 	lock.RLock()
 	segment, ok := registeredSegments[name]
 	lock.RUnlock()
