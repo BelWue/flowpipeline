@@ -69,7 +69,7 @@ podman run -v ./examples/configuration/xy:/config flowpipeline
 docker run -v ./examples/configuration/xy:/config flowpipeline
 ```
 
-#### Flowpipeline demo container
+#### Flowpipeline Demo Container
 We also provide a container displaying example visualizations via prometheus+grafana dashboards (ghcr.io/belwue/flowpipeline-grafana).
 The example container starts with:
  - grafana running on port 3000
@@ -80,6 +80,8 @@ The example container starts with:
 ```sh
 docker run -p 3000:3000 -p 2055:2055/udp -p 6343:6343 -p 9090:9090 /udp ghcr.io/belwue/flowpipeline-grafana
 ```
+<img width="1602" height="921" alt="grafik" src="https://github.com/user-attachments/assets/d2fa3dd1-cc57-4cd7-a034-78a926ed509c" />
+
 The corresponding configuration files are available in `/examples/visualization`
 ## Configuration
 
