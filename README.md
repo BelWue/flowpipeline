@@ -24,7 +24,7 @@ processing stack into a single piece of software which can be configured to
 serve any function:
 
 * accepting raw Netflow (using [goflow2](https://github.com/netsampler/goflow2))
-* enriching the resulting flow messages ([examples/enricher](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/enricher))
+* enriching the resulting flow messages ([examples/configurations/enricher](https://github.com/BelWue/flowpipeline/tree/master/examples/configurations/enricher))
 * writing to and reading from Kafka ([examples/localkafka](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/localkafka))
 * dumping flows to cli (e.g. [flowdump](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/flowdump))
 * providing metrics and insights ([examples/prometheus](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/prometheus))
