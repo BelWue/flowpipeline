@@ -22,7 +22,7 @@ RUN make assets
 FROM debian:trixie-slim
 
 RUN apt update &&\
-    apt install -y ca-certificates apt-transport-https wget gnupg2  libpcap-dev supervisor &&\
+    apt install -y ca-certificates apt-transport-https wget gnupg2 libpcap-dev supervisor &&\
     mkdir -p /etc/apt/keyrings/ &&\
     wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | tee /etc/apt/keyrings/grafana.gpg > /dev/null &&\
     echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | tee -a /etc/apt/sources.list.d/grafana.list &&\
@@ -55,9 +55,8 @@ COPY examples/visualization/grafana/grafana-dashboards.yaml /usr/share/grafana/c
 COPY examples/visualization/grafana/dashboards/overview.json /flowpipeline-example/dashboards/overview.json
 COPY examples/visualization/grafana/dashboards/raw-data.json /flowpipeline-example/dashboards/raw-data.json
 
+# Create supervisord configuration
+COPY examples/visualization/supervisord.conf /etc/supervisor/conf.d/services.conf
+
 # Start grafana, prometheus & flowpipeline 
-ENTRYPOINT /usr/share/grafana/bin/grafana server --config /etc/grafana/grafana.ini \
---pidfile /run/grafana/grafana-server.pid --packaging deb --homepath /usr/share/grafana \
--- cfg:default.paths.logs=/var/log/grafana & \
-/flowpipeline-example/prometheus --config.file=/flowpipeline-example/config/prometheus-config.yml & \
-/flowpipeline-example/fpl -c /flowpipeline-example/config/flowpipeline-config.yml
+ENTRYPOINT ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
