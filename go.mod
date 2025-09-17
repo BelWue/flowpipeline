@@ -27,9 +27,9 @@ require (
 	github.com/rs/dnscache v0.0.0-20230804202142-fc85eb664529
 	github.com/rs/zerolog v1.34.0
 	go.mongodb.org/mongo-driver v1.17.2
+	golang.org/x/text v0.29.0
 	google.golang.org/protobuf v1.36.4
 	gopkg.in/yaml.v2 v2.4.0
-	golang.org/x/text v0.26.0
 )
 
 require (
@@ -115,7 +115,6 @@ require (
 	golang.org/x/net v0.44.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.36.0
-	golang.org/x/text v0.29.0
 	google.golang.org/grpc v1.70.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

@@ -73,6 +73,7 @@ docker run -v ./examples/configuration/xy:/config flowpipeline
 We also provide a container displaying example visualizations via prometheus+grafana dashboards (ghcr.io/belwue/flowpipeline-grafana).
 The example container starts with:
  - grafana running on port 3000
+  - starting with default grafana admin credentials (`user:admin, password:admin`)
  - netflow receiver running on port 2055
  - sflow receiver running on port 6343
  - prometheus running on port 9090
