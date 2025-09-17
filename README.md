@@ -54,7 +54,8 @@ CGO/dynamically linked code (`bpf`, `sqlite`, `mongodb` and plugin support, chec
 [CONFIGURATION.md](https://github.com/BelWue/flowpipeline/blob/master/CONFIGURATION.md)).
 
 ### Container Releases
-A ready to use container is provided as `bwnetflow/flowpipeline`, you can check
+#### Flowpipeline standalone container
+A ready to use container is provided as `belwue/flowpipeline`, you can check
 it out on [GitHub container registry](https://github.com/BelWue/flowpipeline/pkgs/container/flowpipeline).
 
 Configurations referencing other files (geolocation databases for instance)
@@ -68,6 +69,18 @@ podman run -v ./examples/configuration/xy:/config flowpipeline
 docker run -v ./examples/configuration/xy:/config flowpipeline
 ```
 
+#### Flowpipeline demo container
+We also provide a container displaying example visualizations via prometheus+grafana dashboards (ghcr.io/belwue/flowpipeline-grafana).
+The example container starts with:
+ - grafana running on port 3000
+ - netflow receiver running on port 2055
+ - sflow receiver running on port 6343
+ - prometheus running on port 9090
+
+```sh
+docker run -p 3000:3000 -p 2055:2055/udp -p 6343:6343 -p 9090:9090 /udp ghcr.io/belwue/flowpipeline-grafana
+```
+The corresponding configuration files are available in `/examples/visualization`
 ## Configuration
 
 Refer to [CONFIGURATION.md](https://github.com/BelWue/flowpipeline/blob/master/CONFIGURATION.md)
