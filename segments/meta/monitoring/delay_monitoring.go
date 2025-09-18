@@ -126,8 +126,20 @@ func (segment *DelayMonitoring) updateWindow(msg *pb.EnrichedFlow, promExporter 
 			log.Error().Msg("Delay Monitoring: Empty field `TimeFlowEnd` for flow message - consider using segment `sync_timestamps` if your flow collector only fills TimeReceivedMs or TimeReceivedNs")
 		}
 		timeNow := uint64(time.Now().Unix())
-		timeDiffProcessing := timeNow - msg.TimeReceived
-		timeDiffTotal := timeNow - msg.TimeFlowEnd
+		timeDiffProcessing := uint64(0)
+		if timeNow < msg.TimeReceived {
+			log.Debug().Msg("Delay Monitoring: msg.TimeReceived after timeNow setting delay to 0")
+		} else {
+			timeDiffProcessing = timeNow - msg.TimeReceived
+		}
+
+		timeDiffTotal := uint64(0)
+
+		if timeNow < msg.TimeFlowEnd {
+			log.Debug().Msg("Delay Monitoring: msg.TimeFlowEnd after timeNow setting delay to 0")
+		} else {
+			timeDiffTotal = timeNow - msg.TimeFlowEnd
+		}
 
 		segment.movingAverageProcessingDelay = (segment.Alpha * float64(timeDiffProcessing)) + (1.0-segment.Alpha)*segment.movingAverageProcessingDelay
 		segment.movingAverageTotalDelay = (segment.Alpha * float64(timeDiffTotal)) + (1.0-segment.Alpha)*segment.movingAverageProcessingDelay
