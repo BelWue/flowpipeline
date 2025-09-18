@@ -5,22 +5,40 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/BelWue/flowpipeline/pb"
+	"github.com/BelWue/flowpipeline/pipeline/config/evaluation_mode"
 )
 
-type Record struct {
-	FwdBytes       []uint64
-	FwdPackets     []uint64
-	DropBytes      []uint64
-	DropPackets    []uint64
-	capacity       int
-	pointer        int
-	aboveThreshold atomic.Bool
-	Address        string
+type Record interface {
+	Append(*pb.EnrichedFlow)
+	GetMetrics(buckets int, bucketDuration int) (float64, float64, float64, float64, string)
+	AboveThreshold() *atomic.Bool
+	tick(thresholdBuckets int, bucketDuration int, thresholdBps uint64, thresholdPps uint64)
+	isEmpty() bool
+}
+
+type DefaultRecord struct {
+	FwdBytes             []uint64
+	FwdPackets           []uint64
+	DropBytes            []uint64
+	DropPackets          []uint64
+	capacity             int
+	pointer              int
+	AboveThresholdAtomic atomic.Bool
+	Address              string
+
 	sync.RWMutex
 }
 
+type TwoWayRecord struct {
+	DefaultRecord
+	SrcAddr string
+	DstAddr string
+}
+
 type Database struct {
-	database           *map[string]*Record
+	database           *map[string]Record
 	TrafficType        string
 	thresholdBps       uint64
 	thresholdPps       uint64
@@ -31,6 +49,7 @@ type Database struct {
 	cleanupCounter     int
 	cleanupWindowSizes int
 	promExporter       *PrometheusExporter
+	evaluationMode     evaluation_mode.EvaluationMode
 	stopCleanupC       chan struct{}
 	stopClockC         chan struct{}
 	sync.RWMutex
@@ -38,7 +57,7 @@ type Database struct {
 
 func NewDatabase(params PrometheusMetricsParams, promExporter *PrometheusExporter) Database {
 	return Database{
-		database:           &map[string]*Record{},
+		database:           &map[string]Record{},
 		thresholdBps:       params.ThresholdBps,
 		thresholdPps:       params.ThresholdPps,
 		thresholdBuckets:   params.ThresholdBuckets,
@@ -49,29 +68,47 @@ func NewDatabase(params PrometheusMetricsParams, promExporter *PrometheusExporte
 		ReportBuckets:      params.ReportBuckets,
 		TrafficType:        params.TrafficType,
 		BucketDuration:     params.BucketDuration,
+		evaluationMode:     params.EvaluationMode,
 		stopCleanupC:       make(chan struct{}),
 		stopClockC:         make(chan struct{}),
 	}
 }
 
-func (db *Database) GetRecord(address string) *Record {
-	return db.GetTypedRecord("", address)
+func (db *Database) GetRecord(key string, srcAddr string, dstAddr string) Record {
+	return db.GetTypedRecord("", key, srcAddr, dstAddr)
 }
 
-func (db *Database) GetTypedRecord(typeLabel string, address string) *Record {
+func (db *Database) GetTypedRecord(typeLabel string, address string, srcAddr string, dstAddr string) Record {
 	key := fmt.Sprintf("%s: %s", typeLabel, address)
 	db.Lock()
 	defer db.Unlock()
 	record, found := (*db.database)[key]
 	if !found || record == nil {
-		record = NewRecord(db.ReportBuckets, address)
+		switch db.evaluationMode {
+		case evaluation_mode.SourceAndDestination:
+			record = NewTwoWayRecord(db.ReportBuckets, address, srcAddr, dstAddr)
+		case evaluation_mode.Connection:
+			record = NewTwoWayRecord(db.ReportBuckets, address, srcAddr, dstAddr)
+		default:
+			record = NewDefaultRecord(db.ReportBuckets, address)
+		}
+
 		(*db.database)[key] = record
 	}
 	return record
 }
 
-func NewRecord(windowSize int, address string) *Record {
-	record := &Record{
+func NewTwoWayRecord(windowSize int, address string, srcAddr string, dstAddr string) Record {
+	record := &TwoWayRecord{
+		DefaultRecord: *NewDefaultRecord(windowSize, address),
+		SrcAddr:       srcAddr,
+		DstAddr:       dstAddr,
+	}
+	return record
+}
+
+func NewDefaultRecord(windowSize int, address string) *DefaultRecord {
+	record := &DefaultRecord{
 		FwdBytes:    make([]uint64, windowSize),
 		FwdPackets:  make([]uint64, windowSize),
 		DropBytes:   make([]uint64, windowSize),
@@ -83,7 +120,14 @@ func NewRecord(windowSize int, address string) *Record {
 	return record
 }
 
-func (record *Record) Append(bytes uint64, packets uint64, statusFwd bool) {
+func (record *DefaultRecord) AboveThreshold() *atomic.Bool {
+	return &record.AboveThresholdAtomic
+}
+
+func (record *DefaultRecord) Append(msg *pb.EnrichedFlow) {
+	bytes := msg.Bytes
+	packets := msg.Packets
+	statusFwd := msg.IsForwarded()
 	record.Lock()
 	defer record.Unlock()
 	if statusFwd {
@@ -95,7 +139,7 @@ func (record *Record) Append(bytes uint64, packets uint64, statusFwd bool) {
 	}
 }
 
-func (record *Record) isEmpty() bool {
+func (record *DefaultRecord) isEmpty() bool {
 	record.RLock()
 	defer record.RUnlock()
 	for i := 0; i < record.capacity; i++ {
@@ -106,7 +150,7 @@ func (record *Record) isEmpty() bool {
 	return true
 }
 
-func (record *Record) GetMetrics(buckets int, bucketDuration int) (float64, float64, float64, float64, string) {
+func (record *DefaultRecord) GetMetrics(buckets int, bucketDuration int) (float64, float64, float64, float64, string) {
 	// buckets == 0 means "look at the whole window"
 	if buckets == 0 {
 		buckets = record.capacity
@@ -136,7 +180,7 @@ func (record *Record) GetMetrics(buckets int, bucketDuration int) (float64, floa
 	return sumFwdBps, sumFwdPps, sumDropBps, sumDropPps, record.Address
 }
 
-func (record *Record) tick(thresholdBuckets int, bucketDuration int, thresholdBps uint64, thresholdPps uint64) {
+func (record *DefaultRecord) tick(thresholdBuckets int, bucketDuration int, thresholdBps uint64, thresholdPps uint64) {
 	record.Lock()
 	defer record.Unlock()
 	// advance pointer to the next position
@@ -164,9 +208,9 @@ func (record *Record) tick(thresholdBuckets int, bucketDuration int, thresholdBp
 	bps := uint64(float64(sumBytes*8) / float64(bucketDuration*thresholdBuckets))
 	pps := uint64(float64(sumPackets) / float64(bucketDuration*thresholdBuckets))
 	if (bps > thresholdBps) && (pps > thresholdPps) {
-		record.aboveThreshold.Store(true)
+		record.AboveThresholdAtomic.Store(true)
 	} else {
-		record.aboveThreshold.Store(false)
+		record.AboveThresholdAtomic.Store(false)
 	}
 	// clear the current bucket
 	record.FwdBytes[record.pointer] = 0
@@ -223,11 +267,11 @@ func (db *Database) StopTimers() {
 
 func (db *Database) GetAllRecords() <-chan struct {
 	key    string
-	record *Record
+	record Record
 } {
 	out := make(chan struct {
 		key    string
-		record *Record
+		record Record
 	})
 	go func() {
 		db.Lock()
@@ -238,7 +282,7 @@ func (db *Database) GetAllRecords() <-chan struct {
 		for key, record := range *db.database {
 			out <- struct {
 				key    string
-				record *Record
+				record Record
 			}{key, record}
 		}
 	}()

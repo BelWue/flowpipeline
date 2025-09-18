@@ -185,7 +185,7 @@ can be used multiple times in one pipeline without metrics getting mixed up.
     endpoint: ":8080"
     metricspath: "/metrics"
     flowdatapath: "/flowdata"
-    relevantaddress: "destination"
+    evaluationmode: "destination"
 ```
 
 [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/analysis/toptalkers-metrics)

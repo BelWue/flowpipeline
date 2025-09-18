@@ -13,7 +13,9 @@ import (
 
 	"github.com/BelWue/flowfilter/parser"
 	"github.com/BelWue/flowpipeline/pb"
+	"github.com/BelWue/flowpipeline/pipeline"
 	"github.com/BelWue/flowpipeline/pipeline/config"
+	"github.com/BelWue/flowpipeline/pipeline/config/evaluation_mode"
 	"github.com/BelWue/flowpipeline/segments"
 	"github.com/BelWue/flowpipeline/segments/analysis/toptalkers_metrics"
 	"github.com/BelWue/flowpipeline/segments/filter/flowfilter"
@@ -23,7 +25,8 @@ type TrafficSpecificToptalkers struct {
 	segments.BaseSegment
 	toptalkers_metrics.PrometheusParams
 	ThresholdMetricDefinition []*ThresholdMetric
-	RelevantAddress           string // optional, default is "destination", options are "destination", "source", "both", "connection"
+	EvaluationMode            evaluation_mode.EvaluationMode // optional, default is "destination", options are "destination", "source", "both", "connection"
+	MatchingPipeline          *pipeline.Pipeline
 }
 
 type ThresholdMetric struct {
@@ -54,10 +57,26 @@ func (segment TrafficSpecificToptalkers) New(config map[string]string) segments.
 	} else {
 		newSegment.FlowdataPath = config["flowdatapath"]
 	}
-	if config["relevantaddress"] != "" {
-		newSegment.RelevantAddress = config["relevantaddress"]
+	if config["evaluationmode"] == "" && config["relevantaddress"] != "" {
+		log.Warn().Msg("ThresholdToptalkersMetrics: Using deprecated parameter 'relevantaddress' - please use evaluationmode instead")
+		config["evaluationmode"] = config["relevantaddress"]
+	}
+
+	if config["evaluationmode"] == "" {
+		log.Info().Msg("ThresholdToptalkersMetrics: 'evaluationmode' set to default 'destination'.")
+		newSegment.EvaluationMode = evaluation_mode.Destination
 	} else {
-		newSegment.RelevantAddress = ""
+		if config["evaluationmode"] == "both" {
+			log.Warn().Msg("ThresholdToptalkersMetrics: using depected evaluation mode 'both' - please use 'Source and Destination' instead")
+		}
+		evaluationMode := evaluation_mode.ParseEvaluationMode(config["evaluationmode"])
+
+		if evaluationMode == evaluation_mode.Unknown {
+			log.Error().Msg("ThresholdToptalkersMetrics: Could not parse 'evaluationmode', using default value 'destination'.")
+			evaluationMode = evaluation_mode.Destination
+		}
+		newSegment.EvaluationMode = evaluationMode
+
 	}
 
 	return newSegment
@@ -71,17 +90,21 @@ func (segment *TrafficSpecificToptalkers) AddCustomConfig(segmentReprs config.Se
 		}
 		segment.ThresholdMetricDefinition = append(segment.ThresholdMetricDefinition, metric)
 	}
+	if segmentReprs.MatchingPipeline != nil {
+		segments := pipeline.SegmentsFromRepr(segmentReprs.MatchingPipeline)
+		segment.MatchingPipeline = pipeline.New(segments...)
+	}
 }
 
-func (segment *TrafficSpecificToptalkers) metricFromDefinition(definition *config.ThresholdMetricDefinition) (*ThresholdMetric, error) {
+func (segment *TrafficSpecificToptalkers) metricFromDefinition(definition *config.ThresholdMetricConfig) (*ThresholdMetric, error) {
 	var err error
 	metric := ThresholdMetric{}
 	metric.PrometheusMetricsParamsDefinition = definition.PrometheusMetricsParamsDefinition
 	metric.FilterDefinition = definition.FilterDefinition
 	metric.InitDefaultPrometheusMetricParams()
 
-	if segment.RelevantAddress != "" {
-		metric.RelevantAddress = segment.RelevantAddress
+	if metric.EvaluationMode == evaluation_mode.Unknown {
+		metric.EvaluationMode = segment.EvaluationMode
 	}
 
 	metric.Expression, err = parser.Parse(definition.FilterDefinition)
@@ -104,12 +127,19 @@ func (segment *TrafficSpecificToptalkers) metricFromDefinition(definition *confi
 func (segment *TrafficSpecificToptalkers) Run(wg *sync.WaitGroup) {
 	var allDatabases *[]*toptalkers_metrics.Database
 	defer func() {
+		if segment.MatchingPipeline != nil {
+			segment.MatchingPipeline.Close()
+		}
 		close(segment.Out)
 		for _, db := range *allDatabases {
 			db.StopTimers()
 		}
 		wg.Done()
 	}()
+	if segment.MatchingPipeline != nil {
+		segment.MatchingPipeline.AutoDrain()
+		segment.MatchingPipeline.Start()
+	}
 
 	var promExporter = toptalkers_metrics.PrometheusExporter{}
 	promExporter.Initialize()
@@ -125,13 +155,72 @@ func (segment *TrafficSpecificToptalkers) Run(wg *sync.WaitGroup) {
 
 	filter := &flowfilter.Filter{}
 	log.Info().Msgf("Threshold Metric Report runing on %s", segment.Endpoint)
-	for msg := range segment.In {
-		promExporter.KafkaMessageCount.Inc()
-		for _, filterDef := range segment.ThresholdMetricDefinition {
-			addMessageToMatchingToptalkers(msg, filterDef, filter)
+	if segment.MatchingPipeline != nil {
+		for msg := range segment.In {
+			promExporter.KafkaMessageCount.Inc()
+			for _, filterDef := range segment.ThresholdMetricDefinition {
+				addMessageToMatchingToptalkers(msg, filterDef, filter)
+			}
+			if segment.MatchingPipeline != nil && segment.IpInToptalkers(msg, filter) {
+				segment.MatchingPipeline.In <- msg
+			}
+			segment.Out <- msg
 		}
-		segment.Out <- msg
+	} else {
+		for msg := range segment.In {
+			promExporter.KafkaMessageCount.Inc()
+			for _, filterDef := range segment.ThresholdMetricDefinition {
+				addMessageToMatchingToptalkers(msg, filterDef, filter)
+			}
+			segment.Out <- msg
+		}
 	}
+}
+
+func (segment *TrafficSpecificToptalkers) IpInToptalkers(msg *pb.EnrichedFlow, filter *flowfilter.Filter) bool {
+	for _, metricDef := range segment.ThresholdMetricDefinition {
+		if segment.IpInToptalkersOfMetric(metricDef, msg, filter) {
+			return true
+		}
+	}
+	return false
+}
+
+func (segment *TrafficSpecificToptalkers) IpInToptalkersOfMetric(metricDef *ThresholdMetric, msg *pb.EnrichedFlow, filter *flowfilter.Filter) bool {
+	if metricDef.PrometheusMetricsParams.TrafficType != "" {
+		source := msg.SrcAddrObj().String()
+		destination := msg.DstAddrObj().String()
+
+		var keys []string
+		switch metricDef.PrometheusMetricsParams.RelevantAddress {
+		case evaluation_mode.Source:
+			keys = []string{source}
+		case evaluation_mode.Destination:
+			keys = []string{destination}
+		case evaluation_mode.SourceAndDestination:
+			keys = []string{source, destination}
+		case evaluation_mode.Connection:
+			keys = []string{fmt.Sprintf("%s -> %s", source, destination)}
+		case evaluation_mode.Unknown:
+			//default = Destination
+			keys = []string{destination}
+		}
+
+		for _, key := range keys {
+			record := metricDef.Database.GetTypedRecord(metricDef.PrometheusMetricsParams.TrafficType, key, source, destination)
+			if record.AboveThreshold().Load() {
+				return true
+			}
+		}
+	}
+
+	//also check subfilters
+	for _, subdefinition := range metricDef.SubDefinitions {
+		if segment.IpInToptalkersOfMetric(subdefinition, msg, filter) {
+			return true
+		}
+	}
+	return false
 }
 
 func initDatabasesAndCollector(promExporter toptalkers_metrics.PrometheusExporter, segment *TrafficSpecificToptalkers) *[]*toptalkers_metrics.Database {
@@ -165,19 +254,19 @@ func addMessageToMatchingToptalkers(msg *pb.EnrichedFlow, definition *ThresholdM
 		// Update Counters if definition has a prometheus label defined
 		if definition.PrometheusMetricsParams.TrafficType != "" {
 			var keys []string
-			switch definition.PrometheusMetricsParams.RelevantAddress {
-			case "source":
+			switch definition.PrometheusMetricsParams.EvaluationMode {
+			case evaluation_mode.Source:
 				keys = []string{msg.SrcAddrObj().String()}
-			case "destination":
+			case evaluation_mode.Destination:
 				keys = []string{msg.DstAddrObj().String()}
-			case "both":
+			case evaluation_mode.SourceAndDestination:
 				keys = []string{msg.SrcAddrObj().String(), msg.DstAddrObj().String()}
-			case "connection":
+			case evaluation_mode.Connection:
 				keys = []string{fmt.Sprintf("%s -> %s", msg.SrcAddrObj().String(), msg.DstAddrObj().String())}
 			}
 			for _, key := range keys {
-				record := definition.Database.GetTypedRecord(definition.PrometheusMetricsParams.TrafficType, key)
-				record.Append(msg.Bytes, msg.Packets, msg.IsForwarded())
+				record := definition.Database.GetTypedRecord(definition.PrometheusMetricsParams.TrafficType, key, msg.SrcAddrObj().String(), msg.DstAddrObj().String())
+				record.Append(msg)
 			}
 		}
 
