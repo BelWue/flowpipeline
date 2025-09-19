@@ -1,4 +1,4 @@
-FROM golang:1.23.2 AS builder
+FROM golang:1.24.0 AS builder
 RUN apt-get update
 
 # add local repo into the builder
