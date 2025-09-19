@@ -12,7 +12,7 @@ import (
 
 // AddCid Segment tests are thorough and try every combination
 func TestSegment_AddCid_noLocalAddrKeep(t *testing.T) {
-	result := segments.TestSegment("addcid", map[string]string{"filename": "../../../examples/enricher/subnet_ids.csv"},
+	result := segments.TestSegment("addcid", map[string]string{"filename": "../../../examples/configurations/enricher/subnet_ids.csv"},
 		&pb.EnrichedFlow{RemoteAddr: 0, SrcAddr: []byte{192, 168, 88, 142}})
 	if result.Cid != 0 {
 		t.Error("([error] Segment AddCid is adding a Cid when the local address is undetermined.")
@@ -20,7 +20,7 @@ func TestSegment_AddCid_noLocalAddrKeep(t *testing.T) {
 }
 
 func TestSegment_AddCid_noLocalAddrDrop(t *testing.T) {
-	result := segments.TestSegment("addcid", map[string]string{"filename": "../../../examples/enricher/subnet_ids.csv", "dropunmatched": "true"},
+	result := segments.TestSegment("addcid", map[string]string{"filename": "../../../examples/configurations/enricher/subnet_ids.csv", "dropunmatched": "true"},
 		&pb.EnrichedFlow{RemoteAddr: 0, SrcAddr: []byte{192, 168, 88, 142}})
 	if result != nil {
 		t.Error("([error] Segment AddCid is not dropping the flow as instructed if the local address is undetermined.")
@@ -28,7 +28,7 @@ func TestSegment_AddCid_noLocalAddrDrop(t *testing.T) {
 }
 
 func TestSegment_AddCid_localAddrIsDst(t *testing.T) {
-	result := segments.TestSegment("addcid", map[string]string{"filename": "../../../examples/enricher/subnet_ids.csv"},
+	result := segments.TestSegment("addcid", map[string]string{"filename": "../../../examples/configurations/enricher/subnet_ids.csv"},
 		&pb.EnrichedFlow{RemoteAddr: 1, DstAddr: []byte{192, 168, 88, 42}})
 	if result.Cid != 1 {
 		t.Error("([error] Segment AddCid is not adding a Cid when the local address is the destination address.")
@@ -36,7 +36,7 @@ func TestSegment_AddCid_localAddrIsDst(t *testing.T) {
 }
 
 func TestSegment_AddCid_localAddrIsSrc(t *testing.T) {
-	result := segments.TestSegment("addcid", map[string]string{"filename": "../../../examples/enricher/subnet_ids.csv"},
+	result := segments.TestSegment("addcid", map[string]string{"filename": "../../../examples/configurations/enricher/subnet_ids.csv"},
 		&pb.EnrichedFlow{RemoteAddr: 2, SrcAddr: []byte{192, 168, 88, 142}})
 	if result.Cid != 1 {
 		t.Error("([error] Segment AddCid is not adding a Cid when the local address is the source address.")
@@ -44,7 +44,7 @@ func TestSegment_AddCid_localAddrIsSrc(t *testing.T) {
 }
 
 func TestSegment_AddCid_bothAddrs(t *testing.T) {
-	result := segments.TestSegment("addcid", map[string]string{"matchboth": "1", "filename": "../../../examples/enricher/subnet_ids.csv"},
+	result := segments.TestSegment("addcid", map[string]string{"matchboth": "1", "filename": "../../../examples/configurations/enricher/subnet_ids.csv"},
 		&pb.EnrichedFlow{SrcAddr: []byte{192, 168, 88, 142}})
 	if result.Cid != 1 {
 		t.Error("([error] Segment AddCid is not adding a Cid when the local address is the source address.")
@@ -56,7 +56,7 @@ func BenchmarkAddCid(b *testing.B) {
 	zerolog.SetGlobalLevel(zerolog.Disabled)
 	os.Stdout, _ = os.Open(os.DevNull)
 
-	segment := AddCid{}.New(map[string]string{"filename": "../../../examples/enricher/subnet_ids.csv"})
+	segment := AddCid{}.New(map[string]string{"filename": "../../../examples/configurations/enricher/subnet_ids.csv"})
 
 	in, out := make(chan *pb.EnrichedFlow), make(chan *pb.EnrichedFlow)
 	segment.Rewire(in, out)

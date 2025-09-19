@@ -3,13 +3,13 @@
 // `topicsuffix` parameter, which allows pipelines to write to multiple topics at
 // once. A typical use case is this:
 //
-// * set `topic: customer-`
-// * set `topicsuffix: Cid`
-// * this will result in a number of topics which will a) be created or b) need to
-//   exist, depending on your Kafka cluster settings.
-// * the topics will take the form `customer-123` for all values of Cid
-// * it is advisable to use the `flowfilter` segment to limit the number of
-//   topics
+//   - set `topic: customer-`
+//   - set `topicsuffix: Cid`
+//   - this will result in a number of topics which will a) be created or b) need to
+//     exist, depending on your Kafka cluster settings.
+//   - the topics will take the form `customer-123` for all values of Cid
+//   - it is advisable to use the `flowfilter` segment to limit the number of
+//     topics
 //
 // This could also be used to populate topics by Proto, or by Etype, or by any
 // number of other things.
@@ -41,7 +41,7 @@ import (
 // yield separate topics for each different protocol number occuring in all
 // flows. Usually, a sensible application is usage with customer ids (`Cid`).
 //
-// For more info, see examples/splitter in the repo.
+// For more info, see examples/configuration/splitter in the repo.
 
 // FIXME: use sarama directly here
 type KafkaProducer struct {

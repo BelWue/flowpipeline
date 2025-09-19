@@ -10,13 +10,13 @@
 // populated. In order to not to overload the router and to introduce delays, this
 // segment will:
 //
-// * not wait for a SNMP query to return, instead it will leave the flow as it was
-//   before sending it to the next segment (i.e. the first one on a given
-//   interface will always remain untouched)
-// * add any interface's data to a cache, which will be used to enrich the
-//   next flow using that same interface
-// * clear the cache value after 1 hour has elapsed, resulting in another flow
-//   without these annotations at that time
+//   - not wait for a SNMP query to return, instead it will leave the flow as it was
+//     before sending it to the next segment (i.e. the first one on a given
+//     interface will always remain untouched)
+//   - add any interface's data to a cache, which will be used to enrich the
+//     next flow using that same interface
+//   - clear the cache value after 1 hour has elapsed, resulting in another flow
+//     without these annotations at that time
 //
 // These rules are applied for source and destination interfaces separately.
 //
@@ -55,7 +55,7 @@ var (
 type SNMP struct {
 	segments.BaseSegment
 	Community string // optional, default is 'public'
-	Regex     string // optional, default matches all, can be used to extract content from descriptions, see examples/enricher
+	Regex     string // optional, default matches all, can be used to extract content from descriptions, see examples/configurations/enricher
 	ConnLimit uint64 // optional, default is 16
 
 	compiledRegex      *regexp.Regexp

@@ -24,10 +24,10 @@ processing stack into a single piece of software which can be configured to
 serve any function:
 
 * accepting raw Netflow (using [goflow2](https://github.com/netsampler/goflow2))
-* enriching the resulting flow messages ([examples/enricher](https://github.com/BelWue/flowpipeline/tree/master/examples/enricher))
-* writing to and reading from Kafka ([examples/localkafka](https://github.com/BelWue/flowpipeline/tree/master/examples/localkafka))
-* dumping flows to cli (e.g. [flowdump](https://github.com/BelWue/flowpipeline/tree/master/examples/flowdump))
-* providing metrics and insights ([examples/prometheus](https://github.com/BelWue/flowpipeline/tree/master/examples/prometheus))
+* enriching the resulting flow messages ([examples/configurations/enricher](https://github.com/BelWue/flowpipeline/tree/master/examples/configurations/enricher))
+* writing to and reading from Kafka ([examples/localkafka](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/localkafka))
+* dumping flows to cli (e.g. [flowdump](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/flowdump))
+* providing metrics and insights ([examples/prometheus](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/prometheus))
 * and many more...
 
 ## Getting Started
@@ -54,7 +54,8 @@ CGO/dynamically linked code (`bpf`, `sqlite`, `mongodb` and plugin support, chec
 [CONFIGURATION.md](https://github.com/BelWue/flowpipeline/blob/master/CONFIGURATION.md)).
 
 ### Container Releases
-A ready to use container is provided as `bwnetflow/flowpipeline`, you can check
+#### Flowpipeline standalone container
+A ready to use container is provided as `belwue/flowpipeline`, you can check
 it out on [GitHub container registry](https://github.com/BelWue/flowpipeline/pkgs/container/flowpipeline).
 
 Configurations referencing other files (geolocation databases for instance)
@@ -63,11 +64,26 @@ mountpoint `/config` is prepended in all segments which accept configuration to
 open files, if the binary was built with the `container` build flag.
 
 ```sh
-podman run -v ./examples/xy:/config flowpipeline
+podman run -v ./examples/configuration/xy:/config flowpipeline
 # or
-docker run -v ./examples/xy:/config flowpipeline
+docker run -v ./examples/configuration/xy:/config flowpipeline
 ```
 
+#### Flowpipeline Demo Container
+We also provide a container displaying example visualizations via prometheus+grafana dashboards (ghcr.io/belwue/flowpipeline-grafana).
+The example container starts with:
+ - grafana running on port 3000
+  - starting with default grafana admin credentials (`user:admin, password:admin`)
+ - netflow receiver running on port 2055
+ - sflow receiver running on port 6343
+ - prometheus running on port 9090
+
+```sh
+docker run -p 3000:3000 -p 2055:2055/udp -p 6343:6343 -p 9090:9090 /udp ghcr.io/belwue/flowpipeline-grafana
+```
+<img width="1602" height="921" alt="grafik" src="https://github.com/user-attachments/assets/d2fa3dd1-cc57-4cd7-a034-78a926ed509c" />
+
+The corresponding configuration files are available in `/examples/visualization`
 ## Configuration
 
 Refer to [CONFIGURATION.md](https://github.com/BelWue/flowpipeline/blob/master/CONFIGURATION.md)
@@ -112,7 +128,7 @@ If you find that the existing segments lack some functionality or you require
 some very specific behaviour, it is possible to include segments as a plugin.
 This is done using the `-p yourplugin.so` commandline option and your own
 custom module. See
-[examples/plugin](https://github.com/BelWue/flowpipeline/tree/master/examples/plugin)
+[examples/plugin](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/plugin)
 for a basic example and instructions on how to compile your plugin.
 
 Note that this requires CGO and thus will not work using the static binary

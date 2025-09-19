@@ -1,10 +1,10 @@
-config.yml
+/config.yml
 /config/
 *.so
 
 .idea
 .vscode
-flowpipeline
 /doc_generator
+/flowpipeline
 *.sqlite
 csvs
