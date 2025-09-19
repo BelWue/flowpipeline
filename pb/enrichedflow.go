@@ -5,6 +5,18 @@ import (
 	"net"
 )
 
+type MacSeparator int
+
+const (
+	MACSeparatorColon MacSeparator = iota
+	MACSeparatorDash  MacSeparator = iota
+)
+
+const (
+	macSeparatorFormatColon = "%02x:%02x:%02x:%02x:%02x:%02x"
+	macSeparatorFormatDash  = "%02x-%02x-%02x-%02x-%02x-%02x"
+)
+
 var (
 	FlowDirectionMap = map[uint32]string{
 		0: "Incoming",
@@ -144,23 +156,38 @@ func (flow *EnrichedFlow) SamplerAddressObj() net.IP {
 	return net.IP(flow.SamplerAddress)
 }
 
-func (flow *EnrichedFlow) SrcMacString() string {
-	return MacToString(flow.SrcMac)
+func (flow *EnrichedFlow) SrcMacString(sep MacSeparator) string {
+	return MacToString(flow.SrcMac, sep)
 }
 
-func (flow *EnrichedFlow) DstMacString() string {
-	return MacToString(flow.DstMac)
+func (flow *EnrichedFlow) DstMacString(sep MacSeparator) string {
+	return MacToString(flow.DstMac, sep)
 }
 
-func MacToString(mac uint64) string {
-	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
-		uint64((mac & 0x0000000000FF)),
-		uint64((mac&0x00000000FF00)>>8),
-		uint64((mac&0x000000FF0000)>>16),
-		uint64((mac&0x0000FF000000)>>24),
-		uint64((mac&0x00FF00000000)>>32),
-		uint64((mac&0xFF0000000000)>>40),
-	)
+func MacToString(mac uint64, sep MacSeparator) string {
+	// this code duplication is needed to get good performance by not requiring any allocations
+	// or dynamic string building
+	switch sep {
+	case MACSeparatorDash:
+		return fmt.Sprintf(macSeparatorFormatDash,
+			(mac & 0x0000000000FF),
+			(mac&0x00000000FF00)>>8,
+			(mac&0x000000FF0000)>>16,
+			(mac&0x0000FF000000)>>24,
+			(mac&0x00FF00000000)>>32,
+			(mac&0xFF0000000000)>>40,
+		)
+	// colon is default
+	default:
+		return fmt.Sprintf(macSeparatorFormatColon,
+			(mac & 0x0000000000FF),
+			(mac&0x00000000FF00)>>8,
+			(mac&0x000000FF0000)>>16,
+			(mac&0x0000FF000000)>>24,
+			(mac&0x00FF00000000)>>32,
+			(mac&0xFF0000000000)>>40,
+		)
+	}
 }
 
 func (flow *EnrichedFlow) GetBps() uint64 {

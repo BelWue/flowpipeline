@@ -9,21 +9,34 @@
 // * `SourceMAC` (from `SrcMac`)
 // * `DestinationMAC` (from `DstMac`)
 //
-// This segment has no configuration options. It is intended to be used in conjunction
-// with the `dropfields` segment to remove the original fields.
+// This segment has one configuration option `macseparator`. A value of `dash` will use dashes as separator, otherwise
+// colons are used (default).
+//
+// This segment is intended to be used in conjunction with the `dropfields` segment to remove the original fields.
 package addrstrings
 
 import (
-	"github.com/BelWue/flowpipeline/segments"
+	"strings"
 	"sync"
+
+	"github.com/BelWue/flowpipeline/pb"
+	"github.com/BelWue/flowpipeline/segments"
 )
 
 type AddrStrings struct {
 	segments.BaseSegment
+	Separator pb.MacSeparator
 }
 
 func (segment AddrStrings) New(config map[string]string) segments.Segment {
-	return &AddrStrings{}
+	// default separator is dash
+	var sep = pb.MACSeparatorColon
+	if strings.Contains(config["macseparator"], "dash") {
+		sep = pb.MACSeparatorDash
+	}
+	return &AddrStrings{
+		Separator: sep,
+	}
 }
 
 func (segment *AddrStrings) Run(wg *sync.WaitGroup) {
@@ -51,11 +64,11 @@ func (segment *AddrStrings) Run(wg *sync.WaitGroup) {
 		}
 		// SourceMAC
 		if original.SrcMac != 0x0 {
-			original.SourceMAC = original.SrcMacString()
+			original.SourceMAC = original.SrcMacString(segment.Separator)
 		}
 		// DestinationMAC
 		if original.DstMac != 0x0 {
-			original.DestinationMAC = original.DstMacString()
+			original.DestinationMAC = original.DstMacString(segment.Separator)
 		}
 		segment.Out <- original
 	}

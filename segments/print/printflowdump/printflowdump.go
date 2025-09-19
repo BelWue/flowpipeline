@@ -33,11 +33,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/BelWue/flowpipeline/utils"
 	"github.com/rs/zerolog/log"
 
 	"github.com/BelWue/flowpipeline/pb"
 	"github.com/BelWue/flowpipeline/segments"
-	"github.com/BelWue/flowpipeline/segments/modify/protomap"
 	"github.com/dustin/go-humanize"
 )
 
@@ -142,7 +142,7 @@ func (segment PrintFlowdump) format_flow(flowmsg *pb.EnrichedFlow) string {
 			proto = flowmsg.ProtoName
 		} else {
 			// use function from another segment, as it is just a lookup.
-			proto = protomap.ProtoNumToString(flowmsg.Proto)
+			proto = utils.IanaProtocolNumberToName(flowmsg.Proto)
 		}
 		if proto == "ICMP" && flowmsg.DstPort != 0 {
 			proto = fmt.Sprintf("ICMP (type %d, code %d)", flowmsg.DstPort/256, flowmsg.DstPort%256)

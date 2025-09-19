@@ -1,4 +1,72 @@
-// Send passing flows to one or more lumberjack (Elastic Beats) servers.
+// The `lumberjack` segment sends flows to one or more [elastic beats](https://github.com/elastic/beats)
+// servers user the [lumberjack](https://github.com/logstash-plugins/logstash-input-beats/blob/main/PROTOCOL.md)
+// protocol. Flows are queued in a non-deterministic, round-robin fashion to the servers.
+//
+// The only mandatory option is `servers` which contains a comma-separated list of lumberjack
+// server URLs. Each URL must start with one of these schemata: `tcp://` (plain TCP,
+// no encryption), `tls://` (TLS encryption) or `tlsnoverify://` (TLS encryption without
+// certificate verification). The schema is followed by the hostname or IP address, a colon `:`,
+// and a port number. IPv6 addresses must be surrounded by square brackets.
+//
+// A goroutine is spawned for every lumberjack server. Each goroutine only uses one CPU core to
+// process and send flows. This may not be enough when the ingress flow rate is high and/or a high compression
+// level is used. The number of goroutines per backend can be set explicitly with the `?count=x` URL
+// parameter. For example:
+//
+// ```yaml
+// config:
+//
+//	server: tls://host1:5043/?count=4, tls://host2:5043/?compression=9&count=16
+//
+// ```
+//
+// will use four parallel goroutines for `host1` and sixteen parallel goroutines for `host2`. Use `&count=…` instead of
+// `?count=…` when `count` is not the first parameter (standard URI convention).
+//
+// Transport compression is disabled by default. Use `compression` to set the compression level
+// for all hosts. Compression levels can vary between 0 (no compression) and 9 (maximum compression).
+// To set per-host transport compression adding `?compression=<level>` to the server URI.
+//
+// To prevent blocking, flows are buffered in a channel between the segment and the output
+// go routines. Each output go routine maintains a buffer of flows which are send either when the
+// buffer is full or after a configurable timeout. Proper parameter sizing for the queue,
+// buffers, and timeouts depends on multiple individual factors (like size, characteristics
+// of the incoming netflows and the responsiveness of the target servers). There are parameters
+// to both observe and tune this segment's performance.
+//
+// Upon connection error or loss, the segment will try to reconnect indefinitely with a pause of
+// `reconnectwait` between attempts.
+//
+// * `queuesize` (integer) sets the number of flows that are buffered between the segment and the output go routines.
+// * `batchsize` (integer) sets the number of flows that each output go routine buffers before sending.
+// * `batchtimeout` (duration) sets the maximum time that flows are buffered before sending.
+// * `reconnectwait` (duration) sets the time to wait between reconnection attempts.
+//
+// These options help to observe the performance characteristics of the segment:
+//
+// * `batchdebug` (bool) enables debug logging of batch operations (full send, partial send, and skipped send).
+// * `queuestatusinterval` (duration) sets the interval at which the segment logs the current queue status.
+//
+// To see debug output, set the `-l debug` flag when starting `flowpipeline`.
+//
+// See [time.ParseDuration](https://pkg.go.dev/time#ParseDuration) for proper duration format
+// strings and [strconv.ParseBool](https://pkg.go.dev/strconv#ParseBool) for allowed bool keywords.
+//
+// ```yaml
+//   - segment: lumberjack
+//     config:
+//     servers: tcp://foo.example.com:5044, tls://bar.example.com:5044?compression=3, tlsnoverify://[2001:db8::1]:5044
+//     compression: 0
+//     batchsize: 1024
+//     queuesize: = 2048
+//     batchtimeout: "2000ms"
+//     reconnectwait: "1s"
+//     batchdebug: false
+//     queuestatusinterval: "0s"
+//
+// ```
+//
+// [godoc](https://pkg.go.dev/github.com/BelWue/flowpipeline/segments/output/lumberjack)
 package lumberjack
 
 import (
@@ -28,7 +96,7 @@ type ServerOptions struct {
 	UseTLS            bool
 	VerifyCertificate bool
 	CompressionLevel  int
-	Parallism         int
+	Parallelism       int
 }
 
 type Lumberjack struct {
@@ -42,7 +110,7 @@ type Lumberjack struct {
 	LumberjackOut       chan *pb.EnrichedFlow
 }
 
-func NoDebugPrintf(format string, v ...any) {}
+func NoDebugPrintf(format string, v ...any) { _, _ = format, v }
 func DoDebugPrintf(format string, v ...any) {
 	log.Debug().Msgf(format, v...)
 }
@@ -50,7 +118,7 @@ func DoDebugPrintf(format string, v ...any) {
 func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 	var (
 		err                error
-		buflen             int
+		bufferLength       int
 		defaultCompression int
 	)
 
@@ -118,7 +186,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 			}
 
 			// parse count url argument
-			var numRoutines = 1
+			var numRoutines int
 			numRoutinesString := urlQueryParams.Get("count")
 			if numRoutinesString == "" {
 				numRoutines = 1
@@ -139,7 +207,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 				UseTLS:            useTLS,
 				VerifyCertificate: verifyTLS,
 				CompressionLevel:  compressionLevel,
-				Parallism:         numRoutines,
+				Parallelism:       numRoutines,
 			}
 		}
 	}
@@ -178,7 +246,7 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 		if err != nil {
 			log.Fatal().Err(err).Msg("Lumberjack: Failed to parse batchdebug config option: ")
 		}
-		// set proper BatchDebugPrintf function
+		// set the correct BatchDebugPrintf function
 		if batchDebug {
 			segment.BatchDebugPrintf = DoDebugPrintf
 		} else {
@@ -206,18 +274,18 @@ func (segment *Lumberjack) New(config map[string]string) segments.Segment {
 
 	// create buffered channel
 	if config["queuesize"] != "" {
-		buflen, err = strconv.Atoi(strings.ReplaceAll(config["queuesize"], "_", ""))
+		bufferLength, err = strconv.Atoi(strings.ReplaceAll(config["queuesize"], "_", ""))
 		if err != nil {
 			log.Fatal().Err(err).Msg("Lumberjack: Failed to parse queuesize config option: ")
 		}
 	} else {
-		buflen = defaultQueueSize
+		bufferLength = defaultQueueSize
 	}
-	if buflen < 64 {
+	if bufferLength < 64 {
 		log.Error().Msgf("Lumberjack: queuesize too small, using default %d", defaultQueueSize)
-		buflen = defaultQueueSize
+		bufferLength = defaultQueueSize
 	}
-	segment.LumberjackOut = make(chan *pb.EnrichedFlow, buflen)
+	segment.LumberjackOut = make(chan *pb.EnrichedFlow, bufferLength)
 
 	return segment
 }
@@ -244,17 +312,17 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 		}()
 	}
 
-	// run goroutine for each lumberjack server
+	// run a goroutine for each lumberjack server
 	for server, options := range segment.Servers {
 		writerWG.Add(1)
 		options := options
-		for i := 0; i < options.Parallism; i++ {
+		for i := 0; i < options.Parallelism; i++ {
 			go func(server string, numServer int) {
 				defer writerWG.Done()
 				// connect to lumberjack server
-				client := NewResilientClient(server, options, segment.ReconnectWait)
+				client := newResilientClient(server, options, segment.ReconnectWait)
 				defer client.Close()
-				log.Info().Msgf("Lumberjack: Connected to %s (TLS: %v, VerifyTLS: %v, Compression: %d, number %d/%d)", server, options.UseTLS, options.VerifyCertificate, options.CompressionLevel, numServer+1, options.Parallism)
+				log.Info().Msgf("Lumberjack: Connected to %s (TLS: %v, VerifyTLS: %v, Compression: %d, number %d/%d)", server, options.UseTLS, options.VerifyCertificate, options.CompressionLevel, numServer+1, options.Parallelism)
 
 				flowInterface := make([]interface{}, segment.BatchSize)
 				idx := 0
@@ -268,7 +336,7 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 				for {
 					select {
 					case flow, isOpen := <-segment.LumberjackOut:
-						// exit on closed channel
+						// exit on channel closing
 						if !isOpen {
 							// send local buffer
 							count, err := client.SendNoRetry(flowInterface[:idx])
@@ -282,13 +350,13 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 						}
 
 						// append flow to batch
-						flowInterface[idx] = flow
+						flowInterface[idx] = ECSFromEnrichedFlow(flow)
 						idx++
 
 						// send batch if full
 						if idx == segment.BatchSize {
-							// We got an event, and timer was already set.
-							// We need to stop the timer and drain the channel if needed,
+							// We got an event, and the timer was already set.
+							// We need to stop the timer and drain the channel
 							// so that we can safely reset it later.
 							if timerSet {
 								if !timer.Stop() {
@@ -303,7 +371,7 @@ func (segment *Lumberjack) Run(wg *sync.WaitGroup) {
 							// reset idx
 							idx = 0
 
-							// If timer was not set, or it was stopped before, it's safe to reset it.
+							// If the timer was not set, or it was stopped before, it's safe to reset it.
 							if !timerSet {
 								timerSet = true
 								timer.Reset(segment.BatchTimeout)

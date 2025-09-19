@@ -1,54 +1,3 @@
-// The `lumberjack` segment sends flows to one or more [elastic beats](https://github.com/elastic/beats)
-// servers user the [lumberjack](https://github.com/logstash-plugins/logstash-input-beats/blob/main/PROTOCOL.md)
-// protocol. Flows are queued in a non-deterministic, round-robin fashion to the servers.
-//
-// The only mandatory option is `servers` which contains a comma separated list of lumberjack
-// server URLs. Each URL must start with one of these schemata: `tcp://` (plain TCP,
-// no encryption), `tls://` (TLS encryption) or `tlsnoverify://` (TLS encryption without
-// certificate verification). The schema is followed by the hostname or IP address, a colon `:`,
-// and a port number. IPv6 addresses must be surrounded by square brackets.
-//
-// A goroutine is spawned for every lumberjack server. Each goroutine only uses one CPU core to
-// process and send flows. This may not be enough when the ingress flow rate is high and/or a high compression
-// level is used. The number of goroutines per backend can by set explicitly with the `?count=x` URL
-// parameter. For example:
-//
-// ```yaml
-// config:
-//   server: tls://host1:5043/?count=4, tls://host2:5043/?compression=9&count=16
-// ```
-//
-// will use four parallel goroutines for `host1` and sixteen parallel goroutines for `host2`. Use `&count=…` instead of
-// `?count=…` when `count` is not the first parameter (standard URI convention).
-//
-// Transport compression is disabled by default. Use `compression` to set the compression level
-// for all hosts. Compression levels can vary between 0 (no compression) and 9 (maximum compression).
-// To set per-host transport compression adding `?compression=<level>` to the server URI.
-//
-// To prevent blocking, flows are buffered in a channel between the segment and the output
-// go routines. Each output go routine maintains a buffer of flows which are send either when the
-// buffer is full or after a configurable timeout. Proper parameter sizing for the queue,
-// buffers, and timeouts depends on multiple individual factors (like size, characteristics
-// of the incoming netflows and the responsiveness of the target servers). There are parameters
-// to both observe and tune this segment's performance.
-//
-// Upon connection error or loss, the segment will try to reconnect indefinitely with a pause of
-// `reconnectwait` between attempts.
-//
-// * `queuesize` (integer) sets the number of flows that are buffered between the segment and the output go routines.
-// * `batchsize` (integer) sets the number of flows that each output go routine buffers before sending.
-// * `batchtimeout` (duration) sets the maximum time that flows are buffered before sending.
-// * `reconnectwait` (duration) sets the time to wait between reconnection attempts.
-//
-// These options help to observe the performance characteristics of the segment:
-//
-// * `batchdebug` (bool) enables debug logging of batch operations (full send, partial send and skipped send).
-// * `queuestatusinterval` (duration) sets the interval at which the segment logs the current queue status.
-//
-// To see debug output, set the `-l debug` flag when starting `flowpipeline`.
-//
-// See [time.ParseDuration](https://pkg.go.dev/time#ParseDuration) for proper duration format
-// strings and [strconv.ParseBool](https://pkg.go.dev/strconv#ParseBool) for allowed bool keywords.
 package lumberjack
 
 import (
@@ -71,7 +20,7 @@ type resilientClient struct {
 	ReconnectWait time.Duration
 }
 
-func NewResilientClient(serverName string, options ServerOptions, reconnectWait time.Duration) *resilientClient {
+func newResilientClient(serverName string, options ServerOptions, reconnectWait time.Duration) *resilientClient {
 	return &resilientClient{
 		ServerName:    serverName,
 		Options:       options,
@@ -83,7 +32,13 @@ func NewResilientClient(serverName string, options ServerOptions, reconnectWait 
 func jsonEncoderWrapper(msg interface{}) ([]byte, error) {
 	protoMsg, ok := msg.(*pb.EnrichedFlow)
 	if ok {
-		return protojson.Marshal(protoMsg)
+		return protojson.Marshal(struct {
+			*pb.EnrichedFlow
+			TimeStamp uint64 `json:"@timestamp"`
+		}{
+			protoMsg,
+			protoMsg.TimeFlowStart,
+		})
 	} else {
 		return json.Marshal(msg)
 	}
