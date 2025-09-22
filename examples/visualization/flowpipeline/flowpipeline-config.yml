@@ -1,0 +1,26 @@
+- segment: goflow
+  config:
+    listen: "sflow://:6343,netflow://:2055"
+
+# normalize using router-annotated factors, or assume the fallback value
+- segment: normalize
+  config:
+    fallback: 1
+
+- segment: prometheus
+  config:
+    endpoint: ":8080"
+    labels: "SrcAddr,SrcAs,SrcPort,DstAddr,DstAs,DstPort,Etype,Proto,Bytes,Packets"
+
+- segment: toptalkers_metrics
+  config:
+    # the lines below are optional and set to default
+    traffictype: "All"
+    buckets: 60
+    BucketDuration: 1
+    thresholdbps: 10
+    thresholdpps: 10
+    endpoint: ":8081"
+    metricspath: "/metrics"
+    flowdatapath: "/flowdata"
+    relevantaddress: "both"
