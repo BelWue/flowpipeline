@@ -42,7 +42,7 @@ import (
 type Goflow struct {
 	segments.BaseSegment
 	Listen     []url.URL // optional, default config value for this slice is "sflow://:6343,netflow://:2055"
-	Workers    uint64    // optional, amunt of workers to spawn for each endpoint, default is 1
+	Workers    uint64    // optional, amount of workers to spawn for each endpoint, default is 1
 	Blocking   bool      //optional, default is false
 	QueueSize  int       //default is 1000000
 	NumSockets int       //default is 1

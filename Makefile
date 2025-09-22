@@ -14,6 +14,9 @@ binary:
 test:
 	go test ./... -cover
 
+debian-bullseye-binary:
+	podman run --rm -v .:/src:Z golang:bullseye bash -c 'apt update; apt install -y libpcap-dev; cd /src; make'
+
 bench:
 	@go test -bench=. -benchtime=1ns ./segments/pass | grep "cpu:"
 	@echo "results:"
