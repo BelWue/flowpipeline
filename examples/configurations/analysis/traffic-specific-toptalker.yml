@@ -1,0 +1,41 @@
+---
+###############################################################################
+# Consume flow messages, it's best to use an enriched topic as flowdump
+# printing involves interface descriptions.
+- segment: kafkaconsumer
+  config:
+    server: kafka01.example.com:9093
+    topic: flow-messages-enriched
+    group: myuser-flowdump
+    user: myuser
+    pass: $KAFKA_SASL_PASS
+
+###############################################################################
+# filter with traffic specific toptalker thresholds
+# forward traffic to all ips that are matched to a csv export 
+- segment: traffic_specific_toptalkers
+  config:
+    endpoint: ":8085"
+    traffic_specific_toptalkers:
+    - filter: "proto udp"
+      subfilter:
+      - filter: "port 0"
+        traffictype: "UDP Fragmented"
+        thresholdbps: 100
+      - filter: "port 53"
+        traffictype: "DNS"
+        filter: "port 53"
+        thresholdbps: 100
+      - filter: "port 123"
+        traffictype: "NTP"
+        thresholdbps: 100
+      - filter: "port 389"
+        traffictype: "CLDAP"
+        thresholdbps: 100
+    - filter: "proto icmp or proto icmpv6"
+      traffictype: "ICMP"
+      thresholdpps: 100
+  matching_pipline:
+  - segment: csv
+    config:
+      filename: "matched.csv"

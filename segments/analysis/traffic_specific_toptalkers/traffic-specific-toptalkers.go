@@ -8,31 +8,9 @@
 // allow for a more efficient filtering.
 
 // Filters with a specified `traffictyp` will be exported if they reach the configured thresholds.
-
-// ```yaml
-// - segment: traffic_specific_toptalkers
-//   config:
-//     endpoint: ":8085"
-//     traffic_specific_toptalkers:
-//     - filter: "proto udp"
-//       subfilter:
-//       - filter: "port 0"
-//         traffictype: "UDP Fragmented"
-//         thresholdbps: 100
-//       - filter: "port 53"
-//         traffictype: "DNS"
-//         filter: "port 53"
-//         thresholdbps: 100
-//       - filter: "port 123"
-//         traffictype: "NTP"
-//         thresholdbps: 100
-//       - filter: "port 389"
-//         traffictype: "CLDAP"
-//         thresholdbps: 100
-//     - filter: "proto icmp or proto icmpv6"
-//       traffictype: "ICMP"
-//       thresholdpps: 100
-// ```
+// The segment allows forwarding all traffic to a matched ip to a subpipeline.
+// See the [example configuration](https://github.com/BelWue/flowpipeline/tree/master/examples/configuration/analysis/traffic-specific-toptalker.yml)
+// for an example using that functionality
 
 package traffic_specific_toptalkers
 
