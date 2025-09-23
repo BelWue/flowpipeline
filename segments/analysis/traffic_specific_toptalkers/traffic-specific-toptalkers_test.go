@@ -76,7 +76,7 @@ func TestSegment_TrafficSpecificToptalkers_matching_passthrough(t *testing.T) {
     traffic_specific_toptalkers:
     - filter: "proto udp"
       traffictype: "UDP"
-  matching_pipline:
+  matching_pipeline:
   - segment: counter
 `))
 

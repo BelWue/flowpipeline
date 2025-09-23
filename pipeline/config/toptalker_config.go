@@ -3,7 +3,7 @@ package config
 import a "github.com/BelWue/flowpipeline/pipeline/config/evaluation_mode"
 
 type ThresholdMetricDefinition struct {
-	MatchingPipeline []SegmentRepr `yaml:"matching_pipline,omitempty"`
+	MatchingPipeline []SegmentRepr `yaml:"matching_pipeline,omitempty"`
 }
 
 type ThresholdMetricConfig struct {
