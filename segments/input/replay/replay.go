@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -33,6 +34,12 @@ type Replay struct {
 func fileExists(filename string) bool {
 	_, err := os.Stat(filename)
 	return !os.IsNotExist(err)
+}
+
+func byEarliest(flows []*pb.EnrichedFlow) func(i, j int) bool {
+	return func(i, j int) bool {
+		return flows[i].GetTimeFlowEnd() < flows[j].GetTimeFlowEnd()
+	}
 }
 
 func (segment Replay) New(config map[string]string) segments.Segment {
@@ -208,9 +215,11 @@ func readFromDB(db *sql.DB) ([]*pb.EnrichedFlow, error) {
 		flows = append(flows, flow)
 	}
 
+	sort.Slice(flows, byEarliest(flows))
 	return flows, nil
 }
 
+// Requires `flows` to be sorted
 func replay(flows []*pb.EnrichedFlow, respectTiming bool, out chan *pb.EnrichedFlow) {
 	if len(flows) == 0 {
 		log.Info().Msg("Replay: No flows to replay.")
