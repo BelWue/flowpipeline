@@ -10,6 +10,7 @@ package replay
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -27,6 +28,11 @@ type Replay struct {
 
 	FileName      string
 	RespectTiming bool // optional, default is true
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return !os.IsNotExist(err)
 }
 
 func (segment Replay) New(config map[string]string) segments.Segment {
@@ -48,6 +54,11 @@ func (segment Replay) New(config map[string]string) segments.Segment {
 		}
 	} else {
 		log.Info().Msg("StdIn: 'respecttiming' set to default 'true'.")
+	}
+
+	if !fileExists(fileName) {
+		log.Error().Msgf("Replay: The given database '%s' does not exist.", fileName)
+		return nil
 	}
 
 	_, err := sql.Open("sqlite3", fileName)
