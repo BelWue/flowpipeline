@@ -21,10 +21,18 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
+      - name: Generate Token
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ vars.CONFIG_GEN_APPID }}
+          private-key: ${{ secrets.CONFIG_GEN_SECRET }}
+
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ steps.app-token.outputs.token }}
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -38,6 +46,8 @@ jobs:
         run: $GENERATOR_EXEC -out "$CONFIG_FILE"
 
       - name: Commit and Push Changes
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -46,7 +56,7 @@ jobs:
 
           if ! git diff --staged --quiet; then
             git commit -m "docs: auto-generated $CONFIG_FILE"
-            git push origin master
+            git push https://$TOKEN@github.com/BelWue/flowpipeline.git master
           else
             echo "No changes to commit."
           fi
