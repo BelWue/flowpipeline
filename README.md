@@ -1,3 +1,6 @@
+This Project was moved to https://codeberg.org/BelWue/flowpipeline
+Please check the new Repo for new Updates
+
 # Flowpipeline
 A [goflow2](https://github.com/netsampler/goflow2)-compatible flow message processing toolkit
 
